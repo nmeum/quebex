@@ -413,9 +413,116 @@ used to add padding between fields or zero-initialize big arrays.
 \subsubsection{Functions}
 \label{sec:functions}
 
-To-Do.
+\begin{code}
+abity :: Parser Q.Abity
+abity = (Q.ABase <$> baseType)
+    <|> (Q.AUserDef <$> userDef)
+
+param :: Parser Q.FuncParam
+param = (Q.Env <$> (ws1 (string "env") >> local))
+    <|> (string "..." >> pure Q.Variadic)
+    <|> do
+          ty <- ws1 abity
+          Q.Regular ty <$> local
+
+params :: Parser [Q.FuncParam]
+params = between (ws $ char '(') (char ')') params'
+  where
+    params' = sepBy1 param (ws $ char ',')
+
+funcDef :: Parser Q.FuncDef
+funcDef = do
+  link <- many linkage
+  _ <- ws1 (string "function")
+  retTy <- optionMaybe (ws1 abity)
+  name <- ws global
+  args <- wsNL params
+  body <- between (wsNL $ char '{') (char '}') $ many1 block
+  return $ Q.FuncDef link name retTy args body
+\end{code}
+
+Function definitions contain the actual code to emit in the compiled
+file. They define a global symbol that contains a pointer to the
+function code. This pointer can be used in \texttt{call} instructions or stored
+in memory.
+
+The type given right before the function name is the return type of the
+function. All return values of this function must have this return type.
+If the return type is missing, the function must not return any value.
+
+The parameter list is a comma separated list of temporary names prefixed
+by types. The types are used to correctly implement C compatibility.
+When an argument has an aggregate type, a pointer to the aggregate is
+passed by the caller. In the example below, we have to use a load
+instruction to get the value of the first (and only) member of the
+struct.
+
+\begin{verbatim}
+type :one = { w }
+
+function w $getone(:one %p) {
+@start
+        %val =w loadw %p
+        ret %val
+}
+\end{verbatim}
+
+If a function accepts or returns values that are smaller than a word,
+such as \texttt{signed char} or \texttt{unsigned short} in C, one of the sub-word type
+must be used. The sub-word types \texttt{sb}, \texttt{ub}, \texttt{sh}, and \texttt{uh} stand,
+respectively, for signed and unsigned 8-bit values, and signed and
+unsigned 16-bit values. Parameters associated with a sub-word type of
+bit width N only have their N least significant bits set and have base
+type \texttt{w}. For example, the function
+
+\begin{verbatim}
+function w $addbyte(w %a, sb %b) {
+@start
+        %bw =w extsb %b
+        %val =w add %a, %bw
+        ret %val
+}
+\end{verbatim}
+
+needs to sign-extend its second argument before the addition. Dually,
+return values with sub-word types do not need to be sign or zero
+extended.
+
+If the parameter list ends with \texttt{...}, the function is a variadic
+function: it can accept a variable number of arguments. To access the
+extra arguments provided by the caller, use the \texttt{vastart} and \texttt{vaarg}
+instructions described in the \nameref{sec:variadic} section.
+
+Optionally, the parameter list can start with an environment parameter
+\texttt{env \%e}. This special parameter is a 64-bit integer temporary (i.e.,
+of type \texttt{l}). If the function does not use its environment parameter,
+callers can safely omit it. This parameter is invisible to a C caller:
+for example, the function
+
+\begin{verbatim}
+export function w $add(env %e, w %a, w %b) {
+@start
+        %c =w add %a, %b
+        ret %c
+}
+\end{verbatim}
+
+must be given the C prototype \texttt{int add(int, int)}. The intended use of
+this feature is to pass the environment pointer of closures while
+retaining a very good compatibility with C. The \nameref{sec:call}
+section explains how to pass an environment parameter.
+
+Since global symbols are defined mutually recursive, there is no need
+for function declarations: a function can be referenced before its
+definition. Similarly, functions from other modules can be used without
+previous declaration. All the type information necessary to compile a
+call is in the instruction itself.
+
+The syntax and semantics for the body of functions are described in the
+\nameref{sec:control} section.
 
 \section{Control}
+\label{sec:control}
 
 The IL represents programs as textual transcriptions of control flow
 graphs. The control flow is serialized as a sequence of blocks of
@@ -504,5 +611,20 @@ following list.
   \item Program termination. \\
     Terminates the execution of the program with a target-dependent error. This instruction can be used when it is expected that the execution never reaches the end of the block it closes; for example, after having called a function such as \texttt{exit()}.
 \end{enumerate}
+
+\section{Instructions}
+\label{sec:instructions}
+
+To-Do.
+
+\subsection{Call}
+\label{sec:call}
+
+To-Do.
+
+\subsection{Variadic}
+\label{sec:variadic}
+
+To-Do.
 
 \end{document}

@@ -18,6 +18,12 @@ data ExtType
   | HalfWord
   deriving (Show, Eq)
 
+data Abity
+  = ABase BaseType
+  -- | SubWordType
+  | AUserDef String
+  deriving (Show, Eq)
+
 data Const
   = Number Word64
   | SFP Float
@@ -59,6 +65,22 @@ data DataItem
   = DSymbol String (Maybe Word64)
   | DString String
   | DConst Const
+  deriving (Show, Eq)
+
+data FuncDef
+  = FuncDef
+  { fLinkage :: [Linkage]
+  , fName :: String
+  , fAbity :: Maybe Abity
+  , fParams :: [FuncParam]
+  , fBlock :: [Block]
+  }
+  deriving (Show, Eq)
+
+data FuncParam
+  = Regular Abity String
+  | Env String
+  | Variadic
   deriving (Show, Eq)
 
 data JumpInstr

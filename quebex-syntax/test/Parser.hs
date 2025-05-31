@@ -1,7 +1,7 @@
 module Parser where
 
 import Language.QBE
-import Language.QBE.Parser (dataDef)
+import Language.QBE.Parser (dataDef, funcDef)
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Text.ParserCombinators.Parsec as P
@@ -47,8 +47,27 @@ dataTests =
     parse :: String -> Either P.ParseError DataDef
     parse = P.parse dataDef ""
 
+funcTests :: TestTree
+funcTests =
+  testGroup
+    "Function Definition"
+    [ testCase "Minimal function definition" $
+        let p = [Regular (ABase Word) "argc"]
+            b = [Block {label = "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [] "main" Nothing p b
+         in parse "function $main(w %argc) {\n@start\nret\n}" @?= Right f,
+      testCase "Function definition with linkage and return type" $
+        let p = [Regular (ABase Long) "v"]
+            b = [Block {label = "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LExport, LThread] "example" (Just (ABase Word)) p b
+         in parse "export\nthread function w $example(l %v) {\n@start\nret\n}" @?= Right f
+    ]
+  where
+    parse :: String -> Either P.ParseError FuncDef
+    parse = P.parse funcDef ""
+
 mkParser :: TestTree
 mkParser =
   testGroup
     "Tests for the QBE parser"
-    [dataTests]
+    [dataTests, funcTests]
