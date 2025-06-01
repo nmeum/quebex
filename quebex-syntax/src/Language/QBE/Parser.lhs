@@ -426,9 +426,9 @@ straight-line code which are connected using jump instructions.
 \begin{code}
 block :: Parser Q.Block
 block = do
-  l <- label <* newline
-  s <- many (statement <* newline)
-  Q.Block l s <$> jumpInstr
+  l <- wsNL1 label
+  s <- many (wsNL1 statement)
+  Q.Block l s <$> (wsNL1 jumpInstr)
 \end{code}
 
 All blocks have a name that is specified by a label at their beginning.
@@ -478,8 +478,9 @@ statement = assign
 \begin{code}
 jumpInstr :: Parser Q.JumpInstr
 jumpInstr = (string "hlt" >> pure Q.Halt)
-        <|> Q.Return <$> (ws1 (string "ret") >> optionMaybe val)
-        <|> try (Q.Jump <$> (string "jmp" >> ws1 label))
+        -- TODO: Return requires a space if there is an optionMaybe
+        <|> Q.Return <$> ((ws $ string "ret") >> optionMaybe val)
+        <|> try (Q.Jump <$> ((ws1 $ string "jmp") >> label))
         <|> do
           _ <- ws1 $ string "jnz"
           v <- ws val <* ws (char ',')
