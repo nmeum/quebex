@@ -24,7 +24,6 @@ import Text.ParserCombinators.Parsec
   ( Parser,
     anyChar,
     char,
-    lookAhead,
     manyTill,
     newline,
     oneOf,
@@ -60,20 +59,13 @@ can be assembled and linked using a standard toolchain (e.g., GNU
 binutils).
 
 \begin{code}
--- TODO: Remove
-lexeme :: Parser a -> Parser a
-lexeme p = p <* blanks1
-
-comment :: Parser String
-comment = lexeme comment' <?> "comment"
+comment :: Parser ()
+comment = skipMany blankNL >> comment' >> skipMany blankNL
   where
-    -- Use lookAhead here as the trailing newline is consumed by lexeme
-    comment' = char '#' >> manyTill anyChar (lookAhead newline)
+    comment' = char '#' >> manyTill anyChar newline
 
-skipNoCode :: Bool -> Parser ()
-skipNoCode reqBlanks =
-  ((if reqBlanks then blanks1 else blanks) <|> skipMany1 comment)
-    <?> "blanks or comment"
+skipNoCode :: Parser () -> Parser ()
+skipNoCode blankP = try (skipMany1 comment <?> "comments") <|> blankP
 \end{code}
 
 Here is a complete "Hello World" IL file which defines a function that
@@ -134,19 +126,10 @@ also to quickly spot the scope and nature of identifiers.
 
 \begin{code}
 blank :: Parser Char
-blank = oneOf "\n\t " <?> "blank"
+blank = oneOf "\t " <?> "blank"
 
-blanks :: Parser ()
-blanks = skipMany blank
-
-blanks1 :: Parser ()
-blanks1 = skipMany1 blank
-
-ws :: Parser a -> Parser a
-ws p = p <* skipNoCode False
-
-ws1 :: Parser a -> Parser a
-ws1 p = p <* skipNoCode True
+blankNL :: Parser Char
+blankNL = oneOf "\n\t " <?> "blank or newline"
 \end{code}
 
 Individual tokens in IL files must be separated by one or more spacing
@@ -154,6 +137,20 @@ characters. Both spaces and tabs are recognized as spacing characters.
 In data and type definitions, newlines may also be used as spaces to
 prevent overly long lines. When exactly one of two consecutive tokens is
 a symbol (for example \texttt{,} or \texttt{=} or \texttt{\{}), spacing may be omitted.
+
+\begin{code}
+ws :: Parser a -> Parser a
+ws p = p <* skipMany blank
+
+ws1 :: Parser a -> Parser a
+ws1 p = p <* skipMany1 blank
+
+wsNL :: Parser a -> Parser a
+wsNL p = p <* skipNoCode (skipMany blankNL)
+
+wsNL1 :: Parser a -> Parser a
+wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
+\end{code}
 
 \section{Types}
 
@@ -362,22 +359,22 @@ To-Do.
 dataDef :: Parser Q.DataDef
 dataDef = do
   link <- many linkage
-  name <- ws1 (string "data") >> ws global
-  _ <- ws (char '=')
-  align <- optionMaybe (ws1 (string "align") >> ws decNumber)
+  name <- wsNL1 (string "data") >> wsNL global
+  _ <- wsNL (char '=')
+  align <- optionMaybe (ws1 (string "align") >> wsNL decNumber)
   braces dataObjs <&> Q.DataDef link name align
  where
-    braces = between (ws $ char '{') (ws $ char '}')
+    braces = between (wsNL $ char '{') (wsNL $ char '}')
 
 dataObjs :: Parser [Q.DataObj]
-dataObjs = sepBy1 dataObj (ws $ char ',')
+dataObjs = sepBy1 dataObj (wsNL $ char ',')
 
 dataObj :: Parser Q.DataObj
 dataObj =
-  (Q.OZeroFill <$> (ws1 (char 'z') >> ws decNumber))
+  (Q.OZeroFill <$> (wsNL1 (char 'z') >> wsNL decNumber))
     <|> do
-      t <- ws1 extType
-      i <- many1 (ws dataItem)
+      t <- wsNL1 extType
+      i <- many1 (wsNL dataItem)
       return $ Q.OItem t i
 
 dataItem :: Parser Q.DataItem

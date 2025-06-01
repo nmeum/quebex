@@ -16,6 +16,15 @@ dataTests =
       testCase "Data definition without optional spaces" $
         let v = DataDef [] "foo" Nothing [OZeroFill 42]
          in parse "data $foo={z 42}" @?= Right v,
+      testCase "Data definition with newlines as spaces" $
+        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+         in parse "data\n$foo={z\n42}" @?= Right v,
+      testCase "Data definition with comments" $
+        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+         in parse "data\n#test\n$foo={z\n#foo\n42}" @?= Right v,
+      testCase "Data definition with comments and whitespaces" $
+        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+         in parse "data\n#test1  \n  #test2\n$foo={z\n#foo\n42}" @?= Right v,
       testCase "Data definition with types" $
         let w = [DConst (Number 23), DConst (Number 42)]
             v = DataDef [] "bar" Nothing [OItem (Base Word) w]
