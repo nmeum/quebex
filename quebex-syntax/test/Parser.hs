@@ -25,6 +25,12 @@ dataTests =
       testCase "Data definition with comments and whitespaces" $
         let v = DataDef [] "foo" Nothing [OZeroFill 42]
          in parse "data\n#test1  \n  #test2\n$foo={z\n#foo\n42}" @?= Right v,
+      testCase "Data definition with linkage" $
+        let v = DataDef [LExport] "foo" Nothing [OZeroFill 42]
+         in parse "export data $foo = { z 42 }" @?= Right v,
+      testCase "Data definition with linkage, newlines, and comments" $
+        let v = DataDef [LExport, LThread] "foo" Nothing [OZeroFill 42]
+         in parse "export\nthread\n#foo\ndata $foo = { z 42 }" @?= Right v,
       testCase "Data definition with types" $
         let w = [DConst (Number 23), DConst (Number 42)]
             v = DataDef [] "bar" Nothing [OItem (Base Word) w]

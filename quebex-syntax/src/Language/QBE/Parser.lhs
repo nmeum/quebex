@@ -295,11 +295,11 @@ stringLit =
   escSeq = try (char '\\' >> (char '\"' <|> char '\\'))
 
 linkage :: Parser Q.Linkage
-linkage = ws1 (bind "export" Q.LExport)
-      <|> ws1 (bind "thread" Q.LThread)
+linkage = wsNL (bind "export" Q.LExport)
+      <|> wsNL (bind "thread" Q.LThread)
       <|> do
         secName <- ws1 stringLit
-        secFlags <- optionMaybe stringLit
+        secFlags <- optionMaybe (wsNL stringLit)
         return $ Q.LSection secName secFlags
 \end{code}
 
