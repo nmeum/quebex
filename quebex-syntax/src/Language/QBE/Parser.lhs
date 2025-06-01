@@ -295,12 +295,16 @@ stringLit =
   escSeq = try (char '\\' >> (char '\"' <|> char '\\'))
 
 linkage :: Parser Q.Linkage
-linkage = wsNL (bind "export" Q.LExport)
-      <|> wsNL (bind "thread" Q.LThread)
-      <|> do
-        secName <- ws1 stringLit
-        secFlags <- optionMaybe (wsNL stringLit)
-        return $ Q.LSection secName secFlags
+linkage =
+  wsNL (bind "export" Q.LExport)
+    <|> wsNL (bind "thread" Q.LThread)
+    <|> do
+      _ <- ws1 $ string "section"
+      -- TODO: make this less awful
+      choice
+        [ try $ ws1 stringLit >>= (\x -> wsNL stringLit <&> Q.LSection x . pure),
+          wsNL stringLit <&> (`Q.LSection` Nothing)
+        ]
 \end{code}
 
 Function and data definitions (see below) can specify linkage

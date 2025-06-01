@@ -60,7 +60,17 @@ funcTests =
         let p = [Regular (ABase Long) "v"]
             b = [Block {label = "start", stmt = [], term = Return Nothing}]
             f = FuncDef [LExport, LThread] "example" (Just (ABase Word)) p b
-         in parse "export\nthread function w $example(l %v) {\n@start\nret\n}" @?= Right f
+         in parse "export\nthread function w $example(l %v) {\n@start\nret\n}" @?= Right f,
+      testCase "Function definition with section linkage" $
+        let p = [Regular (ABase Long) "v"]
+            b = [Block {label = "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LSection "foo" Nothing] "bla" (Just (ABase Word)) p b
+         in parse "section \"foo\"\nfunction w $bla(l %v) {\n@start\nret\n}" @?= Right f,
+      testCase "Function definition with comments" $
+        let p = [Regular (ABase Long) "v"]
+            b = [Block {label = "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LSection "foo" (Just "bar")] "bla" (Just (ABase Word)) p b
+         in parse "section \"foo\" \"bar\"\n#test\nfunction w $bla(l %v) {\n#foo\n@start\n# bar \nret\n#bllubbb\n#bllaaa\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef
