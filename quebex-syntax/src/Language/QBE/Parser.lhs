@@ -360,13 +360,21 @@ To-Do.
 \label{sec:data}
 
 \begin{code}
+align :: Parser Q.AllocAlign
+align =
+  choice
+    [ bind "4" Q.AlignWord,
+      bind "8" Q.AlignLong,
+      bind "16" Q.AlignLongLong
+    ]
+
 dataDef :: Parser Q.DataDef
 dataDef = do
   link <- many linkage
   name <- wsNL1 (string "data") >> wsNL global
   _ <- wsNL (char '=')
-  align <- optionMaybe (ws1 (string "align") >> wsNL decNumber)
-  braces dataObjs <&> Q.DataDef link name align
+  alignment <- optionMaybe (ws1 (string "align") >> wsNL align)
+  braces dataObjs <&> Q.DataDef link name alignment
  where
     braces = between (wsNL $ char '{') (wsNL $ char '}')
 

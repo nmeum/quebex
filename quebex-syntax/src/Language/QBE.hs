@@ -47,11 +47,17 @@ data Linkage
   | LSection String (Maybe String)
   deriving (Show, Eq)
 
+data AllocAlign
+  = AlignWord
+  | AlignLong
+  | AlignLongLong
+  deriving (Show, Eq)
+
 data DataDef
   = DataDef
   { linkage :: [Linkage],
     name :: String,
-    align :: Maybe Word64,
+    align :: Maybe AllocAlign,
     objs :: [DataObj]
   }
   deriving (Show, Eq)

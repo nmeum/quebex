@@ -41,7 +41,10 @@ dataTests =
                 OItem (Base Long) [DConst (Number 23)]
               ]
             v = DataDef [] "c" Nothing o
-         in parse "data $c = { l -1, l 23 }" @?= Right v
+         in parse "data $c = { l -1, l 23 }" @?= Right v,
+      testCase "Data definition with specified alignment and linkage" $
+        let v = DataDef [LExport] "b" (Just AlignLong) [OZeroFill 1000]
+          in parse "export data $b = align 8 { z 1000 }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
