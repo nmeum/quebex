@@ -122,19 +122,30 @@ The original QBE specification defines the syntax using a BNF grammar. In
 contrast, this document defines it using Parsec parser combinators. As such,
 this specification is less formal but more accurate as the parsing code is
 actually executable. Consequently, this specification also captures constructs
-omitted in the original specification (e.g., identifiers, statements, or string
-literals). Nonetheless, the formal language recognized by these combinators
-aims to be equivalent to the one of the BNF grammar.
+omitted in the original specification (e.g., \nameref{sec:identifiers},
+\nameref{sec:statements}, or \nameref{sec:strlit}). Nonetheless, the formal
+language recognized by these combinators aims to be equivalent to the one of
+the BNF grammar.
 
-\subsection{Sigils}
+\subsection{Identifiers}
+\label{sec:identifiers}
 
 \begin{code}
 ident :: Parser String
 ident = do
-  start <- letter <|> oneOf "_."
+  start <- letter <|> oneOf "._"
   rest <- many (alphaNum <|> oneOf "$._")
   return $ start : rest
+\end{code}
 
+Identifiers for data, types, and functions can start with any ASCII letter or
+the special characters \texttt{.} and \texttt{\_}. This initial character can
+be followed by a sequence of any alphanumeric character and the special
+characters \texttt{\$}, \texttt{.}, and \texttt{\_}.
+
+\subsection{Sigils}
+
+\begin{code}
 userDef :: Parser String
 userDef = char ':' >> ident
 
@@ -192,6 +203,7 @@ wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
 }
 
 \subsection{String Literals}
+\label{sec:strlit}
 
 \begin{code}
 strLit :: Parser String
@@ -695,7 +707,8 @@ necessary to write the jump instruction, it will be automatically added
 by the parser. For example the start block in the example below jumps
 directly to the loop block.
 
-\subsection{Statement}
+\subsection{Statements}
+\label{sec:statements}
 
 % TODO: Not documented in the QBE BNF.
 
