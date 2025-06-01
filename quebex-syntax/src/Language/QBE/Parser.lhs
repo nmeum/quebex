@@ -1,6 +1,17 @@
 \documentclass{article}
 %include polycode.fmt
 
+%subst blankline = "\\[5mm]"
+
+% See https://github.com/kosmikus/lhs2tex/issues/58
+%format <$> = "\mathbin{\langle\$\rangle}"
+%format <&> = "\mathbin{\langle\&\rangle}"
+%format <|> = "\mathbin{\langle\:\vline\:\rangle}"
+%format <?> = "\mathbin{\langle?\rangle}"
+%format <*> = "\mathbin{\langle*\rangle}"
+%format <*  = "\mathbin{\langle*}"
+%format *>  = "\mathbin{*\rangle}"
+
 \long\def\ignore#1{}
 
 \usepackage{hyperref}
@@ -11,7 +22,9 @@
 \begin{document}
 
 \title{QBE Intermediate Language}
+\date{}
 \maketitle
+\frenchspacing
 
 \ignore{
 \begin{code}
@@ -63,10 +76,13 @@ comment :: Parser ()
 comment = skipMany blankNL >> comment' >> skipMany blankNL
   where
     comment' = char '#' >> manyTill anyChar newline
+\end{code}
 
+\ignore{
+\begin{code}
 skipNoCode :: Parser () -> Parser ()
 skipNoCode blankP = try (skipMany1 comment <?> "comments") <|> blankP
-\end{code}
+\end{code}}
 
 Here is a complete "Hello World" IL file which defines a function that
 prints to the screen. Since the string is not a first class object (only
@@ -428,14 +444,6 @@ type :opaque = align 16 { 32 }
 \label{sec:data}
 
 \begin{code}
-align :: Parser Q.AllocAlign
-align =
-  choice
-    [ bind "4" Q.AlignWord,
-      bind "8" Q.AlignLong,
-      bind "16" Q.AlignLongLong
-    ]
-
 dataDef :: Parser Q.DataDef
 dataDef = do
   link <- many linkage
@@ -481,6 +489,16 @@ If the letter used is an extended type, the data item following
 specifies the bits to be stored in the field. When several data items
 follow a letter, they initialize multiple fields of the same size.
 
+\begin{code}
+align :: Parser Q.AllocAlign
+align =
+  choice
+    [ bind "4" Q.AlignWord,
+      bind "8" Q.AlignLong,
+      bind "16" Q.AlignLongLong
+    ]
+\end{code}
+
 The members of a struct will be packed. This means that padding has to
 be emitted by the frontend when necessary. Alignment of the whole data
 objects can be manually specified, and when no alignment is provided,
@@ -494,22 +512,6 @@ used to add padding between fields or zero-initialize big arrays.
 \label{sec:functions}
 
 \begin{code}
-abity :: Parser Q.Abity
-abity = (Q.ABase <$> baseType)
-    <|> (Q.AUserDef <$> userDef)
-
-param :: Parser Q.FuncParam
-param = (Q.Env <$> (ws1 (string "env") >> local))
-    <|> (string "..." >> pure Q.Variadic)
-    <|> do
-          ty <- ws1 abity
-          Q.Regular ty <$> local
-
-params :: Parser [Q.FuncParam]
-params = between (ws $ char '(') (char ')') params'
-  where
-    params' = sepBy1 param (ws $ char ',')
-
 funcDef :: Parser Q.FuncDef
 funcDef = do
   link <- many linkage
@@ -526,9 +528,29 @@ file. They define a global symbol that contains a pointer to the
 function code. This pointer can be used in \texttt{call} instructions or stored
 in memory.
 
+\begin{code}
+abity :: Parser Q.Abity
+abity = (Q.ABase <$> baseType)
+    <|> (Q.AUserDef <$> userDef)
+\end{code}
+
 The type given right before the function name is the return type of the
 function. All return values of this function must have this return type.
 If the return type is missing, the function must not return any value.
+
+\begin{code}
+param :: Parser Q.FuncParam
+param = (Q.Env <$> (ws1 (string "env") >> local))
+    <|> (string "..." >> pure Q.Variadic)
+    <|> do
+          ty <- ws1 abity
+          Q.Regular ty <$> local
+
+params :: Parser [Q.FuncParam]
+params = between (ws $ char '(') (char ')') params'
+  where
+    params' = sepBy1 param (ws $ char ',')
+\end{code}
 
 The parameter list is a comma separated list of temporary names prefixed
 by types. The types are used to correctly implement C compatibility.
@@ -682,14 +704,10 @@ a function. The three kinds of jumps available are described in the
 following list.
 
 \begin{enumerate}
-  \item Unconditional jump. \\
-    Simply jumps to another block of the same function.
-  \item Conditional jump. \\
-    When its word argument is non-zero, it jumps to its first label argument; otherwise it jumps to the other label. The argument must be of word type; because of subtyping a long argument can be passed, but only its least significant 32 bits will be compared to 0.
-  \item Function return. \\
-    Terminates the execution of the current function, optionally returning a value to the caller. The value returned must be of the type given in the function prototype. If the function prototype does not specify a return type, no return value can be used.
-  \item Program termination. \\
-    Terminates the execution of the program with a target-dependent error. This instruction can be used when it is expected that the execution never reaches the end of the block it closes; for example, after having called a function such as \texttt{exit()}.
+  \item \textbf{Unconditional jump.} Simply jumps to another block of the same function.
+  \item \textbf{Conditional jump.} When its word argument is non-zero, it jumps to its first label argument; otherwise it jumps to the other label. The argument must be of word type; because of subtyping a long argument can be passed, but only its least significant 32 bits will be compared to 0.
+  \item \textbf{Function return.} Terminates the execution of the current function, optionally returning a value to the caller. The value returned must be of the type given in the function prototype. If the function prototype does not specify a return type, no return value can be used.
+  \item \textbf{Program termination.} Terminates the execution of the program with a target-dependent error. This instruction can be used when it is expected that the execution never reaches the end of the block it closes; for example, after having called a function such as \texttt{exit()}.
 \end{enumerate}
 
 \section{Instructions}
