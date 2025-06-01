@@ -354,7 +354,75 @@ flags.
 \subsubsection{Aggregate Types}
 \label{sec:aggregate-types}
 
-To-Do.
+\begin{code}
+subType :: Parser Q.SubType
+subType =
+  (Q.SExtType <$> extType)
+    <|> (Q.SUserDef <$> userDef)
+
+-- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".
+aggRegular :: Parser Q.AggType
+aggRegular = Q.ARegular <$> sepBy1 aggRegular' (wsNL $ char ',')
+  where
+    aggRegular' = do
+      -- TODO: newline is required if there is a number argument
+      f <- wsNL subType
+      s <- optionMaybe decNumber
+      pure (f, s)
+
+aggOpaque :: Parser Q.AggType
+aggOpaque = Q.AOpaque <$> wsNL decNumber
+
+-- TODO: support union type
+typeDef :: Parser Q.TypeDef
+typeDef = do
+  _ <- wsNL1 (string "type")
+  i <- wsNL1 userDef
+  _ <- wsNL1 (char '=')
+  -- TODO: Provide common alignment parser combinator.
+  a <- optionMaybe (ws1 (string "align") >> wsNL align)
+  braces (aggRegular <|> aggOpaque) <&> Q.TypeDef i a
+ where
+  -- TODO: Move this to a common combinator
+  braces = between (wsNL $ char '{') (wsNL $ char '}')
+\end{code}
+
+Aggregate type definitions start with the \texttt{type} keyword. They have file
+scope, but types must be defined before being referenced. The inner
+structure of a type is expressed by a comma-separated list of types
+enclosed in curly braces.
+
+\begin{verbatim}
+type :fourfloats = { s, s, d, d }
+\end{verbatim}
+
+For ease of IL generation, a trailing comma is tolerated by the parser.
+In case many items of the same type are sequenced (like in a C array),
+the shorter array syntax can be used.
+
+\begin{verbatim}
+type :abyteandmanywords = { b, w 100 }
+\end{verbatim}
+
+By default, the alignment of an aggregate type is the maximum alignment
+of its members. The alignment can be explicitly specified by the
+programmer.
+
+\begin{verbatim}
+type :cryptovector = align 16 { w 4 }
+\end{verbatim}
+
+Union types allow the same chunk of memory to be used with different layouts. They are defined by enclosing multiple regular aggregate type bodies in a pair of curly braces. Size and alignment of union types are set to the maximum size and alignment of each variation or, in the case of alignment, can be explicitly specified.
+
+\begin{verbatim}
+type :un9 = { { b } { s } }
+\end{verbatim}
+
+Opaque types are used when the inner structure of an aggregate cannot be specified; the alignment for opaque types is mandatory. They are defined simply by enclosing their size between curly braces.
+
+\begin{verbatim}
+type :opaque = align 16 { 32 }
+\end{verbatim}
 
 \subsubsection{Data}
 \label{sec:data}

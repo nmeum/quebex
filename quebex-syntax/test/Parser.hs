@@ -1,10 +1,26 @@
 module Parser where
 
 import Language.QBE
-import Language.QBE.Parser (dataDef, funcDef)
+import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Text.ParserCombinators.Parsec as P
+
+typeTests :: TestTree
+typeTests =
+  testGroup
+    "Aggregate Type Definition"
+    [ testCase "Opaque type with alignment" $
+        let v = TypeDef "opaque" (Just AlignLongLong) (AOpaque 32)
+         in parse "type :opaque = align 16 { 32 }" @?= Right v,
+      testCase "Regular type with multiple fields" $
+        let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
+            v = TypeDef "twofloats" Nothing (ARegular f)
+         in parse "type :twofloats = { s, s }" @?= Right v
+    ]
+  where
+    parse :: String -> Either P.ParseError TypeDef
+    parse = P.parse typeDef ""
 
 dataTests :: TestTree
 dataTests =
@@ -44,7 +60,7 @@ dataTests =
          in parse "data $c = { l -1, l 23 }" @?= Right v,
       testCase "Data definition with specified alignment and linkage" $
         let v = DataDef [LExport] "b" (Just AlignLong) [OZeroFill 1000]
-          in parse "export data $b = align 8 { z 1000 }" @?= Right v
+         in parse "export data $b = align 8 { z 1000 }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
@@ -83,4 +99,4 @@ mkParser :: TestTree
 mkParser =
   testGroup
     "Tests for the QBE parser"
-    [dataTests, funcTests]
+    [typeTests, dataTests, funcTests]

@@ -53,6 +53,25 @@ data AllocAlign
   | AlignLongLong
   deriving (Show, Eq)
 
+data TypeDef
+  = TypeDef
+  { aggName :: String,
+    aggAlign :: Maybe AllocAlign,
+    aggType :: AggType
+  }
+  deriving (Show, Eq)
+
+data SubType
+  = SExtType ExtType
+  | SUserDef String
+  deriving (Show, Eq)
+
+data AggType
+  = ARegular [(SubType, Maybe Word64)]
+  -- TODO: union type
+  | AOpaque Word64
+  deriving (Show, Eq)
+
 data DataDef
   = DataDef
   { linkage :: [Linkage],
