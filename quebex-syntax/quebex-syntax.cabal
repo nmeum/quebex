@@ -1,0 +1,53 @@
+cabal-version:      3.4
+name:               quebex-syntax
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            GPL-3.0-only
+license-file:       LICENSE
+author:             Sören Tempel
+maintainer:         soeren+git@soeren-tempel.net
+-- copyright:
+category:           Language
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+
+library
+    import:           warnings
+    -- other-extensions:
+    hs-source-dirs:   src
+    default-language: GHC2021
+
+    other-modules:
+      Language.QBE.Util
+
+    exposed-modules:
+      Language.QBE,
+      Language.QBE.Parser
+
+    build-depends:
+      base,
+      parsec,
+      parsec3-numbers
+
+test-suite quebex-syntax-test
+    import:           warnings
+    default-language: Haskell2010
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+
+    other-modules:
+      Parser
+
+    build-depends:
+        base,
+        quebex-syntax,
+        parsec,
+        tasty        >=1.4.3,
+        tasty-hunit  >=0.10,
+        tasty-golden >=2.3.5,
