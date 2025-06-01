@@ -51,10 +51,11 @@ import Text.ParserCombinators.Parsec
 
 This is the description of the
 \href{https://c9x.me/compile/doc/il-v1.2.html}{QBE intermediate language},
-specified through ParSec parser combinators and generated from a literate
-Haskell file. The natural language description is derived from the offical QBE
-IL documentation, licensed under MIT. Presently, this implementation targets
-version 1.2 of the QBE intermediate language.
+specified through \href{https://hackage.haskell.org/package/parsec}{Parsec}
+parser combinators and generated from a literate Haskell file. The natural
+language description is derived from the offical QBE IL documentation, licensed
+under MIT. Presently, this implementation targets version 1.2 of the QBE
+intermediate language.
 
 \section{Basic Concepts}
 
@@ -107,6 +108,23 @@ export function w $main() {
 If you have read the LLVM language reference, you might recognize the
 example above. In comparison, QBE makes a much lighter use of types and
 the syntax is terser.
+
+\subsection{Parser Combinators}
+
+\ignore{
+\begin{code}
+bracesNL :: Parser a -> Parser a
+bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
+\end{code}
+}
+
+The original QBE specification defines the syntax using a BNF grammar. In
+contrast, this document defines it using Parsec parser combinators. As such,
+this specification is less formal but more accurate as the parsing code is
+actually executable. Consequently, this specification also captures constructs
+omitted in the original specification (e.g., identifiers, statements, or string
+literals). Nonetheless, the formal language recognized by these combinators
+aims to be equivalent to the one of the BNF grammar.
 
 \subsection{Sigils}
 
@@ -423,10 +441,7 @@ typeDef = do
   _ <- wsNL1 (char '=')
   -- TODO: Provide common alignment parser combinator.
   a <- optionMaybe (ws1 (string "align") >> wsNL align)
-  braces (aggRegular <|> aggOpaque) <&> Q.TypeDef i a
- where
-  -- TODO: Move this to a common combinator
-  braces = between (wsNL $ char '{') (wsNL $ char '}')
+  bracesNL (aggRegular <|> aggOpaque) <&> Q.TypeDef i a
 \end{code}
 
 Aggregate type definitions start with the \texttt{type} keyword. They have file
@@ -476,9 +491,8 @@ dataDef = do
   name <- wsNL1 (string "data") >> wsNL global
   _ <- wsNL (char '=')
   alignment <- optionMaybe (ws1 (string "align") >> wsNL align)
-  braces dataObjs <&> Q.DataDef link name alignment
+  bracesNL dataObjs <&> Q.DataDef link name alignment
  where
-    braces = between (wsNL $ char '{') (wsNL $ char '}')
     dataObjs = sepBy1 dataObj (wsNL $ char ',')
 \end{code}
 
