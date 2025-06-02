@@ -607,8 +607,16 @@ function code. This pointer can be used in \texttt{call} instructions or stored
 in memory.
 
 \begin{code}
+subWordType :: Parser Q.SubWordType
+subWordType = choice
+  [ bind "sb" Q.SignedByte
+  , bind "ub" Q.UnsignedByte
+  , bind "sh" Q.SignedHalf
+  , bind "sh" Q.UnsignedHalf ]
+
 abity :: Parser Q.Abity
 abity = (Q.ABase <$> baseType)
+    <|> (Q.ASubWordType <$> subWordType)
     <|> (Q.AUserDef <$> userDef)
 \end{code}
 

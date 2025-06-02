@@ -18,9 +18,16 @@ data ExtType
   | HalfWord
   deriving (Show, Eq)
 
+data SubWordType
+  = SignedByte
+  | UnsignedByte
+  | SignedHalf
+  | UnsignedHalf
+  deriving (Show, Eq)
+
 data Abity
   = ABase BaseType
-  -- | SubWordType
+  | ASubWordType SubWordType
   | AUserDef String
   deriving (Show, Eq)
 
