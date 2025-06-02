@@ -116,6 +116,9 @@ the syntax is terser.
 bracesNL :: Parser a -> Parser a
 bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
 
+quoted :: Parser a -> Parser a
+quoted = let q = char '"' in between q q
+
 binaryInstr :: (Q.Value -> Q.Value -> Q.Instr) -> String -> Parser Q.Instr
 binaryInstr conc keyword = do
   _ <- ws (string keyword)
@@ -215,15 +218,15 @@ wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
 \subsection{String Literals}
 \label{sec:strlit}
 
+% The string literal is not documented in the original QBE specification.
+% See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n287
+
 \begin{code}
 strLit :: Parser String
 strLit = concat <$> quoted (many strChr)
   where
     strChr :: Parser [Char]
     strChr = (singleton <$> noneOf "\"\\") <|> escSeq
-
-    quoted :: Parser a -> Parser a
-    quoted = let q = char '"' in between q q
 
     escSeq :: Parser [Char]
     escSeq = try $ do
@@ -298,17 +301,6 @@ either by zero-extension, or by sign-extension.
 % See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n304
 
 \begin{code}
-constant :: Parser Q.Const
-constant =
-  (Q.Number <$> decNumber)
-    <|> (Q.SFP <$> sfp)
-    <|> (Q.DFP <$> dfp)
-    <|> (Q.Global <$> ident)
-    <?> "const"
-  where
-    sfp = string "s_" >> float
-    dfp = string "d_" >> float
-
 dynConst :: Parser Q.DynConst
 dynConst =
   (Q.Const <$> constant)
@@ -324,6 +316,19 @@ time. Consequently, dynamic constants can only occur in function bodies.
 The representation of integers is two's complement.
 Floating-point numbers are represented using the single-precision and
 double-precision formats of the IEEE 754 standard.
+
+\begin{code}
+constant :: Parser Q.Const
+constant =
+  (Q.Number <$> decNumber)
+    <|> (Q.SFP <$> sfp)
+    <|> (Q.DFP <$> dfp)
+    <|> (Q.Global <$> ident)
+    <?> "const"
+  where
+    sfp = string "s_" >> float
+    dfp = string "d_" >> float
+\end{code}
 
 Constants specify a sequence of bits and are untyped. They are always
 parsed as 64-bit blobs. Depending on the context surrounding a constant,
@@ -367,9 +372,6 @@ temporaries.
 
 \subsection{Linkage}
 \label{sec:linkage}
-
-% The string literal is not documented in the original QBE specification.
-% See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n287
 
 \begin{code}
 linkage :: Parser Q.Linkage
@@ -533,7 +535,14 @@ dataObj =
       t <- wsNL1 extType
       i <- many1 (wsNL dataItem)
       return $ Q.OItem t i
+\end{code}
 
+Objects are described by a sequence of fields that start with a type
+letter. This letter can either be an extended type, or the \texttt{z} letter.
+If the letter used is an extended type, the data item following
+specifies the bits to be stored in the field.
+
+\begin{code}
 dataItem :: Parser Q.DataItem
 dataItem =
   (Q.DString <$> strLit)
@@ -544,10 +553,7 @@ dataItem =
       return $ Q.DSymbol i off
 \end{code}
 
-Objects are described by a sequence of fields that start with a type
-letter. This letter can either be an extended type, or the \texttt{z} letter.
-If the letter used is an extended type, the data item following
-specifies the bits to be stored in the field. When several data items
+Within each object, several items can be defined. When several data items
 follow a letter, they initialize multiple fields of the same size.
 
 \begin{code}
@@ -738,6 +744,8 @@ assign = do
 statement :: Parser Q.Statement
 statement = assign
 \end{code}
+
+To-Do.
 
 \subsection{Jumps}
 
