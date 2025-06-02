@@ -1,0 +1,7 @@
+data $blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = {}
+type :bluuuuuuuuuuuuuuuuuuuuuuuuubbbbbb = {}
+
+function $foo() {
+@start
+hlt
+}
