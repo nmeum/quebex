@@ -1,6 +1,6 @@
 module Parser where
 
-import Language.QBE
+import Language.QBE.Types
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Test.Tasty
 import Test.Tasty.HUnit

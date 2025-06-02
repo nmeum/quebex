@@ -43,12 +43,15 @@ test-suite quebex-syntax-test
     main-is:          Main.hs
 
     other-modules:
-      Parser
+      Parser,
+      Golden
 
     build-depends:
         base,
         quebex-syntax,
         parsec,
+        process,
+        filepath,
         tasty        >=1.4.3,
         tasty-hunit  >=0.10,
         tasty-golden >=2.3.5,

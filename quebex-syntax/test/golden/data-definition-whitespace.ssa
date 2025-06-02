@@ -1,0 +1,22 @@
+data $foo1 = {z 42}
+
+data
+
+
+$foo2
+
+#foo
+=
+
+ {    w    10              
+
+  #bla
+
+ }
+
+data $foo3
+={ z 42 }
+
+data
+#test
+$foo4={z 42}
