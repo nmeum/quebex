@@ -66,9 +66,12 @@ data SubType
   | SUserDef String
   deriving (Show, Eq)
 
+type Field = (SubType, Maybe Word64)
+
+-- TODO: Type for tuple
 data AggType
-  = ARegular [(SubType, Maybe Word64)]
-  -- TODO: union type
+  = ARegular [Field]
+  | AUnion [[Field]]
   | AOpaque Word64
   deriving (Show, Eq)
 

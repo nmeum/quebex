@@ -13,10 +13,24 @@ typeTests =
     [ testCase "Opaque type with alignment" $
         let v = TypeDef "opaque" (Just AlignLongLong) (AOpaque 32)
          in parse "type :opaque = align 16 { 32 }" @?= Right v,
+      testCase "Regular empty type" $
+        let v = TypeDef "empty" Nothing (ARegular [])
+          in parse "type :empty = {}" @?= Right v,
       testCase "Regular type with multiple fields" $
         let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
             v = TypeDef "twofloats" Nothing (ARegular f)
-         in parse "type :twofloats = { s, s }" @?= Right v
+         in parse "type :twofloats = { s, s }" @?= Right v,
+      testCase "Union type with multiple fields" $
+        let f = [[(SExtType Byte, Nothing)], [(SExtType (Base Single), Nothing)]]
+            v = TypeDef "un9" Nothing (AUnion f)
+         in parse "type :un9 = { { b } { s } }" @?= Right v,
+      testCase "Union type with multiple nested fields" $
+        let f =
+              [ [(SExtType (Base Long), Nothing), (SExtType (Base Single), Nothing)],
+                [(SExtType (Base Word), Nothing), (SExtType (Base Long), Nothing)]
+              ]
+            v = TypeDef "un9" Nothing (AUnion f)
+         in parse "type :un9 = { { l, s } { w, l } }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError TypeDef

@@ -30,21 +30,33 @@
 \begin{code}
 module Language.QBE.Parser where
 
-import Data.List (singleton)
 import Data.Functor ((<&>))
+import Data.List (singleton)
 import qualified Language.QBE as Q
 import Language.QBE.Util (bind, decNumber, float)
 import Text.ParserCombinators.Parsec
   ( Parser,
+    alphaNum,
     anyChar,
+    between,
     char,
+    choice,
+    letter,
+    many,
+    many1,
     manyTill,
     newline,
+    noneOf,
     oneOf,
+    optionMaybe,
+    sepBy,
+    sepBy1,
+    skipMany,
     skipMany1,
+    string,
+    try,
     (<?>),
     (<|>),
-    choice, string, letter, many, alphaNum, optionMaybe, between, noneOf, try, many1, sepBy1, skipMany
   )
 \end{code}
 }
@@ -439,70 +451,69 @@ flags.
 \label{sec:aggregate-types}
 
 \begin{code}
-subType :: Parser Q.SubType
-subType =
-  (Q.SExtType <$> extType)
-    <|> (Q.SUserDef <$> userDef)
-
--- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".
-aggRegular :: Parser Q.AggType
-aggRegular = Q.ARegular <$> sepBy1 aggRegular' (wsNL $ char ',')
-  where
-    aggRegular' = do
-      -- TODO: newline is required if there is a number argument
-      f <- wsNL subType
-      s <- optionMaybe decNumber
-      pure (f, s)
-
-aggOpaque :: Parser Q.AggType
-aggOpaque = Q.AOpaque <$> wsNL decNumber
-
--- TODO: support union type
 typeDef :: Parser Q.TypeDef
 typeDef = do
   _ <- wsNL1 (string "type")
   i <- wsNL1 userDef
   _ <- wsNL1 (char '=')
   a <- optionMaybe alignSpec
-  bracesNL (aggRegular <|> aggOpaque) <&> Q.TypeDef i a
+  bracesNL (opaqueType <|> unionType <|> regularType) <&> Q.TypeDef i a
 \end{code}
 
 Aggregate type definitions start with the \texttt{type} keyword. They have file
 scope, but types must be defined before being referenced. The inner
-structure of a type is expressed by a comma-separated list of types
-enclosed in curly braces.
+structure of a type is expressed by a comma-separated list of fields.
 
-\begin{verbatim}
-type :fourfloats = { s, s, d, d }
-\end{verbatim}
+\begin{code}
+subType :: Parser Q.SubType
+subType =
+  (Q.SExtType <$> extType)
+    <|> (Q.SUserDef <$> userDef)
 
-For ease of IL generation, a trailing comma is tolerated by the parser.
-In case many items of the same type are sequenced (like in a C array),
-the shorter array syntax can be used.
+field :: Parser Q.Field
+field = do
+  -- TODO: newline is required if there is a number argument
+  f <- wsNL subType
+  s <- optionMaybe decNumber
+  pure (f, s)
 
-\begin{verbatim}
-type :abyteandmanywords = { b, w 100 }
-\end{verbatim}
+-- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".
+fields :: Bool -> Parser [Q.Field]
+fields allowEmpty =
+  (if allowEmpty then sepBy else sepBy1) field (wsNL $ char ',')
+\end{code}
 
-By default, the alignment of an aggregate type is the maximum alignment
-of its members. The alignment can be explicitly specified by the
-programmer.
+A field consists of a subtype, either an extended type or a user-defined type,
+and an optional number expressing the value of this field. In case many items
+of the same type are sequenced (like in a C array), the shorter array syntax
+can be used.
 
-\begin{verbatim}
-type :cryptovector = align 16 { w 4 }
-\end{verbatim}
+\begin{code}
+regularType :: Parser Q.AggType
+regularType = Q.ARegular <$> fields True
+\end{code}
+
+Three different kinds of aggregate types are presentl ysupported: regular
+types, union types and opaque types. The fields of regular types will be
+packed. By default, the alignment of an aggregate type is the maximum alignment
+of its members. The alignment can be explicitly specified by the programmer.
+
+\begin{code}
+unionType :: Parser Q.AggType
+unionType = Q.AUnion <$> many1 (wsNL unionType')
+  where
+    unionType' :: Parser [Q.Field]
+    unionType' = bracesNL $ fields False
+\end{code}
 
 Union types allow the same chunk of memory to be used with different layouts. They are defined by enclosing multiple regular aggregate type bodies in a pair of curly braces. Size and alignment of union types are set to the maximum size and alignment of each variation or, in the case of alignment, can be explicitly specified.
 
-\begin{verbatim}
-type :un9 = { { b } { s } }
-\end{verbatim}
+\begin{code}
+opaqueType :: Parser Q.AggType
+opaqueType = Q.AOpaque <$> wsNL decNumber
+\end{code}
 
 Opaque types are used when the inner structure of an aggregate cannot be specified; the alignment for opaque types is mandatory. They are defined simply by enclosing their size between curly braces.
-
-\begin{verbatim}
-type :opaque = align 16 { 32 }
-\end{verbatim}
 
 \subsubsection{Data}
 \label{sec:data}
