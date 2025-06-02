@@ -244,12 +244,6 @@ dynConst =
   (Q.Const <$> constant)
     <|> (Q.Thread <$> ident)
     <?> "dynconst"
-
-val :: Parser Q.Value
-val =
-  (Q.VConst <$> dynConst)
-    <|> (Q.VLocal <$> local)
-    <?> "val"
 \end{code}
 
 Constants come in two kinds: compile-time constants and dynamic
@@ -288,6 +282,14 @@ resolved and turned into actual numeric constants by the linker.
 When the \texttt{thread} keyword prefixes a symbol name, the
 symbol\textquotesingle s numeric value is resolved at runtime in the
 thread-local storage.
+
+\begin{code}
+val :: Parser Q.Value
+val =
+  (Q.VConst <$> dynConst)
+    <|> (Q.VLocal <$> local)
+    <?> "val"
+\end{code}
 
 Vals are used as arguments in regular, phi, and jump instructions within
 function definitions. They are either constants or function-scope
@@ -453,10 +455,18 @@ dataDef = do
   braces dataObjs <&> Q.DataDef link name alignment
  where
     braces = between (wsNL $ char '{') (wsNL $ char '}')
+    dataObjs = sepBy1 dataObj (wsNL $ char ',')
+\end{code}
 
-dataObjs :: Parser [Q.DataObj]
-dataObjs = sepBy1 dataObj (wsNL $ char ',')
+Data definitions express objects that will be emitted in the compiled
+file. Their visibility and location in the compiled artifact are
+controlled with linkage flags described in the \nameref{sec:linkage}
+section.
 
+They define a global identifier (starting with the sigil \texttt{\$}), that
+will contain a pointer to the object specified by the definition.
+
+\begin{code}
 dataObj :: Parser Q.DataObj
 dataObj =
   (Q.OZeroFill <$> (wsNL1 (char 'z') >> wsNL decNumber))
@@ -474,14 +484,6 @@ dataItem =
       off <- optionMaybe (char '+' >> decNumber)
       return $ Q.DSymbol i off
 \end{code}
-
-Data definitions express objects that will be emitted in the compiled
-file. Their visibility and location in the compiled artifact are
-controlled with linkage flags described in the \nameref{sec:linkage}
-section.
-
-They define a global identifier (starting with the sigil \texttt{\$}), that
-will contain a pointer to the object specified by the definition.
 
 Objects are described by a sequence of fields that start with a type
 letter. This letter can either be an extended type, or the \texttt{z} letter.
@@ -555,7 +557,7 @@ params = between (ws $ char '(') (char ')') params'
 The parameter list is a comma separated list of temporary names prefixed
 by types. The types are used to correctly implement C compatibility.
 When an argument has an aggregate type, a pointer to the aggregate is
-passed by the caller. In the example below, we have to use a load
+passed by thea caller. In the example below, we have to use a load
 instruction to get the value of the first (and only) member of the
 struct.
 
