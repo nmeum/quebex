@@ -28,7 +28,7 @@
 
 \ignore{
 \begin{code}
-module Language.QBE.Parser where
+module Language.QBE.Parser (dataDef, typeDef, funcDef) where
 
 import Data.Functor ((<&>))
 import Data.List (singleton)
