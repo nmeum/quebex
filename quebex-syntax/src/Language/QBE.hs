@@ -19,9 +19,9 @@ data Definition
 parseDef :: Parser Definition
 parseDef =
   choice
-    [ DefData <$> dataDef,
-      DefType <$> typeDef,
-      DefFunc <$> funcDef
+    [ DefType <$> typeDef,
+      DefFunc <$> funcDef,
+      DefData <$> dataDef
     ]
 
 parse :: SourceName -> String -> Either ParseError [Definition]
