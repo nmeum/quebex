@@ -115,6 +115,16 @@ the syntax is terser.
 \begin{code}
 bracesNL :: Parser a -> Parser a
 bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
+
+binaryInstr :: (Q.Value -> Q.Value -> Q.Instr) -> String -> Parser Q.Instr
+binaryInstr conc keyword = do
+  _ <- ws (string keyword)
+  vfst <- ws val <* ws (char ',')
+  conc vfst <$> ws val
+
+-- Can only appear in data and type definitions and hence allows newlines.
+alignSpec :: Parser Q.AllocAlign
+alignSpec = (ws1 (string "align")) >> wsNL align
 \end{code}
 }
 
@@ -451,8 +461,7 @@ typeDef = do
   _ <- wsNL1 (string "type")
   i <- wsNL1 userDef
   _ <- wsNL1 (char '=')
-  -- TODO: Provide common alignment parser combinator.
-  a <- optionMaybe (ws1 (string "align") >> wsNL align)
+  a <- optionMaybe alignSpec
   bracesNL (aggRegular <|> aggOpaque) <&> Q.TypeDef i a
 \end{code}
 
@@ -502,7 +511,7 @@ dataDef = do
   link <- many linkage
   name <- wsNL1 (string "data") >> wsNL global
   _ <- wsNL (char '=')
-  alignment <- optionMaybe (ws1 (string "align") >> wsNL align)
+  alignment <- optionMaybe alignSpec
   bracesNL dataObjs <&> Q.DataDef link name alignment
  where
     dataObjs = sepBy1 dataObj (wsNL $ char ',')
@@ -719,11 +728,6 @@ instr =
     [ binaryInstr Q.Add "add",
       binaryInstr Q.Sub "sub"
     ]
-  where
-    binaryInstr conc keyword = do
-      _ <- ws (string keyword)
-      vfst <- ws val <* ws (char ',')
-      conc vfst <$> ws val
 
 assign :: Parser Q.Statement
 assign = do
