@@ -143,6 +143,9 @@ the BNF grammar.
 \subsection{Identifiers}
 \label{sec:identifiers}
 
+% Ident is not documented in the original QBE specification.
+% See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n304
+
 \begin{code}
 ident :: Parser String
 ident = do
@@ -153,8 +156,8 @@ ident = do
 
 Identifiers for data, types, and functions can start with any ASCII letter or
 the special characters \texttt{.} and \texttt{\_}. This initial character can
-be followed by a sequence of any alphanumeric character and the special
-characters \texttt{\$}, \texttt{.}, and \texttt{\_}.
+be followed by a sequence of zero or more alphanumeric characters and the
+special characters \texttt{\$}, \texttt{.}, and \texttt{\_}.
 
 \subsection{Sigils}
 
@@ -296,9 +299,6 @@ either by zero-extension, or by sign-extension.
 
 \subsection{Constants and Vals}
 \label{sec:constants-and-vals}
-
-% Ident is not documented in the original QBE specification.
-% See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n304
 
 \begin{code}
 dynConst :: Parser Q.DynConst
