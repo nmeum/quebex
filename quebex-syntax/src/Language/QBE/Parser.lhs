@@ -172,11 +172,11 @@ wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
 \subsection{String Literals}
 
 \begin{code}
-stringLit :: Parser String
-stringLit = concat <$> stringLit'
+strLit :: Parser String
+strLit = concat <$> quoted (many strChr)
   where
-    stringLit' :: Parser [[Char]]
-    stringLit' = quoted $ many ((singleton <$> noneOf "\"\\") <|> escSeq)
+    strChr :: Parser [Char]
+    strChr = (singleton <$> noneOf "\"\\") <|> escSeq
 
     quoted :: Parser a -> Parser a
     quoted = let q = char '"' in between q q
@@ -336,8 +336,8 @@ linkage =
       _ <- ws1 $ string "section"
       -- TODO: make this less awful
       choice
-        [ try $ ws1 stringLit >>= (\x -> wsNL stringLit <&> Q.LSection x . pure),
-          wsNL stringLit <&> (`Q.LSection` Nothing)
+        [ try $ ws1 strLit >>= (\x -> wsNL strLit <&> Q.LSection x . pure),
+          wsNL strLit <&> (`Q.LSection` Nothing)
         ]
 \end{code}
 
@@ -493,7 +493,7 @@ dataObj =
 
 dataItem :: Parser Q.DataItem
 dataItem =
-  (Q.DString <$> stringLit)
+  (Q.DString <$> strLit)
     <|> (Q.DConst <$> constant)
     <|> do
       i <- global
