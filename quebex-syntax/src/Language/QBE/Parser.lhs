@@ -334,11 +334,15 @@ linkage =
     <|> wsNL (bind "thread" Q.LThread)
     <|> do
       _ <- ws1 $ string "section"
-      -- TODO: make this less awful
-      choice
-        [ try $ ws1 strLit >>= (\x -> wsNL strLit <&> Q.LSection x . pure),
-          wsNL strLit <&> (`Q.LSection` Nothing)
-        ]
+      (try secWithFlags) <|> sec
+  where
+    sec :: Parser Q.Linkage
+    sec = wsNL strLit <&> (`Q.LSection` Nothing)
+
+    secWithFlags :: Parser Q.Linkage
+    secWithFlags = do
+      n <- ws1 strLit
+      wsNL strLit <&> Q.LSection n . Just
 \end{code}
 
 Function and data definitions (see below) can specify linkage
