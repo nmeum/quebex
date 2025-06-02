@@ -46,7 +46,8 @@ import Text.ParserCombinators.Parsec
     (<|>),
     choice, string, letter, many, alphaNum, optionMaybe, between, noneOf, try, many1, sepBy1, skipMany
   )
-\end{code}}
+\end{code}
+}
 
 This is the description of the
 \href{https://c9x.me/compile/doc/il-v1.2.html}{QBE intermediate language},
@@ -83,7 +84,8 @@ comment = skipMany blankNL >> comment' >> skipMany blankNL
 \begin{code}
 skipNoCode :: Parser () -> Parser ()
 skipNoCode blankP = try (skipMany1 comment <?> "comments") <|> blankP
-\end{code}}
+\end{code}
+}
 
 Here is a complete "Hello World" IL file which defines a function that
 prints to the screen. Since the string is not a first class object (only
@@ -155,6 +157,7 @@ In data and type definitions, newlines may also be used as spaces to
 prevent overly long lines. When exactly one of two consecutive tokens is
 a symbol (for example \texttt{,} or \texttt{=} or \texttt{\{}), spacing may be omitted.
 
+\ignore{
 \begin{code}
 ws :: Parser a -> Parser a
 ws p = p <* skipMany blank
@@ -168,6 +171,7 @@ wsNL p = p <* skipNoCode (skipMany blankNL)
 wsNL1 :: Parser a -> Parser a
 wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
 \end{code}
+}
 
 \subsection{String Literals}
 
