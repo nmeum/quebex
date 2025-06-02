@@ -627,7 +627,7 @@ param = (Q.Env <$> (ws1 (string "env") >> local))
 params :: Parser [Q.FuncParam]
 params = between (ws $ char '(') (char ')') params'
   where
-    params' = sepBy1 param (ws $ char ',')
+    params' = sepBy param (ws $ char ',')
 \end{code}
 
 The parameter list is a comma separated list of temporary names prefixed

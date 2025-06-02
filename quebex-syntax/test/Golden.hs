@@ -1,11 +1,11 @@
 module Golden (goldenTests) where
 
+import Language.QBE (parse)
 import System.Exit (ExitCode (..))
 import System.FilePath
 import System.IO (IOMode (WriteMode), hClose, openFile)
 import System.Process
 import Test.Tasty
-import Language.QBE (parse)
 import Test.Tasty.Golden.Advanced
 
 runQBE :: FilePath -> IO ExitCode
@@ -27,7 +27,7 @@ runQuebex filePath = do
   case parse filePath content of
     Right _ -> pure ExitSuccess
     Left _err -> do
-      --fail $ show err
+      -- fail $ show err
       pure $ ExitFailure 1
 
 simpleCmp :: ExitCode -> ExitCode -> IO (Maybe String)
@@ -60,4 +60,6 @@ goldenTests :: TestTree
 goldenTests =
   testGroup
     "goldenTests"
-    [ runTest "data-definition-whitespace"]
+    [ runTest "data-definition-whitespace",
+      runTest "empty-definitions"
+    ]
