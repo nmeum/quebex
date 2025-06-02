@@ -769,7 +769,7 @@ a function. The three kinds of jumps available are described in the
 following list.
 
 \begin{enumerate}
-  \item \textbf{Unconditional jump.} Simply jumps to another block of the same function.
+  \item \textbf{Unconditional jump.} Jumps to another block of the same function.
   \item \textbf{Conditional jump.} When its word argument is non-zero, it jumps to its first label argument; otherwise it jumps to the other label. The argument must be of word type; because of subtyping a long argument can be passed, but only its least significant 32 bits will be compared to 0.
   \item \textbf{Function return.} Terminates the execution of the current function, optionally returning a value to the caller. The value returned must be of the type given in the function prototype. If the function prototype does not specify a return type, no return value can be used.
   \item \textbf{Program termination.} Terminates the execution of the program with a target-dependent error. This instruction can be used when it is expected that the execution never reaches the end of the block it closes; for example, after having called a function such as \texttt{exit()}.
