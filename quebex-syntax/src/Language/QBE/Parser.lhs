@@ -49,13 +49,13 @@ import Text.ParserCombinators.Parsec
 \end{code}
 }
 
-This is the description of the
+This an executable description of the
 \href{https://c9x.me/compile/doc/il-v1.2.html}{QBE intermediate language},
 specified through \href{https://hackage.haskell.org/package/parsec}{Parsec}
-parser combinators and generated from a literate Haskell file. The natural
-language description is derived from the offical QBE IL documentation, licensed
-under MIT. Presently, this implementation targets version 1.2 of the QBE
-intermediate language.
+parser combinators and generated from a literate Haskell file. The description
+is derived from the original QBE IL documentation, licensed under MIT.
+Presently, this implementation targets version 1.2 of the QBE intermediate
+language and aims to be equivalent with the original specification.
 
 \section{Basic Concepts}
 
