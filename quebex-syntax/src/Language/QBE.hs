@@ -14,6 +14,7 @@ data Definition
   = DefData DataDef
   | DefType TypeDef
   | DefFunc FuncDef
+  deriving (Eq, Show)
 
 parseDef :: Parser Definition
 parseDef =
