@@ -30,6 +30,7 @@
 \begin{code}
 module Language.QBE.Parser where
 
+import Data.List (singleton)
 import Data.Functor ((<&>))
 import qualified Language.QBE as Q
 import Language.QBE.Util (bind, decNumber, float)
@@ -168,6 +169,31 @@ wsNL1 :: Parser a -> Parser a
 wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
 \end{code}
 
+\subsection{String Literals}
+
+\begin{code}
+stringLit :: Parser String
+stringLit = concat <$> stringLit'
+  where
+    stringLit' :: Parser [[Char]]
+    stringLit' = quoted $ many ((singleton <$> noneOf "\"\\") <|> escSeq)
+
+    quoted :: Parser a -> Parser a
+    quoted = let q = char '"' in between q q
+
+    escSeq :: Parser [Char]
+    escSeq = try $ do
+      esc <- char '\\'
+      chr <- anyChar
+      return $ [esc, chr]
+\end{code}
+
+Strings are enclosed by double quotes and are, for example, used to specify a
+section name as part of the \nameref{sec:linkage} information. Within a string,
+a double quote can be escaped using a \texttt{\textbackslash} character. All
+escape sequences, including double quote escaping, are passed through as-is to
+the generated assembly file.
+
 \section{Types}
 
 \subsection{Simple Types}
@@ -302,16 +328,6 @@ temporaries.
 % See https://c9x.me/git/qbe.git/tree/parse.c?h=v1.2#n287
 
 \begin{code}
-stringLit :: Parser String
-stringLit =
-  quoted $ many (noneOf "\"\\" <|> escSeq)
- where
-  quoted :: Parser a -> Parser a
-  quoted = let q = char '"' in between q q
-
-  escSeq :: Parser Char
-  escSeq = try (char '\\' >> (char '\"' <|> char '\\'))
-
 linkage :: Parser Q.Linkage
 linkage =
   wsNL (bind "export" Q.LExport)

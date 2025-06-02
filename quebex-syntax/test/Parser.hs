@@ -60,7 +60,10 @@ dataTests =
          in parse "data $c = { l -1, l 23 }" @?= Right v,
       testCase "Data definition with specified alignment and linkage" $
         let v = DataDef [LExport] "b" (Just AlignLong) [OZeroFill 1000]
-         in parse "export data $b = align 8 { z 1000 }" @?= Right v
+         in parse "export data $b = align 8 { z 1000 }" @?= Right v,
+      testCase "Data definition with linkage section and string escape sequences" $
+        let v = DataDef [LSection "f\\oo\\\"bar" Nothing] "b" (Just AlignLong) [OZeroFill 1]
+         in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
