@@ -527,7 +527,7 @@ dataDef = do
   alignment <- optionMaybe alignSpec
   bracesNL dataObjs <&> Q.DataDef link name alignment
  where
-    dataObjs = sepBy1 dataObj (wsNL $ char ',')
+    dataObjs = sepBy dataObj (wsNL $ char ',')
 \end{code}
 
 Data definitions express objects that will be emitted in the compiled

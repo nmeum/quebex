@@ -43,6 +43,9 @@ dataTests =
     [ testCase "Data definition with zero fill" $
         let v = DataDef [] "foo" Nothing [OZeroFill 42]
          in parse "data $foo = { z 42 }" @?= Right v,
+      testCase "Data definition with empty value" $
+        let v = DataDef [] "foo" Nothing []
+         in parse "data $foo = {}" @?= Right v,
       testCase "Data definition without optional spaces" $
         let v = DataDef [] "foo" Nothing [OZeroFill 42]
          in parse "data $foo={z 42}" @?= Right v,
