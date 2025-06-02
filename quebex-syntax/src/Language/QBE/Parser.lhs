@@ -586,7 +586,7 @@ funcDef = do
   retTy <- optionMaybe (ws1 abity)
   name <- ws global
   args <- wsNL params
-  body <- between (wsNL $ char '{') (char '}') $ many1 block
+  body <- between (wsNL1 $ char '{') (char '}') $ many1 block
   return $ Q.FuncDef link name retTy args body
 \end{code}
 
