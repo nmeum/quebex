@@ -21,7 +21,7 @@
 
 \begin{document}
 
-\title{QBE Intermediate Language}
+\title{QBE Intermediate Language\vspace{-2em}}
 \date{}
 \maketitle
 \frenchspacing
@@ -32,7 +32,7 @@ module Language.QBE.Parser where
 
 import Data.Functor ((<&>))
 import Data.List (singleton)
-import qualified Language.QBE as Q
+import qualified Language.QBE.Types as Q
 import Language.QBE.Util (bind, decNumber, float)
 import Text.ParserCombinators.Parsec
   ( Parser,

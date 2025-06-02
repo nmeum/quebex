@@ -27,6 +27,7 @@ library
 
     exposed-modules:
       Language.QBE,
+      Language.QBE.Types,
       Language.QBE.Parser
 
     build-depends:
