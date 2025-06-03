@@ -138,8 +138,8 @@ binaryInstr conc keyword = do
   conc vfst <$> ws val
 
 -- Can only appear in data and type definitions and hence allows newlines.
-alignSpec :: Parser Q.AllocAlign
-alignSpec = (ws1 (string "align")) >> wsNL align
+alignSpec :: Parser Q.AllocSize
+alignSpec = (ws1 (string "align")) >> wsNL allocSize
 \end{code}
 }
 
@@ -568,8 +568,8 @@ Within each object, several items can be defined. When several data items
 follow a letter, they initialize multiple fields of the same size.
 
 \begin{code}
-align :: Parser Q.AllocAlign
-align =
+allocSize :: Parser Q.AllocSize
+allocSize =
   choice
     [ bind "4" Q.AlignWord,
       bind "8" Q.AlignLong,
@@ -750,9 +750,15 @@ directly to the loop block.
 instr :: Parser Q.Instr
 instr =
   choice
-    [ binaryInstr Q.Add "add",
-      binaryInstr Q.Sub "sub"
+    [ try $ binaryInstr Q.Add "add",
+      try $ binaryInstr Q.Sub "sub",
+      try $ allocInstr
     ]
+
+allocInstr :: Parser Q.Instr
+allocInstr = do
+  siz <- (ws $ string "alloc") >> (ws1 allocSize)
+  decNumber <&> Q.Alloc siz
 
 assign :: Parser Q.Statement
 assign = do

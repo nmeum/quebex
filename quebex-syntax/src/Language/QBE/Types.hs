@@ -54,7 +54,7 @@ data Linkage
   | LSection String (Maybe String)
   deriving (Show, Eq)
 
-data AllocAlign
+data AllocSize
   = AlignWord
   | AlignLong
   | AlignLongLong
@@ -63,7 +63,7 @@ data AllocAlign
 data TypeDef
   = TypeDef
   { aggName :: String,
-    aggAlign :: Maybe AllocAlign,
+    aggAlign :: Maybe AllocSize,
     aggType :: AggType
   }
   deriving (Show, Eq)
@@ -86,7 +86,7 @@ data DataDef
   = DataDef
   { linkage :: [Linkage],
     name :: String,
-    align :: Maybe AllocAlign,
+    align :: Maybe AllocSize,
     objs :: [DataObj]
   }
   deriving (Show, Eq)
@@ -128,6 +128,7 @@ data JumpInstr
 data Instr
   = Add Value Value
   | Sub Value Value
+  | Alloc AllocSize Word64
   deriving (Show, Eq)
 
 data VolatileInstr

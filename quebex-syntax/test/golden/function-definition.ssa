@@ -4,5 +4,7 @@ export function w $main(l %s0, l %s1) {
 	blit %s0, %s1, 8
 	jmp @bla
 @bla
+	%A0 =l alloc4 8
+	storew 43,  %A0
 	hlt
 }
