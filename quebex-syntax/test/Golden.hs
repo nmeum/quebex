@@ -61,5 +61,6 @@ goldenTests =
   testGroup
     "goldenTests"
     [ runTest "data-definition-whitespace",
-      runTest "empty-definitions"
+      runTest "empty-definitions",
+      runTest "function-definition"
     ]

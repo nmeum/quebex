@@ -1,0 +1,8 @@
+export function w $main(l %s0, l %s1) {
+@start
+	storew 1, %s0
+	blit %s0, %s1, 8
+	jmp @bla
+@bla
+	hlt
+}
