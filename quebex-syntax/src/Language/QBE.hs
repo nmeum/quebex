@@ -1,4 +1,4 @@
-module Language.QBE (Definition (..), Language.QBE.parse) where
+module Language.QBE (Program, Definition (..), Language.QBE.parse) where
 
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Language.QBE.Types (DataDef, FuncDef, TypeDef)
@@ -24,5 +24,7 @@ parseDef =
       DefData <$> dataDef
     ]
 
-parse :: SourceName -> String -> Either ParseError [Definition]
+type Program = [Definition]
+
+parse :: SourceName -> String -> Either ParseError Program
 parse = Text.ParserCombinators.Parsec.parse (many parseDef)
