@@ -130,10 +130,14 @@ data Instr
   | Sub Value Value
   deriving (Show, Eq)
 
+data VolatileInstr
+  = Store ExtType Value Value
+  | Blit Value Value Word64
+  deriving (Show, Eq)
+
 data Statement
   = Assign String BaseType Instr
-  -- | Call
-  -- | Volative
+  | Volatile VolatileInstr
   deriving (Show, Eq)
 
 data Block

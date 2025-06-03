@@ -760,8 +760,25 @@ assign = do
   t <- ws (char '=') >> ws1 baseType
   Q.Assign n t <$> instr
 
+volatileInstr :: Parser Q.Statement
+volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
+
+storeInstr :: Parser Q.VolatileInstr
+storeInstr = do
+  t <- string "store" >> ws1 extType
+  v <- ws val
+  _ <- ws $ char ','
+  ws val <&> Q.Store t v
+
+blitInstr :: Parser Q.VolatileInstr
+blitInstr = do
+  v1 <- (ws1 $ string "blit") >> ws val <* (ws $ char ',')
+  v2 <- ws val <* (ws $ char ',')
+  nb <- decNumber
+  return $ Q.Blit v1 v2 nb
+
 statement :: Parser Q.Statement
-statement = assign
+statement = assign <|> volatileInstr
 \end{code}
 
 To-Do.
