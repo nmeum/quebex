@@ -3,9 +3,13 @@ module Language.QBE.Simulator where
 import Data.Word
 import Control.Monad.Reader (ReaderT)
 import Control.Monad.State (StateT)
-import Control.Monad.Except (ExceptT)
+import Control.Monad.Except (ExceptT,liftEither, throwError)
 import qualified Data.Map as Map
 import qualified Language.QBE.Types as QBE
+
+data EvalError
+  = TypingError
+  | NotImplemented
 
 data RegVal
   = EByte Word8
@@ -15,25 +19,25 @@ data RegVal
   | ESingle Float
   | EDouble Double
 
-addVals :: RegVal -> RegVal -> Maybe RegVal
-addVals (EByte lhs) (EByte rhs) = Just (EByte $ lhs + rhs)
-addVals (EHalf lhs) (EHalf rhs) = Just (EHalf $ lhs + rhs)
-addVals (EWord lhs) (EWord rhs) = Just (EWord $ lhs + rhs)
-addVals (ELong lhs) (ELong rhs) = Just (ELong $ lhs + rhs)
-addVals (ESingle lhs) (ESingle rhs) = Just (ESingle $ lhs + rhs)
-addVals (EDouble lhs) (EDouble rhs) = Just (EDouble $ lhs + rhs)
-addVals _ _ = Nothing
+addVals :: RegVal -> RegVal -> Either EvalError RegVal
+addVals (EByte lhs) (EByte rhs) = Right (EByte $ lhs + rhs)
+addVals (EHalf lhs) (EHalf rhs) = Right (EHalf $ lhs + rhs)
+addVals (EWord lhs) (EWord rhs) = Right (EWord $ lhs + rhs)
+addVals (ELong lhs) (ELong rhs) = Right (ELong $ lhs + rhs)
+addVals (ESingle lhs) (ESingle rhs) = Right (ESingle $ lhs + rhs)
+addVals (EDouble lhs) (EDouble rhs) = Right (EDouble $ lhs + rhs)
+addVals _ _ = Left TypingError
 
-assertType :: QBE.ExtType -> RegVal -> Maybe RegVal
-assertType QBE.Byte v@(EByte _) = Just v
-assertType _ _ = Nothing
+assertType :: QBE.ExtType -> RegVal -> Either EvalError RegVal
+assertType QBE.Byte v@(EByte _) = Right v
+assertType _ _ = Left TypingError
 
 ------------------------------------------------------------------------
 
 type Env = Map.Map String RegVal
 
-lookupValue :: Env -> QBE.Value -> Maybe RegVal
-lookupValue = error "not implemented"
+lookupValue :: Env -> QBE.Value -> ExceptT EvalError IO RegVal
+lookupValue _ _ = throwError NotImplemented
 
 type Exec a = StateT Env (ExceptT RegVal IO)
 
@@ -41,11 +45,11 @@ type Exec a = StateT Env (ExceptT RegVal IO)
 -- execVolatile = _
 
 -- QBE.ExtType gibt mir den return type der Instruktion an.
-execInstr :: Env -> QBE.ExtType -> QBE.Instr -> Maybe RegVal
+execInstr :: Env -> QBE.ExtType -> QBE.Instr -> ExceptT EvalError IO RegVal
 execInstr env retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue env lhs
   v2 <- lookupValue env rhs
-  addVals v1 v2 >>= assertType retTy
+  liftEither (addVals v1 v2) >>= liftEither . assertType retTy
 execInstr _ _ _ = error "not implemented"
 
 -- execStmt :: Statement -> Exec ()
