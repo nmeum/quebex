@@ -14,7 +14,7 @@ extra-doc-files:    CHANGELOG.md
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -ddump-splices
 
 library
     import:           warnings
@@ -24,11 +24,13 @@ library
 
     build-depends:
       base ^>=4.19.1.0,
+      template-haskell,
       quebex-syntax,
       containers,
       mtl
 
     exposed-modules:
+      Language.QBE.Generator,
       Language.QBE.Simulator
 
 test-suite quebex-test
