@@ -1,7 +1,7 @@
 module Language.QBE.Simulator where
 
 import Data.Word
-import Control.Monad.Reader (ReaderT)
+import Control.Monad.Reader (ReaderT, ask)
 import Control.Monad.State (StateT)
 import Control.Monad.Except (ExceptT,liftEither, throwError)
 import qualified Data.Map as Map
@@ -36,21 +36,21 @@ assertType _ _ = Left TypingError
 
 type Env = Map.Map String RegVal
 
-lookupValue :: Env -> QBE.Value -> ExceptT EvalError IO RegVal
-lookupValue _ _ = throwError NotImplemented
+lookupValue :: QBE.Value -> Exec RegVal
+lookupValue _ = throwError NotImplemented
 
-type Exec a = StateT Env (ExceptT RegVal IO)
+type Exec a = StateT Env (ExceptT EvalError IO) a
 
 -- execVolatile :: VolatileInstr -> Exec ()
 -- execVolatile = _
 
 -- QBE.ExtType gibt mir den return type der Instruktion an.
-execInstr :: Env -> QBE.ExtType -> QBE.Instr -> ExceptT EvalError IO RegVal
-execInstr env retTy (QBE.Add lhs rhs) = do
-  v1 <- lookupValue env lhs
-  v2 <- lookupValue env rhs
+execInstr :: QBE.ExtType -> QBE.Instr -> Exec RegVal
+execInstr retTy (QBE.Add lhs rhs) = do
+  v1 <- lookupValue lhs
+  v2 <- lookupValue rhs
   liftEither (addVals v1 v2) >>= liftEither . assertType retTy
-execInstr _ _ _ = error "not implemented"
+execInstr _ _ = error "not implemented"
 
 -- execStmt :: Statement -> Exec ()
 -- execStmt (VolatileInstr v) = execVolatile v
