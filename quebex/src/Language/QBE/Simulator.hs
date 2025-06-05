@@ -1,11 +1,12 @@
 module Language.QBE.Simulator where
 
-import Data.Word
+import Control.Monad.Except (ExceptT, liftEither, throwError)
 import Control.Monad.Reader (ReaderT, ask)
 import Control.Monad.State (StateT)
-import Control.Monad.Except (ExceptT,liftEither, throwError)
-import qualified Data.Map as Map
-import qualified Language.QBE.Types as QBE
+import Data.Map qualified as Map
+import Data.Word
+import Language.QBE.Generator (generateOperators)
+import Language.QBE.Types qualified as QBE
 
 data EvalError
   = TypingError
@@ -44,7 +45,6 @@ type Exec a = StateT Env (ExceptT EvalError IO) a
 -- execVolatile :: VolatileInstr -> Exec ()
 -- execVolatile = _
 
--- QBE.ExtType gibt mir den return type der Instruktion an.
 execInstr :: QBE.ExtType -> QBE.Instr -> Exec RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue lhs
