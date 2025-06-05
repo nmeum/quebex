@@ -30,8 +30,10 @@ library
       mtl
 
     exposed-modules:
-      Language.QBE.Generator,
-      Language.QBE.Simulator
+      Language.QBE.Simulator,
+      Language.QBE.Simulator.Generator,
+      Language.QBE.Simulator.Expression,
+      Language.QBE.Simulator.Error
 
 test-suite quebex-test
     import:           warnings

@@ -1,4 +1,4 @@
-module Language.QBE.Generator (generateOperators) where
+module Language.QBE.Simulator.Generator (generateOperators) where
 
 import Language.Haskell.TH
 
