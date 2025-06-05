@@ -1,7 +1,6 @@
 module Language.QBE.Simulator where
 
 import Data.Functor ((<&>))
-import Control.Monad (sequence, forM)
 import Control.Monad.Except (ExceptT, liftEither, throwError, runExceptT)
 import Control.Monad.State (StateT,put,get, runStateT, liftIO)
 import Data.Map qualified as Map
@@ -52,17 +51,28 @@ assertType _ _ = Left TypingError
 
 type Env = Map.Map String RegVal
 
-lookupValue :: QBE.Value -> Exec RegVal
-lookupValue (QBE.VConst (QBE.Const (QBE.Number v))) = pure $ EWord (fromIntegral v)
-lookupValue (QBE.VConst (QBE.Const (QBE.SFP v))) = error "foo"
-lookupValue (QBE.VConst (QBE.Const (QBE.DFP v))) = error "foo"
-lookupValue (QBE.VConst (QBE.Const (QBE.Global k))) = error "foo"
-lookupValue (QBE.VConst (QBE.Thread k)) = error "not implemented"
-lookupValue (QBE.VLocal k) = do
+lookupValue' :: String -> Exec RegVal
+lookupValue' k = do
   env <- get
   case Map.lookup k env of
     Nothing -> throwError UnknownVariable
     Just v  -> pure v
+
+lookupValue :: QBE.BaseType -> QBE.Value -> Exec RegVal
+lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
+  pure $ case ty of
+    QBE.Long -> ELong v
+    QBE.Word -> EWord $ fromIntegral v
+    QBE.Single -> ESingle $ fromIntegral v
+    QBE.Double -> EDouble $ fromIntegral v
+lookupValue _ (QBE.VConst (QBE.Const (QBE.SFP v))) = pure $ ESingle v
+lookupValue _ (QBE.VConst (QBE.Const (QBE.DFP v))) = pure $ EDouble v
+lookupValue _ (QBE.VConst (QBE.Const (QBE.Global k)))
+  = lookupValue' (show k)
+lookupValue _ (QBE.VConst (QBE.Thread k))
+  = lookupValue' (show k)
+lookupValue _ (QBE.VLocal k)
+  = lookupValue' (show k)
 
 type Exec a = StateT Env (ExceptT EvalError IO) a
 
@@ -71,12 +81,12 @@ execVolatile = error "execVolatile not implemented"
 
 execInstr :: QBE.BaseType -> QBE.Instr -> Exec RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
-  v1 <- lookupValue lhs
-  v2 <- lookupValue rhs
+  v1 <- lookupValue retTy lhs
+  v2 <- lookupValue retTy rhs
   liftEither (addVals v1 v2) >>= liftEither . assertType retTy
 execInstr retTy (QBE.Sub lhs rhs) = do
-  v1 <- lookupValue lhs
-  v2 <- lookupValue rhs
+  v1 <- lookupValue retTy lhs
+  v2 <- lookupValue retTy rhs
   liftEither (subVals v1 v2) >>= liftEither . assertType retTy
 execInstr _retTy (QBE.Alloc _size _align) = do
   -- TODO: This needs a byte-addressable memory implementation
@@ -86,7 +96,7 @@ execInstr _retTy (QBE.Alloc _size _align) = do
 execStmt :: QBE.Statement -> Exec Env
 execStmt a@(QBE.Assign name ty inst) = do
   rv <- execInstr ty inst
-  newEnv <- get <&> Map.insert name rv
+  newEnv <- get <&> Map.insert (show name) rv
   put newEnv >> pure newEnv
 execStmt (QBE.Volatile v) = execVolatile v
 
