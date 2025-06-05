@@ -174,17 +174,17 @@ special characters \texttt{\$}, \texttt{.}, and \texttt{\_}.
 \subsection{Sigils}
 
 \begin{code}
-userDef :: Parser String
-userDef = char ':' >> ident
+userDef :: Parser Q.UserIdent
+userDef = Q.UserIdent <$> (char ':' >> ident)
 
-global :: Parser String
-global = char '$' >> ident
+global :: Parser Q.GlobalIdent
+global = Q.GlobalIdent <$> (char '$' >> ident)
 
-local :: Parser String
-local = char '%' >> ident
+local :: Parser Q.LocalIdent
+local = Q.LocalIdent <$> (char '%' >> ident)
 
-label :: Parser String
-label = char '@' >> ident
+label :: Parser Q.BlockIdent
+label = Q.BlockIdent <$> (char '@' >> ident)
 \end{code}
 
 The intermediate language makes heavy use of sigils, all user-defined
@@ -316,7 +316,7 @@ either by zero-extension, or by sign-extension.
 dynConst :: Parser Q.DynConst
 dynConst =
   (Q.Const <$> constant)
-    <|> (Q.Thread <$> ident)
+    <|> (Q.Thread <$> global)
     <?> "dynconst"
 \end{code}
 
@@ -335,7 +335,7 @@ constant =
   (Q.Number <$> decNumber)
     <|> (Q.SFP <$> sfp)
     <|> (Q.DFP <$> dfp)
-    <|> (Q.Global <$> ident)
+    <|> (Q.Global <$> global)
     <?> "const"
   where
     sfp = string "s_" >> float

@@ -11,25 +11,25 @@ typeTests =
   testGroup
     "Aggregate Type Definition"
     [ testCase "Opaque type with alignment" $
-        let v = TypeDef "opaque" (Just AlignLongLong) (AOpaque 32)
+        let v = TypeDef (UserIdent "opaque") (Just AlignLongLong) (AOpaque 32)
          in parse "type :opaque = align 16 { 32 }" @?= Right v,
       testCase "Regular empty type" $
-        let v = TypeDef "empty" Nothing (ARegular [])
+        let v = TypeDef (UserIdent "empty") Nothing (ARegular [])
           in parse "type :empty = {}" @?= Right v,
       testCase "Regular type with multiple fields" $
         let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
-            v = TypeDef "twofloats" Nothing (ARegular f)
+            v = TypeDef (UserIdent "twofloats") Nothing (ARegular f)
          in parse "type :twofloats = { s, s }" @?= Right v,
       testCase "Union type with multiple fields" $
         let f = [[(SExtType Byte, Nothing)], [(SExtType (Base Single), Nothing)]]
-            v = TypeDef "un9" Nothing (AUnion f)
+            v = TypeDef (UserIdent "un9") Nothing (AUnion f)
          in parse "type :un9 = { { b } { s } }" @?= Right v,
       testCase "Union type with multiple nested fields" $
         let f =
               [ [(SExtType (Base Long), Nothing), (SExtType (Base Single), Nothing)],
                 [(SExtType (Base Word), Nothing), (SExtType (Base Long), Nothing)]
               ]
-            v = TypeDef "un9" Nothing (AUnion f)
+            v = TypeDef (UserIdent "un9") Nothing (AUnion f)
          in parse "type :un9 = { { l, s } { w, l } }" @?= Right v
     ]
   where
@@ -41,45 +41,45 @@ dataTests =
   testGroup
     "Data Definition"
     [ testCase "Data definition with zero fill" $
-        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "data $foo = { z 42 }" @?= Right v,
       testCase "Data definition with empty value" $
-        let v = DataDef [] "foo" Nothing []
+        let v = DataDef [] (GlobalIdent "foo") Nothing []
          in parse "data $foo = {}" @?= Right v,
       testCase "Data definition without optional spaces" $
-        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "data $foo={z 42}" @?= Right v,
       testCase "Data definition with newlines as spaces" $
-        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "data\n$foo={z\n42}" @?= Right v,
       testCase "Data definition with comments" $
-        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "data\n#test\n$foo={z\n#foo\n42}" @?= Right v,
       testCase "Data definition with comments and whitespaces" $
-        let v = DataDef [] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "data\n#test1  \n  #test2\n$foo={z\n#foo\n42}" @?= Right v,
       testCase "Data definition with linkage" $
-        let v = DataDef [LExport] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [LExport] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "export data $foo = { z 42 }" @?= Right v,
       testCase "Data definition with linkage, newlines, and comments" $
-        let v = DataDef [LExport, LThread] "foo" Nothing [OZeroFill 42]
+        let v = DataDef [LExport, LThread] (GlobalIdent "foo") Nothing [OZeroFill 42]
          in parse "export\nthread\n#foo\ndata $foo = { z 42 }" @?= Right v,
       testCase "Data definition with types" $
         let w = [DConst (Number 23), DConst (Number 42)]
-            v = DataDef [] "bar" Nothing [OItem (Base Word) w]
+            v = DataDef [] (GlobalIdent "bar") Nothing [OItem (Base Word) w]
          in parse "data $bar = {   w   23   42 }" @?= Right v,
       testCase "An object containing two 64-bit fields" $
         let o =
               [ OItem (Base Long) [DConst (Number 0xffffffffffffffff)],
                 OItem (Base Long) [DConst (Number 23)]
               ]
-            v = DataDef [] "c" Nothing o
+            v = DataDef [] (GlobalIdent "c") Nothing o
          in parse "data $c = { l -1, l 23 }" @?= Right v,
       testCase "Data definition with specified alignment and linkage" $
-        let v = DataDef [LExport] "b" (Just AlignLong) [OZeroFill 1000]
+        let v = DataDef [LExport] (GlobalIdent "b") (Just AlignLong) [OZeroFill 1000]
          in parse "export data $b = align 8 { z 1000 }" @?= Right v,
       testCase "Data definition with linkage section and string escape sequences" $
-        let v = DataDef [LSection "f\\oo\\\"bar" Nothing] "b" (Just AlignLong) [OZeroFill 1]
+        let v = DataDef [LSection "f\\oo\\\"bar" Nothing] (GlobalIdent "b") (Just AlignLong) [OZeroFill 1]
          in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v
     ]
   where
@@ -91,24 +91,24 @@ funcTests =
   testGroup
     "Function Definition"
     [ testCase "Minimal function definition" $
-        let p = [Regular (ABase Word) "argc"]
-            b = [Block {label = "start", stmt = [], term = Return Nothing}]
-            f = FuncDef [] "main" Nothing p b
+        let p = [Regular (ABase Word) (LocalIdent "argc")]
+            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [] (GlobalIdent "main") Nothing p b
          in parse "function $main(w %argc) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with linkage and return type" $
-        let p = [Regular (ABase Long) "v"]
-            b = [Block {label = "start", stmt = [], term = Return Nothing}]
-            f = FuncDef [LExport, LThread] "example" (Just (ABase Word)) p b
+        let p = [Regular (ABase Long) (LocalIdent "v")]
+            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LExport, LThread] (GlobalIdent "example") (Just (ABase Word)) p b
          in parse "export\nthread function w $example(l %v) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with section linkage" $
-        let p = [Regular (ABase Long) "v"]
-            b = [Block {label = "start", stmt = [], term = Return Nothing}]
-            f = FuncDef [LSection "foo" Nothing] "bla" (Just (ABase Word)) p b
+        let p = [Regular (ABase Long) (LocalIdent "v")]
+            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LSection "foo" Nothing] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\"\nfunction w $bla(l %v) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with comments" $
-        let p = [Regular (ABase Long) "v"]
-            b = [Block {label = "start", stmt = [], term = Return Nothing}]
-            f = FuncDef [LSection "foo" (Just "bar")] "bla" (Just (ABase Word)) p b
+        let p = [Regular (ABase Long) (LocalIdent "v")]
+            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            f = FuncDef [LSection "foo" (Just "bar")] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\" \"bar\"\n#test\nfunction w $bla(l %v) {\n#foo\n@start\n# bar \nret\n#bllubbb\n#bllaaa\n}" @?= Right f
     ]
   where
