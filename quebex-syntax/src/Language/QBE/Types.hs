@@ -2,8 +2,33 @@ module Language.QBE.Types where
 
 import Data.Word (Word64)
 
--- TODO: Indent type
 -- TODO: Prefix all constructors
+
+newtype UserIdent = UserIdent { userIdent :: String }
+  deriving (Eq)
+
+instance Show UserIdent where
+  show (UserIdent s) = ':' : s
+
+newtype LocalIdent = LocalIdent { localIdent :: String }
+  deriving (Eq)
+
+instance Show LocalIdent where
+  show (LocalIdent s) = '%' : s
+
+newtype BlockIdent = BlockIdent { blockIdent :: String }
+  deriving (Eq)
+
+instance Show BlockIdent where
+  show (BlockIdent s) = '@' : s
+
+newtype GlobalIdent = GlobalIdent { globalIdent :: String }
+  deriving (Eq)
+
+instance Show GlobalIdent where
+  show (GlobalIdent s) = '$' : s
+
+------------------------------------------------------------------------
 
 data BaseType
   = Word
@@ -28,24 +53,24 @@ data SubWordType
 data Abity
   = ABase BaseType
   | ASubWordType SubWordType
-  | AUserDef String
+  | AUserDef UserIdent
   deriving (Show, Eq)
 
 data Const
   = Number Word64
   | SFP Float
   | DFP Double
-  | Global String
+  | Global GlobalIdent
   deriving (Show, Eq)
 
 data DynConst
   = Const Const
-  | Thread String
+  | Thread GlobalIdent
   deriving (Show, Eq)
 
 data Value
   = VConst DynConst
-  | VLocal String
+  | VLocal LocalIdent
   deriving (Show, Eq)
 
 data Linkage
@@ -62,7 +87,7 @@ data AllocSize
 
 data TypeDef
   = TypeDef
-  { aggName :: String,
+  { aggName :: UserIdent,
     aggAlign :: Maybe AllocSize,
     aggType :: AggType
   }
@@ -70,7 +95,7 @@ data TypeDef
 
 data SubType
   = SExtType ExtType
-  | SUserDef String
+  | SUserDef UserIdent
   deriving (Show, Eq)
 
 type Field = (SubType, Maybe Word64)
@@ -85,7 +110,7 @@ data AggType
 data DataDef
   = DataDef
   { linkage :: [Linkage],
-    name :: String,
+    name :: GlobalIdent,
     align :: Maybe AllocSize,
     objs :: [DataObj]
   }
@@ -97,7 +122,7 @@ data DataObj
   deriving (Show, Eq)
 
 data DataItem
-  = DSymbol String (Maybe Word64)
+  = DSymbol GlobalIdent (Maybe Word64)
   | DString String
   | DConst Const
   deriving (Show, Eq)
@@ -105,7 +130,7 @@ data DataItem
 data FuncDef
   = FuncDef
   { fLinkage :: [Linkage]
-  , fName :: String
+  , fName :: GlobalIdent
   , fAbity :: Maybe Abity
   , fParams :: [FuncParam]
   , fBlock :: [Block]
@@ -113,14 +138,14 @@ data FuncDef
   deriving (Show, Eq)
 
 data FuncParam
-  = Regular Abity String
-  | Env String
+  = Regular Abity LocalIdent
+  | Env LocalIdent
   | Variadic
   deriving (Show, Eq)
 
 data JumpInstr
-  = Jump String
-  | Jnz Value String String
+  = Jump BlockIdent
+  | Jnz Value BlockIdent BlockIdent
   | Return (Maybe Value)
   | Halt
   deriving (Show, Eq)
@@ -137,13 +162,13 @@ data VolatileInstr
   deriving (Show, Eq)
 
 data Statement
-  = Assign String BaseType Instr
+  = Assign LocalIdent BaseType Instr
   | Volatile VolatileInstr
   deriving (Show, Eq)
 
 data Block
   = Block
-  { label :: String
+  { label :: BlockIdent
   -- TODO: phi
   , stmt :: [Statement]
   , term :: JumpInstr
