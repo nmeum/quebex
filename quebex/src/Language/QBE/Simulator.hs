@@ -3,7 +3,7 @@ module Language.QBE.Simulator where
 import Data.Functor ((<&>))
 import Control.Monad (sequence, forM)
 import Control.Monad.Except (ExceptT, liftEither, throwError, runExceptT)
-import Control.Monad.State (StateT,get, runStateT)
+import Control.Monad.State (StateT,put,get, runStateT, liftIO)
 import Data.Map qualified as Map
 import Data.Word
 import Language.QBE.Types qualified as QBE
@@ -84,9 +84,10 @@ execInstr _retTy (QBE.Alloc _size _align) = do
   error "alloc not yet implemented"
 
 execStmt :: QBE.Statement -> Exec Env
-execStmt (QBE.Assign name ty inst) = do
+execStmt a@(QBE.Assign name ty inst) = do
   rv <- execInstr ty inst
-  get <&> Map.insert name rv
+  newEnv <- get <&> Map.insert name rv
+  put newEnv >> pure newEnv
 execStmt (QBE.Volatile v) = execVolatile v
 
 execBlock :: QBE.Block -> Exec Env
