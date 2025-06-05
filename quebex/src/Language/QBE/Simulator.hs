@@ -4,50 +4,9 @@ import Data.Functor ((<&>))
 import Control.Monad.Except (ExceptT, liftEither, throwError, runExceptT)
 import Control.Monad.State (StateT,put,get, runStateT, liftIO)
 import Data.Map qualified as Map
-import Data.Word
+import Language.QBE.Simulator.Expression
+import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
-
-data EvalError
-  = TypingError
-  | UnknownVariable
-  | NotImplemented
-  deriving (Show, Eq)
-
-data RegVal
-  = EByte Word8
-  | EHalf Word16
-  | EWord Word32
-  | ELong Word64
-  | ESingle Float
-  | EDouble Double
-  deriving (Show, Eq)
-
-addVals :: RegVal -> RegVal -> Either EvalError RegVal
-addVals (EByte lhs) (EByte rhs) = Right (EByte $ lhs + rhs)
-addVals (EHalf lhs) (EHalf rhs) = Right (EHalf $ lhs + rhs)
-addVals (EWord lhs) (EWord rhs) = Right (EWord $ lhs + rhs)
-addVals (ELong lhs) (ELong rhs) = Right (ELong $ lhs + rhs)
-addVals (ESingle lhs) (ESingle rhs) = Right (ESingle $ lhs + rhs)
-addVals (EDouble lhs) (EDouble rhs) = Right (EDouble $ lhs + rhs)
-addVals _ _ = Left TypingError
-
-subVals :: RegVal -> RegVal -> Either EvalError RegVal
-subVals (EByte lhs) (EByte rhs) = Right (EByte $ lhs - rhs)
-subVals (EHalf lhs) (EHalf rhs) = Right (EHalf $ lhs - rhs)
-subVals (EWord lhs) (EWord rhs) = Right (EWord $ lhs - rhs)
-subVals (ELong lhs) (ELong rhs) = Right (ELong $ lhs - rhs)
-subVals (ESingle lhs) (ESingle rhs) = Right (ESingle $ lhs - rhs)
-subVals (EDouble lhs) (EDouble rhs) = Right (EDouble $ lhs - rhs)
-subVals _ _ = Left TypingError
-
-assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
-assertType QBE.Word v@(EWord _) = Right v
-assertType QBE.Long v@(ELong _) = Right v
-assertType QBE.Single v@(ESingle _) = Right v
-assertType QBE.Double v@(EDouble _) = Right v
-assertType _ _ = Left TypingError
-
-------------------------------------------------------------------------
 
 type Env = Map.Map String RegVal
 
