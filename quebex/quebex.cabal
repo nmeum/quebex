@@ -25,6 +25,7 @@ library
     build-depends:
       base ^>=4.19.1.0,
       array,
+      bytestring,
       template-haskell,
       quebex-syntax,
       containers,
@@ -45,12 +46,14 @@ test-suite quebex-test
     main-is:          Main.hs
 
     other-modules:
-      Simulator
+      Simulator,
+      Memory
 
     build-depends:
         base ^>=4.19.1.0,
         quebex,
         quebex-syntax,
         containers,
+        bytestring,
         tasty        >=1.4.3,
         tasty-hunit  >=0.10
