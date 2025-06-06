@@ -24,6 +24,7 @@ library
 
     build-depends:
       base ^>=4.19.1.0,
+      array,
       template-haskell,
       quebex-syntax,
       containers,
@@ -33,7 +34,8 @@ library
       Language.QBE.Simulator,
       Language.QBE.Simulator.Generator,
       Language.QBE.Simulator.Expression,
-      Language.QBE.Simulator.Error
+      Language.QBE.Simulator.Error,
+      Language.QBE.Simulator.Memory
 
 test-suite quebex-test
     import:           warnings
