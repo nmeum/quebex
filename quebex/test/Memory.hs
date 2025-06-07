@@ -23,5 +23,16 @@ memTests =
       testCase "Store and read byte" $ do
         m <- mkMemory 0 64
         storeByteString m 0x0 $ BSL.pack [0xff]
-        loadByteString m 0x0 1 >>= assertEqual "" (BSL.pack [0xff])
+        loadByteString m 0x0 1 >>= assertEqual "" (BSL.pack [0xff]),
+      testCase "Store and read bytes" $ do
+        m <- mkMemory 0 32
+        storeByteString m 0x0 $ BSL.pack [0xde, 0xad, 0xbe, 0xef]
+        loadByteString m 0x0 4 >>= assertEqual "" (BSL.pack [0xde, 0xad, 0xbe, 0xef]),
+      testCase "Store and read multiple bytes" $ do
+        m <- mkMemory 0 4
+        storeByteString m 0x0 $ BSL.pack [0xde, 0xad]
+        storeByteString m 0x2 $ BSL.pack [0xbe, 0xef]
+        loadByteString m 0x0 2 >>= assertEqual "" (BSL.pack [0xde, 0xad])
+        loadByteString m 0x2 2 >>= assertEqual "" (BSL.pack [0xbe, 0xef])
+        loadByteString m 0x0 4 >>= assertEqual "" (BSL.pack [0xde, 0xad, 0xbe, 0xef])
     ]
