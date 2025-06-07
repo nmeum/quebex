@@ -1,5 +1,6 @@
 module Language.QBE.Simulator
-  ( execInstr,
+  ( Env (envVars, envMem),
+    execInstr,
     execVolatile,
     execStmt,
     execBlock,
@@ -10,24 +11,32 @@ where
 
 import Control.Monad.Except (ExceptT, liftEither, runExceptT, throwError)
 import Control.Monad.State (StateT, get, put, runStateT)
+import Control.Monad.IO.Class (liftIO)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
+import Language.QBE.Simulator.Memory
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression
 import Language.QBE.Types qualified as QBE
 
-type Env = Map.Map String RegVal
+data Env
+  = Env { envVars :: Map.Map String RegVal
+        , envMem  :: Memory }
 
-mkEnv :: Env
-mkEnv = Map.empty
+mkEnv :: Address -> Size -> IO Env
+mkEnv a s = do
+  mem <- mkMemory a s
+  return $ Env Map.empty mem
 
 insertValue :: String -> RegVal -> Exec Env
-insertValue k v = get <&> Map.insert k v
+insertValue k v = do
+  (Env vars mem) <- get
+  return $ Env (Map.insert k v vars) mem
 
 lookupValue' :: String -> Exec RegVal
 lookupValue' k = do
-  env <- get
-  case Map.lookup k env of
+  (Env vars _) <- get
+  case Map.lookup k vars of
     Nothing -> throwError UnknownVariable
     Just v -> pure v
 
@@ -84,5 +93,6 @@ execBlock block = go $ fmap execStmt (QBE.stmt block)
 -- execFunc f =
 
 runExec :: Exec Env -> IO (Either EvalError Env)
-runExec env =
-  runExceptT (runStateT env mkEnv) <&> fmap fst
+runExec env = do
+  emptyEnv <- liftIO $ mkEnv 0x0 128
+  runExceptT (runStateT env emptyEnv) <&> fmap fst
