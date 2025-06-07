@@ -33,6 +33,7 @@ library
 
     exposed-modules:
       Language.QBE.Simulator,
+      Language.QBE.Simulator.State,
       Language.QBE.Simulator.Generator,
       Language.QBE.Simulator.Expression,
       Language.QBE.Simulator.Error,
