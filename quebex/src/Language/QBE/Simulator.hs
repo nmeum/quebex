@@ -18,6 +18,12 @@ import Language.QBE.Types qualified as QBE
 
 type Env = Map.Map String RegVal
 
+mkEnv :: Env
+mkEnv = Map.empty
+
+insertValue :: String -> RegVal -> Exec Env
+insertValue k v = get <&> Map.insert k v
+
 lookupValue' :: String -> Exec RegVal
 lookupValue' k = do
   env <- get
@@ -63,7 +69,7 @@ execInstr _retTy (QBE.Alloc _size _align) = do
 execStmt :: QBE.Statement -> Exec Env
 execStmt (QBE.Assign name ty inst) = do
   rv <- execInstr ty inst
-  newEnv <- get <&> Map.insert (show name) rv
+  newEnv <- insertValue (show name) rv
   put newEnv >> pure newEnv
 execStmt (QBE.Volatile v) = execVolatile v
 
@@ -79,4 +85,4 @@ execBlock block = go $ fmap execStmt (QBE.stmt block)
 
 runExec :: Exec Env -> IO (Either EvalError Env)
 runExec env =
-  runExceptT (runStateT env Map.empty) <&> fmap fst
+  runExceptT (runStateT env mkEnv) <&> fmap fst
