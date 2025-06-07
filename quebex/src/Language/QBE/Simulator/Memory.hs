@@ -42,20 +42,18 @@ toMemAddr mem addr = addr - (memStart mem)
 memSize :: Memory -> IO Size
 memSize = fmap ((+ 1) . snd) . getBounds . memBytes
 
--- | Store a single byte in memory.
-storeByte :: Memory -> Address -> Word8 -> IO ()
-storeByte mem addr = writeArray (memBytes mem) $ toMemAddr mem addr
-
--- | Load a single byte from memory at the given address.
-loadByte :: Memory -> Address -> IO Word8
-loadByte mem = readArray (memBytes mem) . toMemAddr mem
-
 storeByteString :: Memory -> Address -> BSL.ByteString -> IO ()
 storeByteString mem addr bs =
   mapM_ (\(off, val) -> storeByte mem (addr + off) val) $
     zip [0 ..] $
       BSL.unpack bs
+ where
+  storeByte :: Memory -> Address -> Word8 -> IO ()
+  storeByte m a = writeArray (memBytes m) $ toMemAddr mem a
 
 loadByteString :: Memory -> Address -> Size -> IO (BSL.ByteString)
 loadByteString mem addr byteSize =
   BSL.pack <$> mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
+ where
+  loadByte :: Memory -> Address -> IO Word8
+  loadByte m = readArray (memBytes m) . toMemAddr m
