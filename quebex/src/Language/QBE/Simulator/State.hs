@@ -1,7 +1,9 @@
 module Language.QBE.Simulator.State where
 
 import Control.Monad.Except (ExceptT, throwError)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, put)
+import Data.ByteString.Builder qualified as B
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression
@@ -32,6 +34,12 @@ pushStack size align = do
   where
     alignAddr :: Address -> Address -> Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
+
+storeValue :: Address -> RegVal -> Exec Env
+storeValue addr regVal = do
+  env <- get
+  liftIO $ storeByteString (envMem env) addr (B.toLazyByteString $ toBuilder regVal)
+  pure env
 
 insertValue :: String -> RegVal -> Exec Env
 insertValue k v = do

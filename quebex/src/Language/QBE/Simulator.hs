@@ -19,7 +19,19 @@ import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
 execVolatile :: QBE.VolatileInstr -> Exec Env
-execVolatile = error "execVolatile not implemented"
+execVolatile (QBE.Store valTy valReg addrReg) = do
+  -- Since halfwords and bytes are not first class in the IL, storeh and storeb
+  -- take a word as argument. Only the first 16 or 8 bits of this word will be
+  -- stored in memory at the address specified in the second argument.
+  val <- case valTy of
+    QBE.Byte -> lookupValue QBE.Word valReg -- TODO: Extract first 8 bits
+    QBE.HalfWord -> lookupValue QBE.Word valReg -- TODO: Extract first 16 bits
+    (QBE.Base bt) -> lookupValue bt valReg
+
+  -- TODO
+  (ELong addrVal) <- lookupValue QBE.Long addrReg
+  storeValue addrVal val
+execVolatile (QBE.Blit _ _ _) = error "blit not implemented"
 
 execInstr :: QBE.BaseType -> QBE.Instr -> Exec RegVal
 execInstr retTy (QBE.Add lhs rhs) = do

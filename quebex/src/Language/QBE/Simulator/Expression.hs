@@ -1,6 +1,7 @@
 module Language.QBE.Simulator.Expression where
 
-import Data.Word (Word8, Word16, Word32, Word64)
+import Data.ByteString.Builder qualified as B
+import Data.Word (Word16, Word32, Word64, Word8)
 import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
 
@@ -12,6 +13,14 @@ data RegVal
   | ESingle Float
   | EDouble Double
   deriving (Show, Eq)
+
+toBuilder :: RegVal -> B.Builder
+toBuilder (EByte w) = B.word8 w
+toBuilder (EHalf w) = B.word16LE w
+toBuilder (EWord w) = B.word32LE w
+toBuilder (ELong w) = B.word64LE w
+toBuilder (ESingle w) = B.floatLE w
+toBuilder (EDouble w) = B.doubleLE w
 
 ------------------------------------------------------------------------
 
