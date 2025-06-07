@@ -46,7 +46,14 @@ blockTests =
           let b = Block {label = (BlockIdent "calc"), stmt = [i1, i2], term = Halt}
 
           res <- runExec (execBlock b)
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%val", E.EWord 3), ("%foo", E.EWord 5)])
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%val", E.EWord 3), ("%foo", E.EWord 5)]),
+      testCase "Alloc pre-aligned value on stack" $
+        do
+          let i = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
+          let b = Block {label = (BlockIdent "allocate"), stmt = [i], term = Halt}
+
+          res <- runExec (execBlock b)
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%ptr", E.ELong 120)])
     ]
 
 simTests :: TestTree
