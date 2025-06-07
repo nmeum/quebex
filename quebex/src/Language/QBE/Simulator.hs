@@ -46,10 +46,8 @@ execInstr _retTy (QBE.Alloc size align) =
   pushStack (fromIntegral $ QBE.getSize size) align
 
 execStmt :: QBE.Statement -> Exec Env
-execStmt (QBE.Assign name ty inst) = do
-  rv <- execInstr ty inst
-  newEnv <- insertValue (show name) rv
-  put newEnv >> pure newEnv
+execStmt (QBE.Assign name ty inst) =
+  execInstr ty inst >>= insertValue (show name) >> get
 execStmt (QBE.Volatile v) = execVolatile v
 
 execBlock :: QBE.Block -> Exec Env

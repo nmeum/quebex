@@ -2,7 +2,7 @@ module Language.QBE.Simulator.State where
 
 import Control.Monad.Except (ExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, get, put)
+import Control.Monad.State (StateT, get, modify, put)
 import Data.ByteString.Builder qualified as B
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
@@ -12,24 +12,47 @@ import Language.QBE.Types qualified as QBE
 
 type Exec a = StateT Env (ExceptT EvalError IO) a
 
--- TODO: Turns this into a Monad or use lenses or something?
+data StackFrame
+  = StackFrame
+  { stkFunc :: QBE.FuncDef,
+    stkVars :: Map.Map QBE.LocalIdent RegVal,
+    stkSize :: Size
+  }
+
+mkStackFrame :: QBE.FuncDef -> StackFrame
+mkStackFrame func = StackFrame func Map.empty 0
+
 data Env
   = Env
   { envVars :: Map.Map String RegVal,
     envMem :: Memory,
+    envStk :: [StackFrame],
     envStkPtr :: Address
   }
 
 mkEnv :: Address -> Size -> IO Env
 mkEnv a s = do
   mem <- mkMemory a s
-  return $ Env Map.empty mem (s - 1)
+  return $ Env Map.empty mem [] (s - 1)
+
+pushStackFrame :: QBE.FuncDef -> Exec ()
+pushStackFrame f =
+  modify (\s -> s {envStk = mkStackFrame f : envStk s})
+
+popStackFrame :: Exec (Maybe StackFrame)
+popStackFrame = do
+  stk <- envStk <$> get
+  case stk of
+    [] -> pure Nothing
+    (x : xs) -> do
+      modify (\s -> s {envStk = xs})
+      pure $ Just x
 
 pushStack :: Size -> Address -> Exec RegVal
 pushStack size align = do
-  (Env vars mem stkPtr) <- get
+  stkPtr <- envStkPtr <$> get
   let newStkPtr = alignAddr (stkPtr - size) align
-  put (Env vars mem newStkPtr)
+  modify (\s -> s {envStkPtr = newStkPtr})
   return $ ELong newStkPtr
   where
     alignAddr :: Address -> Address -> Address
@@ -41,10 +64,9 @@ storeValue addr regVal = do
   liftIO $ storeByteString (envMem env) addr (B.toLazyByteString $ toBuilder regVal)
   pure env
 
-insertValue :: String -> RegVal -> Exec Env
+insertValue :: String -> RegVal -> Exec ()
 insertValue k v = do
-  (Env vars mem ptr) <- get
-  return $ Env (Map.insert k v vars) mem ptr
+  modify (\s -> s {envVars = Map.insert k v (envVars s)})
 
 lookupValue' :: String -> Exec RegVal
 lookupValue' k = do
