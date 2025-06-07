@@ -85,6 +85,11 @@ data AllocSize
   | AlignLongLong
   deriving (Show, Eq)
 
+getSize :: AllocSize -> Int
+getSize AlignWord = 4
+getSize AlignLong = 8
+getSize AlignLongLong = 16
+
 data TypeDef
   = TypeDef
   { aggName :: UserIdent,

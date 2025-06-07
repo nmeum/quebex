@@ -1,5 +1,5 @@
 module Language.QBE.Simulator
-  ( Env (envVars, envMem),
+  ( Env (envVars, envMem, envStkPtr),
     execInstr,
     execVolatile,
     execStmt,
@@ -10,33 +10,47 @@ module Language.QBE.Simulator
 where
 
 import Control.Monad.Except (ExceptT, liftEither, runExceptT, throwError)
-import Control.Monad.State (StateT, get, put, runStateT)
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (StateT, get, put, runStateT)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
-import Language.QBE.Simulator.Memory
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression
+import Language.QBE.Simulator.Memory
 import Language.QBE.Types qualified as QBE
 
+-- TODO: Turns this into a Monad or use lenses or something?
 data Env
-  = Env { envVars :: Map.Map String RegVal
-        , envMem  :: Memory }
+  = Env
+  { envVars :: Map.Map String RegVal,
+    envMem :: Memory,
+    envStkPtr :: Address
+  }
 
 mkEnv :: Address -> Size -> IO Env
 mkEnv a s = do
   mem <- mkMemory a s
-  return $ Env Map.empty mem
+  return $ Env Map.empty mem (s - 1)
+
+pushStack :: Size -> Address -> Exec RegVal
+pushStack size align = do
+  (Env vars mem stkPtr) <- get
+  let newStkPtr = alignAddr (stkPtr - size) align
+  put (Env vars mem newStkPtr)
+  return $ ELong newStkPtr
+  where
+    alignAddr :: Address -> Address -> Address
+    alignAddr addr alignment = addr - (addr `mod` alignment)
 
 insertValue :: String -> RegVal -> Exec Env
 insertValue k v = do
-  (Env vars mem) <- get
-  return $ Env (Map.insert k v vars) mem
+  (Env vars mem ptr) <- get
+  return $ Env (Map.insert k v vars) mem ptr
 
 lookupValue' :: String -> Exec RegVal
 lookupValue' k = do
-  (Env vars _) <- get
-  case Map.lookup k vars of
+  e <- get
+  case Map.lookup k (envVars e) of
     Nothing -> throwError UnknownVariable
     Just v -> pure v
 
@@ -70,10 +84,8 @@ execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
   liftEither (subVals v1 v2) >>= liftEither . assertType retTy
-execInstr _retTy (QBE.Alloc _size _align) = do
-  -- TODO: This needs a byte-addressable memory implementation
-  -- needs to return a pointer to the allocated address in memory.
-  error "alloc not yet implemented"
+execInstr _retTy (QBE.Alloc size align) =
+  pushStack (fromIntegral $ QBE.getSize size) align
 
 execStmt :: QBE.Statement -> Exec Env
 execStmt (QBE.Assign name ty inst) = do
