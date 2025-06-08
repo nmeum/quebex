@@ -14,7 +14,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (get, runStateT)
 import Data.Functor ((<&>))
 import Language.QBE.Simulator.Error
-import Language.QBE.Simulator.Expression
+import qualified Language.QBE.Simulator.Expression as E
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
@@ -28,19 +28,19 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
     QBE.HalfWord -> lookupValue QBE.Word valReg -- TODO: Extract first 16 bits
     (QBE.Base bt) -> lookupValue bt valReg
 
-  (ELong addrVal) <- lookupValue QBE.Long addrReg
+  (E.VLong addrVal) <- lookupValue QBE.Long addrReg
   writeMemory addrVal val
 execVolatile (QBE.Blit {}) = error "blit not implemented"
 
-execInstr :: QBE.BaseType -> QBE.Instr -> Exec RegVal
+execInstr :: QBE.BaseType -> QBE.Instr -> Exec E.RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  liftEither (addVals v1 v2) >>= liftEither . assertType retTy
+  liftEither (E.add v1 v2) >>= liftEither . E.assertType retTy
 execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  liftEither (subVals v1 v2) >>= liftEither . assertType retTy
+  liftEither (E.sub v1 v2) >>= liftEither . E.assertType retTy
 execInstr _retTy (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 

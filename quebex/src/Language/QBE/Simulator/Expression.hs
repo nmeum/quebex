@@ -12,27 +12,27 @@ import Language.QBE.Simulator.Generator (generateOperators)
 import Language.QBE.Types qualified as QBE
 
 data RegVal
-  = EByte Word8
-  | EHalf Word16
-  | EWord Word32
-  | ELong Word64
-  | ESingle Float
-  | EDouble Double
+  = VByte Word8
+  | VHalf Word16
+  | VWord Word32
+  | VLong Word64
+  | VSingle Float
+  | VDouble Double
   deriving (Show, Eq)
 
 toBuilder :: RegVal -> B.Builder
-toBuilder (EByte w) = B.word8 w
-toBuilder (EHalf w) = B.word16LE w
-toBuilder (EWord w) = B.word32LE w
-toBuilder (ELong w) = B.word64LE w
-toBuilder (ESingle w) = B.floatLE w
-toBuilder (EDouble w) = B.doubleLE w
+toBuilder (VByte w) = B.word8 w
+toBuilder (VHalf w) = B.word16LE w
+toBuilder (VWord w) = B.word32LE w
+toBuilder (VLong w) = B.word64LE w
+toBuilder (VSingle w) = B.floatLE w
+toBuilder (VDouble w) = B.doubleLE w
 
 assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
-assertType QBE.Word v@(EWord _) = Right v
-assertType QBE.Long v@(ELong _) = Right v
-assertType QBE.Single v@(ESingle _) = Right v
-assertType QBE.Double v@(EDouble _) = Right v
+assertType QBE.Word v@(VWord _) = Right v
+assertType QBE.Long v@(VLong _) = Right v
+assertType QBE.Single v@(VSingle _) = Right v
+assertType QBE.Double v@(VDouble _) = Right v
 assertType _ _ = Left TypingError
 
 generateOperators

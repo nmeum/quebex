@@ -2,23 +2,22 @@ module Language.QBE.Simulator.Generator (generateOperators) where
 
 import Language.Haskell.TH
 
-operators :: [(String, Name)]
+operators :: [(Name, Name)]
 operators =
-  [ ("add", mkName "+"),
-    ("sub", mkName "-")
+  [ (mkName "add", mkName "+"),
+    (mkName "sub", mkName "-")
   ]
 
 cons :: [Name]
 cons =
-  [ mkName "EByte",
-    mkName "EHalf",
-    mkName "EWord",
-    mkName "ELong",
-    mkName "ESingle",
-    mkName "EDouble"
+  [ mkName "VByte",
+    mkName "VHalf",
+    mkName "VWord",
+    mkName "VLong",
+    mkName "VSingle",
+    mkName "VDouble"
   ]
 
--- TODO: Take tuple (lhsCon, lhsValue)
 makeClause :: Exp -> (Name, Name -> Exp) -> (Name, Name -> Exp) -> Name -> Q Clause
 makeClause op (lhsCon, lhsExpr) (rhsCon, rhsExpr) resCon = do
   lhs <- newName "lhs"
@@ -43,8 +42,8 @@ makeStdClause op conName = do
 
 makeSubClauses :: Exp -> Q [Clause]
 makeSubClauses op = do
-  let wcon = mkName "EWord"
-  let lcon = mkName "ELong"
+  let wcon = mkName "VWord"
+  let lcon = mkName "VLong"
 
   c1 <- makeClause op (wcon, VarE) (lcon, longToWord) wcon
   c2 <- makeClause op (lcon, longToWord) (wcon, VarE) wcon
@@ -71,9 +70,8 @@ typingErrorClause =
     )
     []
 
-generateOperator :: (String, Name) -> Q Dec
-generateOperator (fnName, op) = do
-  let name = mkName $ fnName ++ "Vals"
+generateOperator :: (Name, Name) -> Q Dec
+generateOperator (name, op) = do
   let opExpr = VarE op
 
   stdClauses <- mapM (makeStdClause opExpr) cons

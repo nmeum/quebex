@@ -6,7 +6,7 @@ import Control.Monad.State (StateT, get, gets, modify)
 import Data.ByteString.Builder qualified as B
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
-import Language.QBE.Simulator.Expression
+import qualified Language.QBE.Simulator.Expression as E
 import Language.QBE.Simulator.Memory
 import Language.QBE.Types qualified as QBE
 
@@ -17,25 +17,25 @@ type Exec a = StateT Env (ExceptT EvalError IO) a
 data StackFrame
   = StackFrame
   { stkFunc :: QBE.FuncDef,
-    stkVars :: Map.Map QBE.LocalIdent RegVal,
+    stkVars :: Map.Map QBE.LocalIdent E.RegVal,
     stkFp :: Address
   }
 
 mkStackFrame :: QBE.FuncDef -> Address -> StackFrame
 mkStackFrame func = StackFrame func Map.empty
 
-storeLocal :: QBE.LocalIdent -> RegVal -> StackFrame -> StackFrame
+storeLocal :: QBE.LocalIdent -> E.RegVal -> StackFrame -> StackFrame
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
   frame {stkVars = Map.insert ident value v}
 
-lookupLocal :: StackFrame -> QBE.LocalIdent -> Maybe RegVal
+lookupLocal :: StackFrame -> QBE.LocalIdent -> Maybe E.RegVal
 lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 
 ------------------------------------------------------------------------
 
 data Env
   = Env
-  { envGlobals :: Map.Map QBE.GlobalIdent RegVal,
+  { envGlobals :: Map.Map QBE.GlobalIdent E.RegVal,
     envMem :: Memory,
     envStk :: [StackFrame],
     envStkPtr :: Address
@@ -73,34 +73,34 @@ popStackFrame = do
     ((StackFrame {stkFp = fp}) : xs) ->
       modify (\s -> s {envStk = xs, envStkPtr = fp})
 
-stackAlloc :: Size -> Address -> Exec RegVal
+stackAlloc :: Size -> Address -> Exec E.RegVal
 stackAlloc size align = do
   stkPtr <- gets envStkPtr
   let newStkPtr = alignAddr (stkPtr - size) align
   modify (\s -> s {envStkPtr = newStkPtr})
-  return $ ELong newStkPtr
+  return $ E.VLong newStkPtr
   where
     alignAddr :: Address -> Address -> Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
 
-writeMemory :: Address -> RegVal -> Exec ()
+writeMemory :: Address -> E.RegVal -> Exec ()
 writeMemory addr regVal = do
   mem <- gets envMem
-  liftIO $ storeByteString mem addr (B.toLazyByteString $ toBuilder regVal)
+  liftIO $ storeByteString mem addr (B.toLazyByteString $ E.toBuilder regVal)
 
-maybeLookup :: Maybe RegVal -> Exec RegVal
+maybeLookup :: Maybe E.RegVal -> Exec E.RegVal
 maybeLookup (Just x) = pure x
 maybeLookup Nothing = throwError UnknownVariable
 
-lookupValue :: QBE.BaseType -> QBE.Value -> Exec RegVal
+lookupValue :: QBE.BaseType -> QBE.Value -> Exec E.RegVal
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ case ty of
-    QBE.Long -> ELong v
-    QBE.Word -> EWord $ fromIntegral v
-    QBE.Single -> ESingle $ fromIntegral v
-    QBE.Double -> EDouble $ fromIntegral v
-lookupValue _ (QBE.VConst (QBE.Const (QBE.SFP v))) = pure $ ESingle v
-lookupValue _ (QBE.VConst (QBE.Const (QBE.DFP v))) = pure $ EDouble v
+    QBE.Long -> E.VLong v
+    QBE.Word -> E.VWord $ fromIntegral v
+    QBE.Single -> E.VSingle $ fromIntegral v
+    QBE.Double -> E.VDouble $ fromIntegral v
+lookupValue _ (QBE.VConst (QBE.Const (QBE.SFP v))) = pure $ E.VSingle v
+lookupValue _ (QBE.VConst (QBE.Const (QBE.DFP v))) = pure $ E.VDouble v
 lookupValue _ (QBE.VConst (QBE.Const (QBE.Global k))) =
   gets envGlobals >>= maybeLookup . Map.lookup k
 lookupValue _ (QBE.VConst (QBE.Thread k)) =
