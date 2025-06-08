@@ -5,25 +5,25 @@ import Data.Word (Word64)
 -- TODO: Prefix all constructors
 
 newtype UserIdent = UserIdent { userIdent :: String }
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show UserIdent where
   show (UserIdent s) = ':' : s
 
 newtype LocalIdent = LocalIdent { localIdent :: String }
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show LocalIdent where
   show (LocalIdent s) = '%' : s
 
 newtype BlockIdent = BlockIdent { blockIdent :: String }
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show BlockIdent where
   show (BlockIdent s) = '@' : s
 
 newtype GlobalIdent = GlobalIdent { globalIdent :: String }
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show GlobalIdent where
   show (GlobalIdent s) = '$' : s
