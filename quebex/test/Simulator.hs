@@ -26,8 +26,8 @@ blockTests =
                   )
           let b = Block {label = (BlockIdent "start"), stmt = [i], term = Halt}
 
-          res <- runExec (execBlock b)
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%val", E.EWord 3)]),
+          res <- runExec (pushStackFrame funcDef >> execBlock b)
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.EWord 3)]),
       testCase "Evaluate multiple basic blocks" $
         do
           let i1 =
@@ -48,27 +48,32 @@ blockTests =
                   )
           let b = Block {label = (BlockIdent "calc"), stmt = [i1, i2], term = Halt}
 
-          res <- runExec (execBlock b)
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%val", E.EWord 3), ("%foo", E.EWord 5)]),
+          res <- runExec (pushStackFrame funcDef >> execBlock b)
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.EWord 3), ((LocalIdent "foo"), E.EWord 5)]),
       testCase "Alloc pre-aligned value on stack" $
         do
           let i = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
           let b = Block {label = (BlockIdent "allocate"), stmt = [i], term = Halt}
 
-          res <- runExec (execBlock b)
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [("%ptr", E.ELong 120)]),
+          res <- runExec (pushStackFrame funcDef >> execBlock b)
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "ptr"), E.ELong 120)]),
       testCase "Store value on the stack" $
         do
           let i1 = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
           let i2 = Volatile $ Store (Base Word) (VConst (Const (Number 0x42))) (VLocal (LocalIdent "ptr"))
           let bl = Block {label = (BlockIdent "allocate"), stmt = [i1, i2], term = Halt}
 
-          env <- runExec (execBlock bl)
+          env <- runExec (pushStackFrame funcDef >> execBlock bl)
           let (Right mem) = envMem <$> env
 
           res <- MEM.loadByteString mem 120 4
           assertEqual "" res $ BSL.pack [0x42, 0, 0, 0]
     ]
+  where
+    funcDef :: FuncDef
+    funcDef = FuncDef [] (GlobalIdent "foo") Nothing [] []
+
+    envVars e = stkVars (head $ envStk e)
 
 simTests :: TestTree
 simTests = testGroup "Tests for the Simulator" [blockTests]

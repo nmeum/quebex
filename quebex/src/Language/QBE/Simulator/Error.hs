@@ -4,5 +4,6 @@ module Language.QBE.Simulator.Error where
 data EvalError
   = TypingError
   | UnknownVariable
+  | EmptyStack
   | NotImplemented
   deriving (Show, Eq)
