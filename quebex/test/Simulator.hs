@@ -50,6 +50,28 @@ blockTests =
 
           res <- runExec (execFunc $ makeFunc [b])
           assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.VWord 3), ((LocalIdent "foo"), E.VWord 5)]),
+      testCase "Evaluate expression with subtyping" $
+        do
+          let i1 =
+                Assign
+                  (LocalIdent "val")
+                  Long
+                  ( Add
+                      (VConst (Const (Number 0xdeadbeefdecafbad)))
+                      (VConst (Const (Number 0)))
+                  )
+          let i2 =
+                Assign
+                  (LocalIdent "foo")
+                  Word
+                  ( Add
+                      (VLocal (LocalIdent "val"))
+                      (VConst (Const (Number 0)))
+                  )
+          let b = Block {label = (BlockIdent "subtype"), stmt = [i1, i2], term = Halt}
+
+          res <- runExec (execFunc $ makeFunc [b])
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.VLong 0xdeadbeefdecafbad), ((LocalIdent "foo"), E.VWord 0xdecafbad)]),
       testCase "Alloc pre-aligned value on stack" $
         do
           let i = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
