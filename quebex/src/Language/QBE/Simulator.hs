@@ -4,7 +4,7 @@ module Language.QBE.Simulator
     execVolatile,
     execStmt,
     execBlock,
-    -- execFunc,
+    execFunc,
     runExec,
   )
 where
@@ -51,10 +51,15 @@ execStmt (QBE.Assign name ty inst) = do
 execStmt (QBE.Volatile v) = execVolatile v
 
 execBlock :: QBE.Block -> Exec ()
+-- TODO: Handle terms.
 execBlock block = mapM_ execStmt (QBE.stmt block)
 
--- execFunc :: QBE.FuncDef -> Exec Env
--- execFunc f =
+execFunc :: QBE.FuncDef -> Exec ()
+execFunc func = do
+  pushStackFrame func
+  -- TODO: push function arguments on the stack
+  mapM_ execBlock (QBE.fBlock func)
+  -- TODO: return function return value
 
 runExec :: Exec () -> IO (Either EvalError Env)
 runExec env = do
