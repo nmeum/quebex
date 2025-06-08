@@ -18,9 +18,7 @@ import Language.QBE.Simulator.Expression
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
--- TODO: Don't return `Exec Env`.
-
-execVolatile :: QBE.VolatileInstr -> Exec Env
+execVolatile :: QBE.VolatileInstr -> Exec ()
 execVolatile (QBE.Store valTy valReg addrReg) = do
   -- Since halfwords and bytes are not first class in the IL, storeh and storeb
   -- take a word as argument. Only the first 16 or 8 bits of this word will be
@@ -31,7 +29,7 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
     (QBE.Base bt) -> lookupValue bt valReg
 
   (ELong addrVal) <- lookupValue QBE.Long addrReg
-  writeMemory addrVal val >> get
+  writeMemory addrVal val
 execVolatile (QBE.Blit {}) = error "blit not implemented"
 
 execInstr :: QBE.BaseType -> QBE.Instr -> Exec RegVal
@@ -46,24 +44,19 @@ execInstr retTy (QBE.Sub lhs rhs) = do
 execInstr _retTy (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 
-execStmt :: QBE.Statement -> Exec Env
+execStmt :: QBE.Statement -> Exec ()
 execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
-  get
 execStmt (QBE.Volatile v) = execVolatile v
 
-execBlock :: QBE.Block -> Exec Env
-execBlock block = go $ fmap execStmt (QBE.stmt block)
-  where
-    go [] = get
-    go [x] = x
-    go (x : xs) = x >> go xs
+execBlock :: QBE.Block -> Exec ()
+execBlock block = mapM_ execStmt (QBE.stmt block)
 
 -- execFunc :: QBE.FuncDef -> Exec Env
 -- execFunc f =
 
-runExec :: Exec Env -> IO (Either EvalError Env)
+runExec :: Exec () -> IO (Either EvalError Env)
 runExec env = do
   emptyEnv <- liftIO $ mkEnv 0x0 128
-  runExceptT (runStateT env emptyEnv) <&> fmap fst
+  runExceptT (runStateT (env >> get) emptyEnv) <&> fmap fst
