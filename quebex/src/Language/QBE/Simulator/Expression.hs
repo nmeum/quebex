@@ -35,4 +35,12 @@ assertType QBE.Single v@(VSingle _) = Right v
 assertType QBE.Double v@(VDouble _) = Right v
 assertType _ _ = Left TypingError
 
+checkedEval ::
+  QBE.BaseType ->
+  (RegVal -> RegVal -> Either EvalError RegVal) ->
+  RegVal ->
+  RegVal ->
+  Either EvalError RegVal
+checkedEval retTy op lhs rhs = lhs `op` rhs >>= assertType retTy
+
 generateOperators

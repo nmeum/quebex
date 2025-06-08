@@ -18,6 +18,16 @@ import qualified Language.QBE.Simulator.Expression as E
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
+checkedEval ::
+  QBE.BaseType ->
+  (E.RegVal -> E.RegVal -> Either EvalError E.RegVal) ->
+  E.RegVal ->
+  E.RegVal ->
+  Exec E.RegVal
+checkedEval ty op lhs rhs = liftEither $ E.checkedEval ty op lhs rhs
+
+------------------------------------------------------------------------
+
 execVolatile :: QBE.VolatileInstr -> Exec ()
 execVolatile (QBE.Store valTy valReg addrReg) = do
   -- Since halfwords and bytes are not first class in the IL, storeh and storeb
@@ -36,11 +46,11 @@ execInstr :: QBE.BaseType -> QBE.Instr -> Exec E.RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  liftEither (E.add v1 v2) >>= liftEither . E.assertType retTy
+  checkedEval retTy E.add v1 v2
 execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  liftEither (E.sub v1 v2) >>= liftEither . E.assertType retTy
+  checkedEval retTy E.sub v1 v2
 execInstr _retTy (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 
