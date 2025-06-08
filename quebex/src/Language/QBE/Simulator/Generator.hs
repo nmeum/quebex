@@ -2,11 +2,10 @@ module Language.QBE.Simulator.Generator (generateOperators) where
 
 import Language.Haskell.TH
 
--- TODO: mkName here
-operators :: [(String, String)]
+operators :: [(String, Name)]
 operators =
-  [ ("add", "+"),
-    ("sub", "-")
+  [ ("add", mkName "+"),
+    ("sub", mkName "-")
   ]
 
 cons :: [Name]
@@ -20,15 +19,15 @@ cons =
   ]
 
 -- TODO: Take tuple (lhsCon, lhsValue)
-makeClause :: Exp -> Name -> Name -> Name -> Q Clause
-makeClause op lhsCon rhsCon resCon = do
+makeClause :: Exp -> (Name, Name -> Exp) -> (Name, Name -> Exp) -> Name -> Q Clause
+makeClause op (lhsCon, lhsExpr) (rhsCon, rhsExpr) resCon = do
   lhs <- newName "lhs"
   rhs <- newName "rhs"
 
   let body =
         AppE
           (ConE (mkName "Right"))
-          (AppE (ConE resCon) (UInfixE (VarE lhs) op (VarE rhs)))
+          (AppE (ConE resCon) (UInfixE (lhsExpr lhs) op (rhsExpr rhs)))
 
   return $
     Clause
@@ -40,26 +39,47 @@ makeClause op lhsCon rhsCon resCon = do
 
 makeStdClause :: Exp -> Name -> Q Clause
 makeStdClause op conName = do
-  makeClause op conName conName conName
+  makeClause op (conName, VarE) (conName, VarE) conName
 
 makeSubClauses :: Exp -> Q [Clause]
 makeSubClauses op = do
   let wcon = mkName "EWord"
   let lcon = mkName "ELong"
 
-  c1 <- makeClause op wcon lcon wcon
-  c2 <- makeClause op lcon wcon wcon
+  c1 <- makeClause op (wcon, VarE) (lcon, longToWord) wcon
+  c2 <- makeClause op (lcon, longToWord) (wcon, VarE) wcon
   return $ [c1, c2]
+  where
+    longToWord :: Name -> Exp
+    longToWord var =
+      AppE
+        (VarE $ mkName "fromIntegral")
+        ( UInfixE
+            (VarE var)
+            (VarE (mkName ".&."))
+            (LitE (IntegerL 0xffffffff))
+        )
 
-generateOperator :: (String, String) -> Q Dec
-generateOperator (fnName, opName) = do
-  let name = mkName $ fnName ++ "RegVals"
-  let op = VarE $ mkName opName
+typingErrorClause :: Clause
+typingErrorClause =
+  Clause
+    [WildP, WildP]
+    ( NormalB $
+        AppE
+          (ConE $ mkName "Left")
+          (ConE $ mkName "TypingError")
+    )
+    []
 
-  stdClauses <- mapM (makeStdClause op) cons
-  subClauses <- makeSubClauses op
+generateOperator :: (String, Name) -> Q Dec
+generateOperator (fnName, op) = do
+  let name = mkName $ fnName ++ "Vals"
+  let opExpr = VarE op
 
-  return $ FunD name (stdClauses ++ subClauses)
+  stdClauses <- mapM (makeStdClause opExpr) cons
+  subClauses <- makeSubClauses opExpr
+
+  return $ FunD name (stdClauses ++ subClauses ++ [typingErrorClause])
 
 generateOperators :: Q [Dec]
 generateOperators = mapM generateOperator operators
