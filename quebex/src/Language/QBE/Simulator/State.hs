@@ -2,7 +2,7 @@ module Language.QBE.Simulator.State where
 
 import Control.Monad.Except (ExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, get, modify, put)
+import Control.Monad.State (StateT, get, gets, modify)
 import Data.ByteString.Builder qualified as B
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
@@ -12,19 +12,30 @@ import Language.QBE.Types qualified as QBE
 
 type Exec a = StateT Env (ExceptT EvalError IO) a
 
+------------------------------------------------------------------------
+
 data StackFrame
   = StackFrame
   { stkFunc :: QBE.FuncDef,
     stkVars :: Map.Map QBE.LocalIdent RegVal,
-    stkSize :: Size
+    stkFp :: Address
   }
 
-mkStackFrame :: QBE.FuncDef -> StackFrame
-mkStackFrame func = StackFrame func Map.empty 0
+mkStackFrame :: QBE.FuncDef -> Address -> StackFrame
+mkStackFrame func = StackFrame func Map.empty
+
+storeLocal :: QBE.LocalIdent -> RegVal -> StackFrame -> StackFrame
+storeLocal ident value frame@(StackFrame {stkVars = v}) =
+  frame {stkVars = Map.insert ident value v}
+
+lookupLocal :: StackFrame -> QBE.LocalIdent -> Maybe RegVal
+lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
+
+------------------------------------------------------------------------
 
 data Env
   = Env
-  { envVars :: Map.Map String RegVal,
+  { envGlobals :: Map.Map QBE.GlobalIdent RegVal,
     envMem :: Memory,
     envStk :: [StackFrame],
     envStkPtr :: Address
@@ -35,22 +46,36 @@ mkEnv a s = do
   mem <- mkMemory a s
   return $ Env Map.empty mem [] (s - 1)
 
+activeFrame :: Exec StackFrame
+activeFrame = do
+  env <- get
+  case env of
+    Env {envStk = x : _} -> pure x
+    _ -> throwError EmptyStack
+
+modifyFrame :: (StackFrame -> StackFrame) -> Exec ()
+modifyFrame func = do
+  stack <- gets envStk
+  case stack of
+    (x : xs) -> modify (\s -> s {envStk = func x : xs})
+    _ -> throwError EmptyStack
+
 pushStackFrame :: QBE.FuncDef -> Exec ()
-pushStackFrame f =
-  modify (\s -> s {envStk = mkStackFrame f : envStk s})
+pushStackFrame f = do
+  stkPtr <- gets envStkPtr
+  modify (\s -> s {envStk = mkStackFrame f stkPtr : envStk s})
 
-popStackFrame :: Exec (Maybe StackFrame)
+popStackFrame :: Exec ()
 popStackFrame = do
-  stk <- envStk <$> get
+  stk <- gets envStk
   case stk of
-    [] -> pure Nothing
-    (x : xs) -> do
-      modify (\s -> s {envStk = xs})
-      pure $ Just x
+    [] -> pure ()
+    ((StackFrame {stkFp = fp}) : xs) ->
+      modify (\s -> s {envStk = xs, envStkPtr = fp})
 
-pushStack :: Size -> Address -> Exec RegVal
-pushStack size align = do
-  stkPtr <- envStkPtr <$> get
+stackAlloc :: Size -> Address -> Exec RegVal
+stackAlloc size align = do
+  stkPtr <- gets envStkPtr
   let newStkPtr = alignAddr (stkPtr - size) align
   modify (\s -> s {envStkPtr = newStkPtr})
   return $ ELong newStkPtr
@@ -58,22 +83,14 @@ pushStack size align = do
     alignAddr :: Address -> Address -> Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
 
-storeValue :: Address -> RegVal -> Exec Env
-storeValue addr regVal = do
-  env <- get
-  liftIO $ storeByteString (envMem env) addr (B.toLazyByteString $ toBuilder regVal)
-  pure env
+writeMemory :: Address -> RegVal -> Exec ()
+writeMemory addr regVal = do
+  mem <- gets envMem
+  liftIO $ storeByteString mem addr (B.toLazyByteString $ toBuilder regVal)
 
-insertValue :: String -> RegVal -> Exec ()
-insertValue k v = do
-  modify (\s -> s {envVars = Map.insert k v (envVars s)})
-
-lookupValue' :: String -> Exec RegVal
-lookupValue' k = do
-  e <- get
-  case Map.lookup k (envVars e) of
-    Nothing -> throwError UnknownVariable
-    Just v -> pure v
+maybeLookup :: Maybe RegVal -> Exec RegVal
+maybeLookup (Just x) = pure x
+maybeLookup Nothing = throwError UnknownVariable
 
 lookupValue :: QBE.BaseType -> QBE.Value -> Exec RegVal
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
@@ -85,8 +102,8 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
 lookupValue _ (QBE.VConst (QBE.Const (QBE.SFP v))) = pure $ ESingle v
 lookupValue _ (QBE.VConst (QBE.Const (QBE.DFP v))) = pure $ EDouble v
 lookupValue _ (QBE.VConst (QBE.Const (QBE.Global k))) =
-  lookupValue' (show k)
+  gets envGlobals >>= maybeLookup . Map.lookup k
 lookupValue _ (QBE.VConst (QBE.Thread k)) =
-  lookupValue' (show k)
+  gets envGlobals >>= maybeLookup . Map.lookup k
 lookupValue _ (QBE.VLocal k) =
-  lookupValue' (show k)
+  activeFrame >>= maybeLookup . flip lookupLocal k

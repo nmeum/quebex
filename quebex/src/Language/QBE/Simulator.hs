@@ -1,5 +1,5 @@
 module Language.QBE.Simulator
-  ( Env (envVars, envMem, envStkPtr),
+  ( Env (envMem, envStkPtr),
     execInstr,
     execVolatile,
     execStmt,
@@ -11,12 +11,14 @@ where
 
 import Control.Monad.Except (liftEither, runExceptT)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (get, put, runStateT)
+import Control.Monad.State (get, runStateT)
 import Data.Functor ((<&>))
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
+
+-- TODO: Don't return `Exec Env`.
 
 execVolatile :: QBE.VolatileInstr -> Exec Env
 execVolatile (QBE.Store valTy valReg addrReg) = do
@@ -28,10 +30,9 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
     QBE.HalfWord -> lookupValue QBE.Word valReg -- TODO: Extract first 16 bits
     (QBE.Base bt) -> lookupValue bt valReg
 
-  -- TODO
   (ELong addrVal) <- lookupValue QBE.Long addrReg
-  storeValue addrVal val
-execVolatile (QBE.Blit _ _ _) = error "blit not implemented"
+  writeMemory addrVal val >> get
+execVolatile (QBE.Blit {}) = error "blit not implemented"
 
 execInstr :: QBE.BaseType -> QBE.Instr -> Exec RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
@@ -43,11 +44,13 @@ execInstr retTy (QBE.Sub lhs rhs) = do
   v2 <- lookupValue retTy rhs
   liftEither (subVals v1 v2) >>= liftEither . assertType retTy
 execInstr _retTy (QBE.Alloc size align) =
-  pushStack (fromIntegral $ QBE.getSize size) align
+  stackAlloc (fromIntegral $ QBE.getSize size) align
 
 execStmt :: QBE.Statement -> Exec Env
-execStmt (QBE.Assign name ty inst) =
-  execInstr ty inst >>= insertValue (show name) >> get
+execStmt (QBE.Assign name ty inst) = do
+  newVal <- execInstr ty inst
+  modifyFrame (storeLocal name newVal)
+  get
 execStmt (QBE.Volatile v) = execVolatile v
 
 execBlock :: QBE.Block -> Exec Env
