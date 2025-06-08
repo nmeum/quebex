@@ -27,7 +27,7 @@ blockTests =
           let b = Block {label = (BlockIdent "start"), stmt = [i], term = Halt}
 
           res <- runExec (execFunc $ makeFunc [b])
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.EWord 3)]),
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.VWord 3)]),
       testCase "Evaluate multiple basic blocks" $
         do
           let i1 =
@@ -49,14 +49,14 @@ blockTests =
           let b = Block {label = (BlockIdent "calc"), stmt = [i1, i2], term = Halt}
 
           res <- runExec (execFunc $ makeFunc [b])
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.EWord 3), ((LocalIdent "foo"), E.EWord 5)]),
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "val"), E.VWord 3), ((LocalIdent "foo"), E.VWord 5)]),
       testCase "Alloc pre-aligned value on stack" $
         do
           let i = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
           let b = Block {label = (BlockIdent "allocate"), stmt = [i], term = Halt}
 
           res <- runExec (execFunc $ makeFunc [b])
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "ptr"), E.ELong 120)]),
+          assertEqual "" (envVars <$> res) $ Right (Map.fromList [((LocalIdent "ptr"), E.VLong 120)]),
       testCase "Store value on the stack" $
         do
           let i1 = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
