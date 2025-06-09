@@ -47,6 +47,7 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
 
   (E.VLong addrVal) <- lookupValue QBE.Long addrReg
   writeMemory addrVal val
+-- TODO: Implement blit
 execVolatile (QBE.Blit {}) = error "blit not implemented"
 
 execInstr :: QBE.BaseType -> QBE.Instr -> Exec E.RegVal
