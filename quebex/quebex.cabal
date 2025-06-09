@@ -52,6 +52,8 @@ test-suite quebex-test
 
     build-depends:
         base ^>=4.19.1.0,
+        mtl,
+        parsec,
         quebex,
         quebex-syntax,
         containers,
