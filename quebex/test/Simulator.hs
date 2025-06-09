@@ -66,6 +66,64 @@ blockTests =
               \}\n"
 
           res @?= Left (Just $ E.VWord 0xdecafbad),
+      testCase "Evaluate function without return value" $
+        do
+          res <-
+            parseAndExec
+              "function $noRet() {\n\
+              \@start\n\
+              \ret\n\
+              \}\n"
+
+          res @?= Left Nothing,
+      testCase "Evaluate two basic blocks with unconditional jump" $
+        do
+          res <-
+            parseAndExec
+              "function w $unconditionalJump() {\n\
+              \@start\n\
+              \%val =w add 0, 1\n\
+              \jmp @next\n\
+              \@next\n\
+              \%val =w add %val, 1\n\
+              \ret %val\n\
+              \}\n"
+
+          res @?= Left (Just $ E.VWord 2),
+      testCase "Conditional jump with zero value" $
+        do
+          res <-
+            parseAndExec
+              "function l $conditionalJumpTaken() {\n\
+              \@start\n\
+              \%zero =w add 0, 0\n\
+              \jnz %zero, @nonZero, @zero\n\
+              \@nonZero\n\
+              \%val =l add 0, 42\n\
+              \ret %val\n\
+              \@zero\n\
+              \%val =l add 0, 23\n\
+              \ret %val\n\
+              \}\n"
+
+          res @?= Left (Just $ E.VLong 23),
+      testCase "Conditional jump with non-zero value" $
+        do
+          res <-
+            parseAndExec
+              "function l $conditionalJumpTaken() {\n\
+              \@start\n\
+              \%zero =w add 1, 0\n\
+              \jnz %zero, @nonZero, @zero\n\
+              \@nonZero\n\
+              \%val =l add 0, 42\n\
+              \ret %val\n\
+              \@zero\n\
+              \%val =l add 0, 23\n\
+              \ret %val\n\
+              \}\n"
+
+          res @?= Left (Just $ E.VLong 42),
       -- TODO: Rewrite once we have load instruction support.
       testCase "Alloc pre-aligned value on stack" $
         do
