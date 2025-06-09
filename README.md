@@ -32,12 +32,12 @@ Further, whenever possible, dependencies on external libraries that are [not bun
 ### Planned Components
 
 * `quebex`: Basic analysis library, which should provide
-	* A modular interpreted for dynamic analysis sbased on monad transformers *[in progress]*
+	* A modular interpreter for dynamic analysis based on monad transformers *[in progress]*
 	* Basic framework for static analysis (CFG, call graphs, …) *[planned]*
-* `quebex-syntax`: Parser for the QBE intermediate language written in literate Haskell *[in progress]*
-* `quebex-symex`: A symbolic executor based on the modular interpreter provided by `quebex` *[planned]*
+* `quebex-syntax`: Parser for the QBE IL written in literate Haskell *[in progress]*
+* `quebex-symex`: Symbolic execution based on the provided modular interpreter *[planned]*
 
-Long term, it would also be of interest to build lifters to generate QBE from binary code (e.g. using [libriscv]).
+Long term, it is also of interest to build lifters which generate QBE from binaries (e.g. with [libriscv]).
 
 [^1]: At the time of writing, KLEE recommends LLVM 13 and the current version is LLVM 20.
 [QBE]: https://c9x.me/compile/
