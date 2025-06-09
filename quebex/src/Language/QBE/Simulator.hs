@@ -1,5 +1,6 @@
 module Language.QBE.Simulator
   ( Env (envMem, envStkPtr),
+    BlockResult,
     execInstr,
     execVolatile,
     execStmt,
@@ -108,7 +109,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) = do
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
 
-runExec :: Exec a -> IO (Either EvalError Env)
+runExec :: Exec a -> IO (Either EvalError a)
 runExec env = do
   emptyEnv <- liftIO $ mkEnv 0x0 128
-  runExceptT (runStateT (env >> get) emptyEnv) <&> fmap fst
+  runExceptT (runStateT env emptyEnv) <&> fmap fst
