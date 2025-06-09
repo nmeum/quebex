@@ -56,6 +56,16 @@ data Abity
   | AUserDef UserIdent
   deriving (Show, Eq)
 
+abityToBase :: Abity -> BaseType
+-- Calls with a sub-word return type define a temporary of base type
+-- w with its most significant bits unspecified.
+abityToBase (ASubWordType _) = Word
+-- When an aggregate type is used as argument type or return type, the
+-- value respectively passed or returned needs to be a pointer to a
+-- memory location holding the value.
+abityToBase (AUserDef _) = Long
+abityToBase (ABase ty) = ty
+
 data Const
   = Number Word64
   | SFP Float
@@ -138,7 +148,7 @@ data FuncDef
   , fName :: GlobalIdent
   , fAbity :: Maybe Abity
   , fParams :: [FuncParam]
-  , fBlock :: [Block]
+  , fBlock :: [Block] -- TODO: Use a Map here
   }
   deriving (Show, Eq)
 
