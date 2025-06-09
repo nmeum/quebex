@@ -801,7 +801,7 @@ jumpInstr = (string "hlt" >> pure Q.Halt)
           _ <- ws1 $ string "jnz"
           v <- ws val <* ws (char ',')
           l1 <- ws label <* ws (char ',')
-          l2 <- ws1 label
+          l2 <- ws label
           return $ Q.Jnz v l1 l2
 \end{code}
 
