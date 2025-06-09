@@ -6,4 +6,7 @@ data EvalError
   | UnknownVariable
   | EmptyStack
   | NotImplemented
+  | EncounteredHalt
+  | InvalidReturnValue
+  | UnknownBlock
   deriving (Show, Eq)

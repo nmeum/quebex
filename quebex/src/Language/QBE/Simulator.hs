@@ -9,14 +9,20 @@ module Language.QBE.Simulator
   )
 where
 
-import Control.Monad.Except (liftEither, runExceptT)
+import Control.Monad.Except (liftEither, runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (get, runStateT)
 import Data.Functor ((<&>))
+import Data.List (find)
+import Data.Maybe (isNothing)
 import Language.QBE.Simulator.Error
-import qualified Language.QBE.Simulator.Expression as E
+import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
+
+-- Execution of a BasicBlock can either return (with an optional return
+-- value) or it can jump to another BasicBlock which will then be executed.
+type BlockResult = (Either (Maybe E.RegVal) QBE.Block)
 
 checkedEval ::
   QBE.BaseType ->
@@ -60,18 +66,49 @@ execStmt (QBE.Assign name ty inst) = do
   modifyFrame (storeLocal name newVal)
 execStmt (QBE.Volatile v) = execVolatile v
 
-execBlock :: QBE.Block -> Exec ()
--- TODO: Handle terms.
-execBlock block = mapM_ execStmt (QBE.stmt block)
+execJump :: QBE.JumpInstr -> Exec BlockResult
+execJump QBE.Halt = throwError EncounteredHalt
+execJump (QBE.Jump ident) = do
+  blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
+  case find (\x -> QBE.label x == ident) blocks of
+    Just bl -> pure $ Right bl
+    Nothing -> throwError UnknownBlock
+execJump (QBE.Jnz cond ifT ifF) = do
+  (E.VWord condValue) <- lookupValue QBE.Word cond
+  execJump $ QBE.Jump (if condValue /= 0 then ifT else ifF)
+execJump (QBE.Return v) = do
+  func <- activeFrame <&> stkFunc
+  case QBE.fAbity func of
+    Just abity -> do
+      retVal <-
+        case v of
+          Nothing -> throwError InvalidReturnValue
+          Just x -> pure x
+      lookupValue (QBE.abityToBase abity) retVal <&> (Left . Just)
+    Nothing ->
+      if isNothing v
+        then pure (Left Nothing)
+        else throwError InvalidReturnValue
 
-execFunc :: QBE.FuncDef -> Exec ()
-execFunc func = do
+execBlock :: QBE.Block -> Exec BlockResult
+execBlock block = do
+  mapM_ execStmt (QBE.stmt block)
+  execJump (QBE.term block)
+
+execFunc :: QBE.FuncDef -> Exec BlockResult
+execFunc (QBE.FuncDef {QBE.fBlock = []}) = pure (Left Nothing)
+execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) = do
   pushStackFrame func
   -- TODO: push function arguments on the stack
-  mapM_ execBlock (QBE.fBlock func)
-  -- TODO: return function return value
+  execBlock block >>= go
+  where
+    -- TODO: pop function from stack
 
-runExec :: Exec () -> IO (Either EvalError Env)
+    go :: BlockResult -> Exec BlockResult
+    go retValue@(Left _) = pure retValue
+    go (Right nextBlock) = execBlock nextBlock
+
+runExec :: Exec a -> IO (Either EvalError Env)
 runExec env = do
   emptyEnv <- liftIO $ mkEnv 0x0 128
   runExceptT (runStateT (env >> get) emptyEnv) <&> fmap fst
