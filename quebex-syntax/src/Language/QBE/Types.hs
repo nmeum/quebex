@@ -165,11 +165,16 @@ data JumpInstr
   | Halt
   deriving (Show, Eq)
 
+data LoadValue
+  = LSubWord SubWordType
+  | LBase BaseType
+  deriving (Show, Eq)
+
 data Instr
   = Add Value Value
   | Sub Value Value
   | Alloc AllocSize Word64
-  | Load ExtType Value
+  | Load LoadValue Value
   deriving (Show, Eq)
 
 data VolatileInstr

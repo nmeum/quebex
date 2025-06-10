@@ -96,7 +96,7 @@ funcTests =
             f = FuncDef [] (GlobalIdent "main") Nothing p b
          in parse "function $main(w %argc) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with load instruction" $
-        let s = [Assign (LocalIdent "v") Word (Load (Base Word) (VLocal $ LocalIdent "addr"))]
+        let s = [Assign (LocalIdent "v") Word (Load (LBase Word) (VLocal $ LocalIdent "addr"))]
             b = [Block {label = BlockIdent "begin", stmt = s, term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "main") Nothing [] b
          in parse "function $main() {\n@begin\n%v =w loadw %addr\nret\n}" @?= Right f,

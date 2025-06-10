@@ -758,7 +758,8 @@ instr =
 
 loadInstr :: Parser Q.Instr
 loadInstr = do
-  t <- string "load" >> ws1 extType
+  _ <- string "load"
+  t <- ws1 ((Q.LSubWord <$> subWordType) <|> (Q.LBase <$> baseType))
   ws val <&> Q.Load t
 
 allocInstr :: Parser Q.Instr
