@@ -717,6 +717,7 @@ graphs. The control flow is serialized as a sequence of blocks of
 straight-line code which are connected using jump instructions.
 
 \subsection{Blocks}
+\label{sec:blocks}
 
 \begin{code}
 block :: Parser Q.Block
@@ -740,61 +741,6 @@ When one block jumps to the next block in the IL file, it is not
 necessary to write the jump instruction, it will be automatically added
 by the parser. For example the start block in the example below jumps
 directly to the loop block.
-
-\subsection{Statements}
-\label{sec:statements}
-
-% TODO: Not documented in the QBE BNF.
-
-\begin{code}
-instr :: Parser Q.Instr
-instr =
-  choice
-    [ try $ binaryInstr Q.Add "add",
-      try $ binaryInstr Q.Sub "sub",
-      try $ loadInstr,
-      try $ allocInstr
-    ]
-
-loadInstr :: Parser Q.Instr
-loadInstr = do
-  _ <- string "load"
-  t <- ws1 ((Q.LSubWord <$> subWordType) <|> (Q.LBase <$> baseType))
-  ws val <&> Q.Load t
-
-allocInstr :: Parser Q.Instr
-allocInstr = do
-  siz <- (ws $ string "alloc") >> (ws1 allocSize)
-  decNumber <&> Q.Alloc siz
-
-assign :: Parser Q.Statement
-assign = do
-  n <- ws local
-  t <- ws (char '=') >> ws1 baseType
-  Q.Assign n t <$> instr
-
-volatileInstr :: Parser Q.Statement
-volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
-
-storeInstr :: Parser Q.VolatileInstr
-storeInstr = do
-  t <- string "store" >> ws1 extType
-  v <- ws val
-  _ <- ws $ char ','
-  ws val <&> Q.Store t v
-
-blitInstr :: Parser Q.VolatileInstr
-blitInstr = do
-  v1 <- (ws1 $ string "blit") >> ws val <* (ws $ char ',')
-  v2 <- ws val <* (ws $ char ',')
-  nb <- decNumber
-  return $ Q.Blit v1 v2 nb
-
-statement :: Parser Q.Statement
-statement = assign <|> volatileInstr
-\end{code}
-
-To-Do.
 
 \subsection{Jumps}
 
@@ -827,6 +773,156 @@ following list.
 \section{Instructions}
 \label{sec:instructions}
 
+\begin{code}
+instr :: Parser Q.Instr
+instr =
+  choice
+    [ try $ binaryInstr Q.Add "add",
+      try $ binaryInstr Q.Sub "sub",
+      try $ loadInstr,
+      try $ allocInstr
+    ]
+\end{code}
+
+Instructions are the smallest piece of code in the IL, they form the body of
+\nameref{sec:blocks}. This specification distinguishes instructions and
+volatile instructions, the latter do not return a value. For the former, the IL
+uses a three-address code, which means that one instruction computes an
+operation between two operands and assigns the result to a third one.
+
+\begin{code}
+assign :: Parser Q.Statement
+assign = do
+  n <- ws local
+  t <- ws (char '=') >> ws1 baseType
+  Q.Assign n t <$> instr
+
+volatileInstr :: Parser Q.Statement
+volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
+
+-- TODO: Not documented in the QBE BNF.
+statement :: Parser Q.Statement
+statement = assign <|> volatileInstr
+\end{code}
+
+An instruction has both a name and a return type, this return type is a base
+type that defines the size of the instruction's result. The type of the
+arguments can be unambiguously inferred using the instruction name and the
+return type. For example, for all arithmetic instructions, the type of the
+arguments is the same as the return type. The two additions below are valid if
+\texttt{\%y} is a word or a long (because of \nameref{sec:subtyping}).
+
+\begin{verbatim}
+%x =w add 0, %y
+%z =w add %x, %x
+\end{verbatim}
+
+Some instructions, like comparisons and memory loads have operand types
+that differ from their return types. For instance, two floating points
+can be compared to give a word result (0 if the comparison succeeds, 1
+if it fails).
+
+\begin{verbatim}
+%c =w cgts %a, %b
+\end{verbatim}
+
+In the example above, both operands have to have single type. This is
+made explicit by the instruction suffix.
+
+\subsection{Arithmetic and Bits}
+
+To-Do.
+
+\subsection{Memory}
+
+\subsubsection{Store instructions}
+
+\begin{code}
+storeInstr :: Parser Q.VolatileInstr
+storeInstr = do
+  t <- string "store" >> ws1 extType
+  v <- ws val
+  _ <- ws $ char ','
+  ws val <&> Q.Store t v
+\end{code}
+
+Store instructions exist to store a value of any base type and any extended
+type. Since halfwords and bytes are not first class in the IL, \texttt{storeh}
+and \texttt{storeb} take a word as argument. Only the first 16 or 8 bits of
+this word will be stored in memory at the address specified in the second
+argument.
+
+\subsubsection{Load instructions}
+
+\begin{code}
+loadInstr :: Parser Q.Instr
+loadInstr = do
+  _ <- string "load"
+  t <- ws1 ((Q.LSubWord <$> subWordType) <|> (Q.LBase <$> baseType))
+  ws val <&> Q.Load t
+\end{code}
+
+For types smaller than long, two variants of the load instruction are
+available: one will sign extend the loaded value, while the other will zero
+extend it. Note that all loads smaller than long can load to either a long or a
+word.
+
+The two instructions \texttt{loadsw} and \texttt{loaduw} have the same effect
+when they are used to define a word temporary. A \texttt{loadw} instruction is
+provided as syntactic sugar for \texttt{loadsw} to make explicit that the
+extension mechanism used is irrelevant.
+
+\subsubsection{Blits}
+
+\begin{code}
+blitInstr :: Parser Q.VolatileInstr
+blitInstr = do
+  v1 <- (ws1 $ string "blit") >> ws val <* (ws $ char ',')
+  v2 <- ws val <* (ws $ char ',')
+  nb <- decNumber
+  return $ Q.Blit v1 v2 nb
+\end{code}
+
+The blit instruction copies in-memory data from its first address argument to
+its second address argument. The third argument is the number of bytes to copy.
+The source and destination spans are required to be either non-overlapping, or
+fully overlapping (source address identical to the destination address). The
+byte count argument must be a nonnegative numeric constant; it cannot be a
+temporary.
+
+One blit instruction may generate a number of instructions proportional to its
+byte count argument, consequently, it is recommended to keep this argument
+relatively small. If large copies are necessary, it is preferable that
+frontends generate calls to a supporting \texttt{memcpy} function.
+
+\subsubsection{Stack Allocation}
+
+\begin{code}
+allocInstr :: Parser Q.Instr
+allocInstr = do
+  siz <- (ws $ string "alloc") >> (ws1 allocSize)
+  decNumber <&> Q.Alloc siz
+\end{code}
+
+These instructions allocate a chunk of memory on the stack. The number ending
+the instruction name is the alignment required for the allocated slot. QBE will
+make sure that the returned address is a multiple of that alignment value.
+
+Stack allocation instructions are used, for example, when compiling the C local
+variables, because their address can be taken. When compiling Fortran,
+temporaries can be used directly instead, because it is illegal to take the
+address of a variable.
+
+\subsection{Comparisons}
+
+To-Do.
+
+\subsection{Conversions}
+
+To-Do.
+
+\subsection{Cast and Copy}
+
 To-Do.
 
 \subsection{Call}
@@ -836,6 +932,10 @@ To-Do.
 
 \subsection{Variadic}
 \label{sec:variadic}
+
+To-Do.
+
+\subsection{Phi}
 
 To-Do.
 
