@@ -4,25 +4,25 @@ import Data.Word (Word64)
 
 -- TODO: Prefix all constructors
 
-newtype UserIdent = UserIdent { userIdent :: String }
+newtype UserIdent = UserIdent {userIdent :: String}
   deriving (Eq, Ord)
 
 instance Show UserIdent where
   show (UserIdent s) = ':' : s
 
-newtype LocalIdent = LocalIdent { localIdent :: String }
+newtype LocalIdent = LocalIdent {localIdent :: String}
   deriving (Eq, Ord)
 
 instance Show LocalIdent where
   show (LocalIdent s) = '%' : s
 
-newtype BlockIdent = BlockIdent { blockIdent :: String }
+newtype BlockIdent = BlockIdent {blockIdent :: String}
   deriving (Eq, Ord)
 
 instance Show BlockIdent where
   show (BlockIdent s) = '@' : s
 
-newtype GlobalIdent = GlobalIdent { globalIdent :: String }
+newtype GlobalIdent = GlobalIdent {globalIdent :: String}
   deriving (Eq, Ord)
 
 instance Show GlobalIdent where
@@ -144,11 +144,11 @@ data DataItem
 
 data FuncDef
   = FuncDef
-  { fLinkage :: [Linkage]
-  , fName :: GlobalIdent
-  , fAbity :: Maybe Abity
-  , fParams :: [FuncParam]
-  , fBlock :: [Block] -- TODO: Use a Map here
+  { fLinkage :: [Linkage],
+    fName :: GlobalIdent,
+    fAbity :: Maybe Abity,
+    fParams :: [FuncParam],
+    fBlock :: [Block] -- TODO: Use a Map here
   }
   deriving (Show, Eq)
 
@@ -169,6 +169,7 @@ data Instr
   = Add Value Value
   | Sub Value Value
   | Alloc AllocSize Word64
+  | Load ExtType Value
   deriving (Show, Eq)
 
 data VolatileInstr
@@ -183,9 +184,9 @@ data Statement
 
 data Block
   = Block
-  { label :: BlockIdent
-  -- TODO: phi
-  , stmt :: [Statement]
-  , term :: JumpInstr
+  { label :: BlockIdent,
+    -- TODO: phi
+    stmt :: [Statement],
+    term :: JumpInstr
   }
   deriving (Show, Eq)

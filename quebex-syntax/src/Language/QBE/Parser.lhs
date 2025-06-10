@@ -752,8 +752,14 @@ instr =
   choice
     [ try $ binaryInstr Q.Add "add",
       try $ binaryInstr Q.Sub "sub",
+      try $ loadInstr,
       try $ allocInstr
     ]
+
+loadInstr :: Parser Q.Instr
+loadInstr = do
+  t <- string "load" >> ws1 extType
+  ws val <&> Q.Load t
 
 allocInstr :: Parser Q.Instr
 allocInstr = do

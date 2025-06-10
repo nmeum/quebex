@@ -1,7 +1,7 @@
 module Parser where
 
-import Language.QBE.Types
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
+import Language.QBE.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Text.ParserCombinators.Parsec as P
@@ -15,7 +15,7 @@ typeTests =
          in parse "type :opaque = align 16 { 32 }" @?= Right v,
       testCase "Regular empty type" $
         let v = TypeDef (UserIdent "empty") Nothing (ARegular [])
-          in parse "type :empty = {}" @?= Right v,
+         in parse "type :empty = {}" @?= Right v,
       testCase "Regular type with multiple fields" $
         let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
             v = TypeDef (UserIdent "twofloats") Nothing (ARegular f)
@@ -95,6 +95,11 @@ funcTests =
             b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "main") Nothing p b
          in parse "function $main(w %argc) {\n@start\nret\n}" @?= Right f,
+      testCase "Function definition with load instruction" $
+        let s = [Assign (LocalIdent "v") Word (Load (Base Word) (VLocal $ LocalIdent "addr"))]
+            b = [Block {label = BlockIdent "begin", stmt = s, term = Return Nothing}]
+            f = FuncDef [] (GlobalIdent "main") Nothing [] b
+         in parse "function $main() {\n@begin\n%v =w loadw %addr\nret\n}" @?= Right f,
       testCase "Function definition with linkage and return type" $
         let p = [Regular (ABase Long) (LocalIdent "v")]
             b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
