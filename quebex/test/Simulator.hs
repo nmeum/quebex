@@ -1,13 +1,8 @@
 module Simulator (simTests) where
 
-import Control.Monad.State (get)
-import Data.Map qualified as Map
 import Language.QBE.Parser (funcDef)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Memory qualified as MEM
-import Language.QBE.Simulator.State
-import Language.QBE.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.ParserCombinators.Parsec qualified as P
@@ -65,6 +60,7 @@ blockTests =
               \}\n"
 
           res @?= Left (Just $ E.VWord 0xdecafbad),
+      -- TODO: Test subtyping in function return value
       testCase "Evaluate function without return value" $
         do
           res <-
@@ -123,32 +119,20 @@ blockTests =
               \}\n"
 
           res @?= Left (Just $ E.VLong 42),
-      -- TODO: Rewrite once we have load instruction support.
-      testCase "Alloc pre-aligned value on stack" $
+      testCase "Allocate, store and load value in memory" $
         do
-          let i = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
-          let b = Block {label = BlockIdent "allocate", stmt = [i], term = Return Nothing}
+          res <-
+            parseAndExec
+              "function w $allocate() {\n\
+              \@start\n\
+              \%addr =l alloc4 4\n\
+              \storew 2342, %addr\n\
+              \%v =w loadw %addr\n\
+              \ret %v\n\
+              \}\n"
 
-          res <- runExec (execFunc (makeFunc [b]) >> get)
-          assertEqual "" (envVars <$> res) $ Right (Map.fromList [(LocalIdent "ptr", E.VLong 120)]),
-      -- TODO: Rewrite once we have load instruction support.
-      testCase "Store value on the stack" $
-        do
-          let i1 = Assign (LocalIdent "ptr") Long (Alloc AlignWord 4)
-          let i2 = Volatile $ Store (Base Word) (VConst (Const (Number 0x42))) (VLocal (LocalIdent "ptr"))
-          let bl = Block {label = BlockIdent "allocate", stmt = [i1, i2], term = Return Nothing}
-
-          env <- runExec (execFunc (makeFunc [bl]) >> get)
-          let (Right mem) = envMem <$> env
-
-          res <- MEM.loadBytes mem 120 4
-          assertEqual "" res [0x42, 0, 0, 0]
+          res @?= Left (Just $ E.VWord 2342)
     ]
-  where
-    makeFunc :: [Block] -> FuncDef
-    makeFunc = FuncDef [] (GlobalIdent "foo") Nothing []
-
-    envVars e = stkVars (head $ envStk e)
 
 simTests :: TestTree
 simTests = testGroup "Tests for the Simulator" [blockTests]

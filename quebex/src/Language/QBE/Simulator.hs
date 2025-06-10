@@ -12,7 +12,7 @@ where
 
 import Control.Monad.Except (liftEither, runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (get, runStateT)
+import Control.Monad.State (runStateT)
 import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Maybe (isNothing)
@@ -59,7 +59,13 @@ execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
   checkedEval retTy E.sub v1 v2
+execInstr _retTy (QBE.Load ty addr) = do
+  (E.VLong addrVal) <- lookupValue QBE.Long addr
+  -- TODO: Respect specified return type
+  -- TODO: Sign and zero extension for SubWordType
+  readMemory ty addrVal
 execInstr _retTy (QBE.Alloc size align) =
+  -- TODO: Ensure that _retTy is a long?
   stackAlloc (fromIntegral $ QBE.getSize size) align
 
 execStmt :: QBE.Statement -> Exec ()

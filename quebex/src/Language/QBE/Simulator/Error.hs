@@ -5,8 +5,8 @@ data EvalError
   = TypingError
   | UnknownVariable
   | EmptyStack
-  | NotImplemented
   | EncounteredHalt
   | InvalidReturnValue
   | UnknownBlock
+  | InvalidMemoryLoad
   deriving (Show, Eq)

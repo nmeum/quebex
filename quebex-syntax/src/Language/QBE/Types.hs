@@ -170,6 +170,27 @@ data LoadType
   | LBase BaseType
   deriving (Show, Eq)
 
+-- TODO: Could/Should define this on ExtType instead.
+loadByteSize :: LoadType -> Word64
+loadByteSize (LSubWord UnsignedByte) = 1
+loadByteSize (LSubWord SignedByte) = 1
+loadByteSize (LSubWord SignedHalf) = 2
+loadByteSize (LSubWord UnsignedHalf) = 2
+loadByteSize (LBase Word) = 4
+loadByteSize (LBase Long) = 8
+loadByteSize (LBase Single) = 4
+loadByteSize (LBase Double) = 4
+
+loadToExtType :: LoadType -> ExtType
+loadToExtType (LSubWord UnsignedByte) = Byte
+loadToExtType (LSubWord SignedByte) = Byte
+loadToExtType (LSubWord SignedHalf) = HalfWord
+loadToExtType (LSubWord UnsignedHalf) = HalfWord
+loadToExtType (LBase Word) = Base Word
+loadToExtType (LBase Long) = Base Long
+loadToExtType (LBase Single) = Base Single
+loadToExtType (LBase Double) = Base Double
+
 data Instr
   = Add Value Value
   | Sub Value Value

@@ -87,6 +87,15 @@ writeMemory addr regVal = do
   mem <- gets envMem
   liftIO $ MEM.storeBytes mem addr (E.toBytes regVal)
 
+readMemory :: QBE.LoadType -> MEM.Address -> Exec E.RegVal
+readMemory ty addr = do
+  mem <- gets envMem
+  bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)
+
+  case E.fromBytes (QBE.loadToExtType ty) bytes of
+    Just x -> pure x
+    Nothing -> throwError InvalidMemoryLoad
+
 maybeLookup :: Maybe E.RegVal -> Exec E.RegVal
 maybeLookup (Just x) = pure x
 maybeLookup Nothing = throwError UnknownVariable
