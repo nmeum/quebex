@@ -4,9 +4,9 @@
 
 module Language.QBE.Simulator.Expression where
 
-import Data.Bits ((.&.))
-import Data.ByteString.Builder qualified as B
+import Data.Bits (FiniteBits, finiteBitSize, shiftR, (.&.))
 import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Float (castDoubleToWord64, castFloatToWord32)
 import Language.QBE.Simulator.Error (EvalError (TypingError))
 import Language.QBE.Simulator.Generator (generateOperators)
 import Language.QBE.Types qualified as QBE
@@ -20,13 +20,22 @@ data RegVal
   | VDouble Double
   deriving (Show, Eq)
 
-toBuilder :: RegVal -> B.Builder
-toBuilder (VByte w) = B.word8 w
-toBuilder (VHalf w) = B.word16LE w
-toBuilder (VWord w) = B.word32LE w
-toBuilder (VLong w) = B.word64LE w
-toBuilder (VSingle w) = B.floatLE w
-toBuilder (VDouble w) = B.doubleLE w
+toBytes :: RegVal -> [Word8]
+toBytes val =
+  let f w =
+        map
+          (\off -> fromIntegral $ shiftR w off .&. 0xff)
+          (take (bytesize w) $ iterate (+ 8) 0)
+   in case val of
+        (VByte v) -> [v]
+        (VHalf v) -> f v
+        (VWord v) -> f v
+        (VLong v) -> f v
+        (VSingle v) -> toBytes (VWord $ castFloatToWord32 v)
+        (VDouble v) -> toBytes (VLong $ castDoubleToWord64 v)
+  where
+    bytesize :: (FiniteBits a) => a -> Int
+    bytesize v = (finiteBitSize v) `div` 8
 
 assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
 assertType QBE.Word v@(VWord _) = Right v

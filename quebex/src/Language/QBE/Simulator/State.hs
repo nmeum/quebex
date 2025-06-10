@@ -3,11 +3,10 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Except (ExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
-import Data.ByteString.Builder qualified as B
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
-import qualified Language.QBE.Simulator.Expression as E
-import Language.QBE.Simulator.Memory
+import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
 type Exec a = StateT Env (ExceptT EvalError IO) a
@@ -18,10 +17,10 @@ data StackFrame
   = StackFrame
   { stkFunc :: QBE.FuncDef,
     stkVars :: Map.Map QBE.LocalIdent E.RegVal,
-    stkFp :: Address
+    stkFp :: MEM.Address
   }
 
-mkStackFrame :: QBE.FuncDef -> Address -> StackFrame
+mkStackFrame :: QBE.FuncDef -> MEM.Address -> StackFrame
 mkStackFrame func = StackFrame func Map.empty
 
 storeLocal :: QBE.LocalIdent -> E.RegVal -> StackFrame -> StackFrame
@@ -36,14 +35,14 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 data Env
   = Env
   { envGlobals :: Map.Map QBE.GlobalIdent E.RegVal,
-    envMem :: Memory,
+    envMem :: MEM.Memory,
     envStk :: [StackFrame],
-    envStkPtr :: Address
+    envStkPtr :: MEM.Address
   }
 
-mkEnv :: Address -> Size -> IO Env
+mkEnv :: MEM.Address -> MEM.Size -> IO Env
 mkEnv a s = do
-  mem <- mkMemory a s
+  mem <- MEM.mkMemory a s
   return $ Env Map.empty mem [] (s - 1)
 
 activeFrame :: Exec StackFrame
@@ -73,20 +72,20 @@ popStackFrame = do
     ((StackFrame {stkFp = fp}) : xs) ->
       modify (\s -> s {envStk = xs, envStkPtr = fp})
 
-stackAlloc :: Size -> Address -> Exec E.RegVal
+stackAlloc :: MEM.Size -> MEM.Address -> Exec E.RegVal
 stackAlloc size align = do
   stkPtr <- gets envStkPtr
   let newStkPtr = alignAddr (stkPtr - size) align
   modify (\s -> s {envStkPtr = newStkPtr})
   return $ E.VLong newStkPtr
   where
-    alignAddr :: Address -> Address -> Address
+    alignAddr :: MEM.Address -> MEM.Address -> MEM.Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
 
-writeMemory :: Address -> E.RegVal -> Exec ()
+writeMemory :: MEM.Address -> E.RegVal -> Exec ()
 writeMemory addr regVal = do
   mem <- gets envMem
-  liftIO $ storeByteString mem addr (B.toLazyByteString $ E.toBuilder regVal)
+  liftIO $ MEM.storeBytes mem addr (E.toBytes regVal)
 
 maybeLookup :: Maybe E.RegVal -> Exec E.RegVal
 maybeLookup (Just x) = pure x

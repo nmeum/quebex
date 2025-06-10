@@ -5,8 +5,8 @@ module Language.QBE.Simulator.Memory
     mkMemory,
     toMemAddr,
     memSize,
-    storeByteString,
-    loadByteString,
+    loadBytes,
+    storeBytes,
   )
 where
 
@@ -17,7 +17,6 @@ import Data.Array.IO
     readArray,
     writeArray,
   )
-import Data.ByteString.Lazy qualified as BSL
 import Data.Word (Word64, Word8)
 
 type Address = Word64
@@ -42,18 +41,17 @@ toMemAddr mem addr = addr - (memStart mem)
 memSize :: Memory -> IO Size
 memSize = fmap ((+ 1) . snd) . getBounds . memBytes
 
-storeByteString :: Memory -> Address -> BSL.ByteString -> IO ()
-storeByteString mem addr bs =
+storeBytes :: Memory -> Address -> [Word8] -> IO ()
+storeBytes mem addr bytes =
   mapM_ (\(off, val) -> storeByte mem (addr + off) val) $
-    zip [0 ..] $
-      BSL.unpack bs
- where
-  storeByte :: Memory -> Address -> Word8 -> IO ()
-  storeByte m a = writeArray (memBytes m) $ toMemAddr mem a
+    zip [0 ..] bytes
+  where
+    storeByte :: Memory -> Address -> Word8 -> IO ()
+    storeByte m a = writeArray (memBytes m) $ toMemAddr mem a
 
-loadByteString :: Memory -> Address -> Size -> IO (BSL.ByteString)
-loadByteString mem addr byteSize =
-  BSL.pack <$> mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
- where
-  loadByte :: Memory -> Address -> IO Word8
-  loadByte m = readArray (memBytes m) . toMemAddr m
+loadBytes :: Memory -> Address -> Size -> IO [Word8]
+loadBytes mem addr byteSize =
+  mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
+  where
+    loadByte :: Memory -> Address -> IO Word8
+    loadByte m = readArray (memBytes m) . toMemAddr m

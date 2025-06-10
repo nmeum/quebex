@@ -1,7 +1,6 @@
 module Simulator (simTests) where
 
 import Control.Monad.State (get)
-import Data.ByteString.Lazy qualified as BSL
 import Data.Map qualified as Map
 import Language.QBE.Parser (funcDef)
 import Language.QBE.Simulator
@@ -142,8 +141,8 @@ blockTests =
           env <- runExec (execFunc (makeFunc [bl]) >> get)
           let (Right mem) = envMem <$> env
 
-          res <- MEM.loadByteString mem 120 4
-          assertEqual "" res $ BSL.pack [0x42, 0, 0, 0]
+          res <- MEM.loadBytes mem 120 4
+          assertEqual "" res [0x42, 0, 0, 0]
     ]
   where
     makeFunc :: [Block] -> FuncDef
