@@ -60,7 +60,18 @@ blockTests =
               \}\n"
 
           res @?= Left (Just $ E.VWord 0xdecafbad),
-      -- TODO: Test subtyping in function return value
+      testCase "Subtyping in function return value" $
+        do
+          res <-
+            -- 16045690984835251117 == 0xdeadbeefdecafbad
+            parseAndExec
+              "function w $subtyp() {\n\
+              \@start\n\
+              \%v =l add 0, 16045690984835251117\n\
+              \ret %v\n\
+              \}\n"
+
+          res @?= Left (Just $ E.VWord 0xdecafbad),
       testCase "Evaluate function without return value" $
         do
           res <-

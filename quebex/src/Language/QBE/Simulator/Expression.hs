@@ -55,6 +55,14 @@ fromBytes ty lst =
           Just $ (VDouble $ castWord64ToDouble (f bytes))
         _ -> Nothing
 
+subType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
+subType QBE.Word v@(VWord _) = Right v
+subType QBE.Word (VLong l) = Right $ VWord (fromIntegral $ l .&. 0xffffffff)
+subType QBE.Long v@(VLong _) = Right v
+subType QBE.Single v@(VSingle _) = Right v
+subType QBE.Double v@(VDouble _) = Right v
+subType _ _ = Left TypingError
+
 assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
 assertType QBE.Word v@(VWord _) = Right v
 assertType QBE.Long v@(VLong _) = Right v

@@ -1,6 +1,6 @@
 module Language.QBE.Simulator.State where
 
-import Control.Monad.Except (ExceptT, throwError)
+import Control.Monad.Except (ExceptT, liftEither, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
 import Data.Map qualified as Map
@@ -107,11 +107,16 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
     QBE.Word -> E.VWord $ fromIntegral v
     QBE.Single -> E.VSingle $ fromIntegral v
     QBE.Double -> E.VDouble $ fromIntegral v
-lookupValue _ (QBE.VConst (QBE.Const (QBE.SFP v))) = pure $ E.VSingle v
-lookupValue _ (QBE.VConst (QBE.Const (QBE.DFP v))) = pure $ E.VDouble v
-lookupValue _ (QBE.VConst (QBE.Const (QBE.Global k))) =
-  gets envGlobals >>= maybeLookup . Map.lookup k
-lookupValue _ (QBE.VConst (QBE.Thread k)) =
-  gets envGlobals >>= maybeLookup . Map.lookup k
-lookupValue _ (QBE.VLocal k) =
-  activeFrame >>= maybeLookup . flip lookupLocal k
+lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
+  liftEither $ E.assertType ty (E.VSingle v)
+lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
+  liftEither $ E.assertType ty (E.VDouble v)
+lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
+  v <- gets envGlobals >>= maybeLookup . Map.lookup k
+  liftEither $ E.subType ty v
+lookupValue ty (QBE.VConst (QBE.Thread k)) = do
+  v <- gets envGlobals >>= maybeLookup . Map.lookup k
+  liftEither $ E.subType ty v
+lookupValue ty (QBE.VLocal k) = do
+  v <- activeFrame >>= maybeLookup . flip lookupLocal k
+  liftEither $ E.subType ty v
