@@ -4,9 +4,9 @@
 
 module Language.QBE.Simulator.Expression where
 
-import Data.Bits (FiniteBits, finiteBitSize, shiftR, (.&.))
+import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Float (castDoubleToWord64, castFloatToWord32)
+import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
 import Language.QBE.Simulator.Error (EvalError (TypingError))
 import Language.QBE.Simulator.Generator (generateOperators)
 import Language.QBE.Types qualified as QBE
@@ -36,6 +36,24 @@ toBytes val =
   where
     bytesize :: (FiniteBits a) => a -> Int
     bytesize v = (finiteBitSize v) `div` 8
+
+fromBytes :: QBE.ExtType -> [Word8] -> Maybe RegVal
+fromBytes ty lst =
+  let f a =
+        foldl
+          (\x (byte, idx) -> (fromIntegral byte `shift` (idx * 8)) .|. x)
+          0
+          $ zip a [0 ..]
+   in case (ty, lst) of
+        (QBE.Byte, [byte]) -> Just $ VByte byte
+        (QBE.HalfWord, bytes@[_, _]) -> Just (VHalf $ f bytes)
+        ((QBE.Base QBE.Word), bytes@[_, _, _, _]) -> Just (VWord $ f bytes)
+        ((QBE.Base QBE.Long), bytes@[_, _, _, _, _, _, _, _]) -> Just (VLong $ f bytes)
+        ((QBE.Base QBE.Single), bytes@[_, _, _, _]) ->
+          Just $ (VSingle $ castWord32ToFloat (f bytes))
+        ((QBE.Base QBE.Double), bytes@[_, _, _, _, _, _, _, _]) ->
+          Just $ (VDouble $ castWord64ToDouble (f bytes))
+        _ -> Nothing
 
 assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
 assertType QBE.Word v@(VWord _) = Right v
