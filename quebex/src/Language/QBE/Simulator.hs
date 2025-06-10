@@ -108,10 +108,8 @@ execFunc (QBE.FuncDef {QBE.fBlock = []}) = pure (Left Nothing)
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) = do
   pushStackFrame func
   -- TODO: push function arguments on the stack
-  execBlock block >>= go
+  (execBlock block >>= go) <* popStackFrame
   where
-    -- TODO: pop function from stack
-
     go :: BlockResult -> Exec BlockResult
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
