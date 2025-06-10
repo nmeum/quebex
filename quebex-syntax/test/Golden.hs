@@ -62,5 +62,6 @@ goldenTests =
     "goldenTests"
     [ runTest "data-definition-whitespace",
       runTest "empty-definitions",
-      runTest "function-definition"
+      runTest "function-definition",
+      runTest "call-instruction"
     ]

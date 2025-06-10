@@ -802,7 +802,7 @@ volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
 
 -- TODO: Not documented in the QBE BNF.
 statement :: Parser Q.Statement
-statement = assign <|> volatileInstr
+statement = try callInstr <|> assign <|> volatileInstr
 \end{code}
 
 An instruction has both a name and a return type, this return type is a base
@@ -927,6 +927,18 @@ To-Do.
 
 \subsection{Call}
 \label{sec:call}
+
+\begin{code}
+callInstr :: Parser Q.Statement
+callInstr = do
+  retValue <- optionMaybe $ do
+    i <- ws local <* ws (char '=')
+    a <- ws1 abity
+    return (i, a)
+  toCall <- ws1 (string "call") >> ws val
+  fnArgs <- params
+  return $ Q.Call retValue toCall fnArgs
+\end{code}
 
 To-Do.
 

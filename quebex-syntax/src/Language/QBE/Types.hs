@@ -205,6 +205,7 @@ data VolatileInstr
 
 data Statement
   = Assign LocalIdent BaseType Instr
+  | Call (Maybe (LocalIdent, Abity)) Value [FuncParam]
   | Volatile VolatileInstr
   deriving (Show, Eq)
 

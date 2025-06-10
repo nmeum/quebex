@@ -1,0 +1,29 @@
+function l $foo() {
+@start
+	%r =l add 0, 1
+	ret %r
+}
+
+function w $bar(l %x) {
+@begin
+	%y =l add 42, %x
+	ret %y
+}
+
+function w $bar(l %x, l %y) {
+@begin
+	%z =l add %y, %x
+	ret %z
+}
+
+function w $sampleCaller() {
+@begin
+	%a =w call $foo()
+	%b =    l    call $foo()
+	%c=l call $foo()
+	%d=l call $foo    ()
+	%e=w call $bar(l %d)
+	%f=w call $bar(l %d, l %d)
+	%g=w call $bar(l     %d   ,     l %d)
+	ret %a
+}
