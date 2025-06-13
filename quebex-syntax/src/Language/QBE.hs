@@ -1,5 +1,12 @@
-module Language.QBE (Program, Definition (..), Language.QBE.parse) where
+module Language.QBE
+  ( Program,
+    Definition (..),
+    globalFuncs,
+    Language.QBE.parse,
+  )
+where
 
+import Data.Maybe (catMaybes)
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Language.QBE.Types (DataDef, FuncDef, TypeDef)
 import Text.ParserCombinators.Parsec
@@ -7,7 +14,8 @@ import Text.ParserCombinators.Parsec
     Parser,
     SourceName,
     choice,
-    parse, many,
+    many,
+    parse,
   )
 
 data Definition
@@ -25,6 +33,13 @@ parseDef =
     ]
 
 type Program = [Definition]
+
+globalFuncs :: Program -> [FuncDef]
+globalFuncs = catMaybes . map globalFuncs'
+  where
+    globalFuncs' :: Definition -> Maybe FuncDef
+    globalFuncs' (DefFunc f) = Just f
+    globalFuncs' _ = Nothing
 
 parse :: SourceName -> String -> Either ParseError Program
 parse = Text.ParserCombinators.Parsec.parse (many parseDef)

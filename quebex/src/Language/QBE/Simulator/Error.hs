@@ -9,4 +9,5 @@ data EvalError
   | InvalidReturnValue
   | UnknownBlock
   | InvalidMemoryLoad
+  | UnknownFunction
   deriving (Show, Eq)

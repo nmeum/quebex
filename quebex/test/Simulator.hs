@@ -16,7 +16,7 @@ parseAndExec params func = do
     Left e -> fail $ "Unexpected parsing error: " ++ show e
     Right r -> pure r
 
-  evalRes <- runExec (execFunc fDef params)
+  evalRes <- runExec [] (execFunc fDef params)
   case evalRes of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r

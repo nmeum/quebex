@@ -3,6 +3,7 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Except (ExceptT, liftEither, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
+import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
@@ -37,15 +38,19 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 data Env
   = Env
   { envGlobals :: Map.Map QBE.GlobalIdent E.RegVal,
+    envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
     envMem :: MEM.Memory,
     envStk :: [StackFrame],
     envStkPtr :: MEM.Address
   }
 
-mkEnv :: MEM.Address -> MEM.Size -> IO Env
-mkEnv a s = do
+mkEnv :: [QBE.FuncDef] -> MEM.Address -> MEM.Size -> IO Env
+mkEnv funcs a s = do
   mem <- MEM.mkMemory a s
-  return $ Env Map.empty mem [] (s - 1)
+  return $ Env Map.empty (makeFuncs funcs) mem [] (s - 1)
+  where
+    makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
+    makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
 
 activeFrame :: Exec StackFrame
 activeFrame = do
@@ -122,3 +127,22 @@ lookupValue ty (QBE.VConst (QBE.Thread k)) = do
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup . flip lookupLocal k
   liftEither $ E.subType ty v
+
+lookupFunc :: QBE.Value -> Exec QBE.FuncDef
+lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
+  funcs <- gets envFuncs
+  case Map.lookup name funcs of
+    Just def -> pure def
+    Nothing -> throwError UnknownFunction
+lookupFunc _ = error "non-global functions not supported"
+
+lookupParam :: QBE.FuncParam -> Exec (QBE.LocalIdent, E.RegVal)
+lookupParam (QBE.Regular abity ident) = do
+  value <- lookupValue (QBE.abityToBase abity) (QBE.VLocal ident)
+  return (ident, value)
+lookupParam (QBE.Env _) = error "env function parameters not supported"
+lookupParam QBE.Variadic = error "variadic functions not supported"
+
+lookupParams :: [QBE.FuncParam] -> Exec RegMap
+lookupParams params =
+  mapM lookupParam params <&> Map.fromList

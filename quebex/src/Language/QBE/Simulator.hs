@@ -10,6 +10,7 @@ module Language.QBE.Simulator
   )
 where
 
+import Control.Monad (void)
 import Control.Monad.Except (liftEither, runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (runStateT)
@@ -17,6 +18,7 @@ import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Map qualified as Map
 import Data.Maybe (isNothing)
+import Language.QBE (Program, globalFuncs)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State
@@ -74,6 +76,11 @@ execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
 execStmt (QBE.Volatile v) = execVolatile v
+execStmt (QBE.Call _ret toCall params) = do
+  funcDef <- lookupFunc toCall
+  funcArgs <- lookupParams params
+  -- TODO: Check if provided args match FuncDef
+  void $ execFunc funcDef funcArgs
 
 execJump :: QBE.JumpInstr -> Exec BlockResult
 execJump QBE.Halt = throwError EncounteredHalt
@@ -119,7 +126,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) params = do
     pushParams p s@(StackFrame {stkVars = v}) =
       s {stkVars = Map.union p v}
 
-runExec :: Exec a -> IO (Either EvalError a)
-runExec env = do
-  emptyEnv <- liftIO $ mkEnv 0x0 128
+runExec :: Program -> Exec a -> IO (Either EvalError a)
+runExec prog env = do
+  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 128
   runExceptT (runStateT env emptyEnv) <&> fmap fst
