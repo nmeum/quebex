@@ -16,6 +16,7 @@ import Text.ParserCombinators.Parsec
     choice,
     many,
     parse,
+    eof
   )
 
 data Definition
@@ -42,4 +43,4 @@ globalFuncs = catMaybes . map globalFuncs'
     globalFuncs' _ = Nothing
 
 parse :: SourceName -> String -> Either ParseError Program
-parse = Text.ParserCombinators.Parsec.parse (many parseDef)
+parse = Text.ParserCombinators.Parsec.parse (many parseDef <* eof)
