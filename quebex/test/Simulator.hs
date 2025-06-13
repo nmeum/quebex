@@ -166,6 +166,25 @@ blockTests =
               \}"
 
           res @?= Left (Just $ E.VWord 42),
+      testCase "Function call instruction without return value" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              Map.empty
+              "function w $foo(w %x) {\n\
+              \@start\n\
+              \%y =w sub 42, 0\n\
+              \ret %y\n\
+              \}\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%y =w sub 0, 0\n\
+              \call $foo(w %y)\n\
+              \ret %y\n\
+              \}"
+
+          res @?= Left (Just $ E.VWord 0),
       testCase "Allocate, store and load value in memory" $
         do
           res <-
