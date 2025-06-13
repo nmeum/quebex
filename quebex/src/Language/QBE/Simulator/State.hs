@@ -13,10 +13,12 @@ type Exec a = StateT Env (ExceptT EvalError IO) a
 
 ------------------------------------------------------------------------
 
+type RegMap = Map.Map QBE.LocalIdent E.RegVal
+
 data StackFrame
   = StackFrame
   { stkFunc :: QBE.FuncDef,
-    stkVars :: Map.Map QBE.LocalIdent E.RegVal,
+    stkVars :: RegMap,
     stkFp :: MEM.Address
   }
 

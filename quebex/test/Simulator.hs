@@ -1,22 +1,28 @@
 module Simulator (simTests) where
 
+import Data.Map qualified as Map
 import Language.QBE.Parser (funcDef)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.State (RegMap)
+import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 import Text.ParserCombinators.Parsec qualified as P
 
-parseAndExec :: String -> IO BlockResult
-parseAndExec func = do
+parseAndExec :: RegMap -> String -> IO BlockResult
+parseAndExec params func = do
   fDef <- case P.parse funcDef "execFunc" func of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
     Right r -> pure r
 
-  evalRes <- runExec (execFunc fDef)
+  evalRes <- runExec (execFunc fDef params)
   case evalRes of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
+
+parseAndExec' :: String -> IO BlockResult
+parseAndExec' = parseAndExec Map.empty
 
 ------------------------------------------------------------------------
 
@@ -27,7 +33,7 @@ blockTests =
     [ testCase "Evaluate single basic block with single instruction" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function w $addNumbers() {\n\
               \@start\n\
               \%c =w add 1, 2\n\
@@ -38,7 +44,7 @@ blockTests =
       testCase "Evaluate single basic block with multiple instructions" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function w $addMultiple() {\n\
               \@begin\n\
               \%val =w add 1, 2\n\
@@ -51,7 +57,7 @@ blockTests =
         do
           res <-
             -- 16045690984835251117 == 0xdeadbeefdecafbad
-            parseAndExec
+            parseAndExec'
               "function w $subtyping() {\n\
               \@go\n\
               \%val =l add 16045690984835251117, 0\n\
@@ -64,7 +70,7 @@ blockTests =
         do
           res <-
             -- 16045690984835251117 == 0xdeadbeefdecafbad
-            parseAndExec
+            parseAndExec'
               "function w $subtyp() {\n\
               \@start\n\
               \%v =l add 0, 16045690984835251117\n\
@@ -75,7 +81,7 @@ blockTests =
       testCase "Evaluate function without return value" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function $noRet() {\n\
               \@start\n\
               \ret\n\
@@ -85,7 +91,7 @@ blockTests =
       testCase "Evaluate two basic blocks with unconditional jump" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function w $unconditionalJump() {\n\
               \@start\n\
               \%val =w add 0, 1\n\
@@ -99,7 +105,7 @@ blockTests =
       testCase "Conditional jump with zero value" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function l $conditionalJumpTaken() {\n\
               \@start\n\
               \%zero =w add 0, 0\n\
@@ -116,7 +122,7 @@ blockTests =
       testCase "Conditional jump with non-zero value" $
         do
           res <-
-            parseAndExec
+            parseAndExec'
               "function l $conditionalJumpTaken() {\n\
               \@start\n\
               \%zero =w add 1, 0\n\
@@ -130,10 +136,22 @@ blockTests =
               \}\n"
 
           res @?= Left (Just $ E.VLong 42),
-      testCase "Allocate, store and load value in memory" $
+      testCase "Execute a function with parameters" $
         do
           res <-
             parseAndExec
+              (Map.fromList [(QBE.LocalIdent "x", E.VWord 41)])
+              "function w $funcWithParam(w %x) {\n\
+              \@go\n\
+              \%y =w add 1, %x\n\
+              \ret %y\n\
+              \}\n"
+
+          res @?= Left (Just $ E.VWord 42),
+      testCase "Allocate, store and load value in memory" $
+        do
+          res <-
+            parseAndExec'
               "function w $allocate() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\

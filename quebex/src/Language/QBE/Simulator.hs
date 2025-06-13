@@ -15,6 +15,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (runStateT)
 import Data.Functor ((<&>))
 import Data.List (find)
+import Data.Map qualified as Map
 import Data.Maybe (isNothing)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
@@ -103,16 +104,20 @@ execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: QBE.FuncDef -> Exec BlockResult
-execFunc (QBE.FuncDef {QBE.fBlock = []}) = pure (Left Nothing)
-execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) = do
+execFunc :: QBE.FuncDef -> RegMap -> Exec BlockResult
+execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure (Left Nothing)
+execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) params = do
   pushStackFrame func
-  -- TODO: push function arguments on the stack
+  modifyFrame (pushParams params)
   (execBlock block >>= go) <* popStackFrame
   where
     go :: BlockResult -> Exec BlockResult
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
+
+    pushParams :: RegMap -> StackFrame -> StackFrame
+    pushParams p s@(StackFrame {stkVars = v}) =
+      s {stkVars = Map.union p v}
 
 runExec :: Exec a -> IO (Either EvalError a)
 runExec env = do

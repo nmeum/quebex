@@ -54,5 +54,6 @@ test-suite quebex-test
         parsec,
         quebex,
         quebex-syntax,
+        containers,
         tasty        >=1.4.3,
         tasty-hunit  >=0.10
