@@ -218,7 +218,39 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VWord 2342)
+          res @?= Just (E.VWord 2342),
+      testCase "Load with sub word type" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "allocate")
+              Map.empty
+              "function w $allocate() {\n\
+              \@start\n\
+              \%addr =l alloc4 4\n\
+              \storeb 249, %addr\n\
+              \%v =w loadsb %addr\n\
+              \ret %v\n\
+              \}"
+
+          -- 249 (0xf9) sign extended to 32-bit.
+          res @?= Just (E.VWord 0xfffffff9),
+      testCase "Subtyping with load instruction" $
+        do
+          res <-
+            -- 16045690984835251117 == 0xdeadbeefdecafbad
+            parseAndExec
+              (QBE.GlobalIdent "allocate")
+              Map.empty
+              "function w $allocate() {\n\
+              \@start\n\
+              \%addr =l alloc4 4\n\
+              \storew 16045690984835251117, %addr\n\
+              \%v =w loadl %addr\n\
+              \ret %v\n\
+              \}"
+
+          res @?= Just (E.VWord 0xdecafbad)
     ]
 
 simTests :: TestTree

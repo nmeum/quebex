@@ -53,11 +53,13 @@ execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
   liftEither $ v1 `E.sub` v2
-execInstr _retTy (QBE.Load ty addr) = do
+execInstr retTy (QBE.Load ty addr) = do
   (E.VLong addrVal) <- lookupValue QBE.Long addr
-  -- TODO: Respect specified return type
-  -- TODO: Sign and zero extension for SubWordType
-  readMemory ty addrVal
+  val <- readMemory ty addrVal
+  ret <- case ty of
+    QBE.LSubWord t -> liftEither $ E.extSubWord t val
+    QBE.LBase _ -> pure val
+  liftEither $ E.subType retTy ret
 execInstr _retTy (QBE.Alloc size align) =
   -- TODO: Ensure that _retTy is a long?
   stackAlloc (fromIntegral $ QBE.getSize size) align

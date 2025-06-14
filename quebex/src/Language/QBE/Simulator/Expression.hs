@@ -6,8 +6,9 @@ module Language.QBE.Simulator.Expression where
 
 import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
 import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Int (Int8, Int16, Int64)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
-import Language.QBE.Simulator.Error (EvalError (TypingError))
+import Language.QBE.Simulator.Error (EvalError (TypingError, InvaldSubWordExtension))
 import Language.QBE.Simulator.Generator (generateOperators)
 import Language.QBE.Types qualified as QBE
 
@@ -54,6 +55,13 @@ fromBytes ty lst =
         ((QBE.Base QBE.Double), bytes@[_, _, _, _, _, _, _, _]) ->
           Just $ (VDouble $ castWord64ToDouble (f bytes))
         _ -> Nothing
+
+extSubWord :: QBE.SubWordType -> RegVal -> Either EvalError RegVal
+extSubWord QBE.SignedByte (VByte b) = Right $ VLong (fromIntegral (fromIntegral (fromIntegral b :: Int8) :: Int64))
+extSubWord QBE.UnsignedByte (VByte b) = Right $ VLong (fromIntegral b)
+extSubWord QBE.SignedHalf (VHalf h) = Right $ VLong (fromIntegral (fromIntegral (fromIntegral h :: Int16) :: Int64))
+extSubWord QBE.UnsignedHalf (VHalf h) = Right $ VLong (fromIntegral h)
+extSubWord _ _ = Left InvaldSubWordExtension
 
 subType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
 subType QBE.Word v@(VWord _) = Right v

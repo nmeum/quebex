@@ -13,4 +13,5 @@ data EvalError
   | MissingFunctionReturn
   | FunctionReturnIgnored
   | AssignedVoidReturnValue
+  | InvaldSubWordExtension
   deriving (Show, Eq)
