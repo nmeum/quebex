@@ -10,7 +10,6 @@ module Language.QBE.Simulator
   )
 where
 
-import Control.Monad (void)
 import Control.Monad.Except (liftEither, runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (runStateT)
@@ -76,11 +75,27 @@ execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
 execStmt (QBE.Volatile v) = execVolatile v
-execStmt (QBE.Call _ret toCall params) = do
+execStmt (QBE.Call ret toCall params) = do
   funcDef <- lookupFunc toCall
-  funcArgs <- lookupParams params
   -- TODO: Check if provided args match FuncDef
-  void $ execFunc funcDef funcArgs
+  funcArgs <- lookupParams params
+
+  mayRetVal <- execFunc funcDef funcArgs
+  -- TODO: Some code duplication with return value handling.
+  case mayRetVal of
+    Nothing ->
+      -- XXX: Could also check funcDef for the return value.
+      if isNothing ret
+        then pure ()
+        else throwError FunctionReturnIgnored
+    Just retVal ->
+      case ret of
+        Nothing -> throwError AssignedVoidReturnValue
+        Just (ident, abity) -> do
+          let baseTy = QBE.abityToBase abity
+          -- TODO: Need to zero and sign extension for subword types.
+          subTyped <- liftEither $ E.subType baseTy retVal
+          modifyFrame (storeLocal ident subTyped)
 
 execJump :: QBE.JumpInstr -> Exec BlockResult
 execJump QBE.Halt = throwError EncounteredHalt

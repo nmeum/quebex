@@ -11,4 +11,6 @@ data EvalError
   | InvalidMemoryLoad
   | UnknownFunction
   | MissingFunctionReturn
+  | FunctionReturnIgnored
+  | AssignedVoidReturnValue
   deriving (Show, Eq)

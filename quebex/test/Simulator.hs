@@ -172,10 +172,10 @@ blockTests =
             parseAndExec
               (QBE.GlobalIdent "main")
               Map.empty
-              "function w $foo(w %x) {\n\
+              "function $foo(w %x) {\n\
               \@start\n\
               \%y =w sub 42, 0\n\
-              \ret %y\n\
+              \ret\n\
               \}\n\
               \function w $main() {\n\
               \@start\n\
@@ -185,6 +185,25 @@ blockTests =
               \}"
 
           res @?= Just (E.VWord 0),
+      testCase "Function call with return value" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              Map.empty
+              "function w $foo(w %x) {\n\
+              \@start\n\
+              \%y =w sub %x, 19\n\
+              \ret %y\n\
+              \}\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%x =w add 0, 42\n\
+              \%ret =w call $foo(w %x)\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (E.VWord 23),
       testCase "Allocate, store and load value in memory" $
         do
           res <-
