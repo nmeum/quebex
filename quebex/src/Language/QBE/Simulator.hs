@@ -111,12 +111,16 @@ execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: QBE.FuncDef -> RegMap -> Exec BlockResult
-execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure (Left Nothing)
+execFunc :: QBE.FuncDef -> RegMap -> Exec (Maybe E.RegVal)
+execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) params = do
   pushStackFrame func
   modifyFrame (pushParams params)
-  (execBlock block >>= go) <* popStackFrame
+
+  blockResult <- (execBlock block >>= go) <* popStackFrame
+  case blockResult of
+    Right _block -> throwError MissingFunctionReturn
+    Left maybeValue -> pure maybeValue
   where
     go :: BlockResult -> Exec BlockResult
     go retValue@(Left _) = pure retValue

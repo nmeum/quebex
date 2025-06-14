@@ -10,7 +10,7 @@ import Language.QBE (parse, globalFuncs)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parseAndExec :: QBE.GlobalIdent -> RegMap -> String -> IO BlockResult
+parseAndExec :: QBE.GlobalIdent -> RegMap -> String -> IO (Maybe E.RegVal)
 parseAndExec funcName params input = do
   prog <- case parse "" input of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
@@ -43,7 +43,7 @@ blockTests =
               \ret %c\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 3),
+          res @?= Just (E.VWord 3),
       testCase "Evaluate single basic block with multiple instructions" $
         do
           res <-
@@ -57,7 +57,7 @@ blockTests =
               \ret %foo\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 5),
+          res @?= Just (E.VWord 5),
       testCase "Evaluate expression with subtyping" $
         do
           res <-
@@ -72,7 +72,7 @@ blockTests =
               \ret %foo\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 0xdecafbad),
+          res @?= Just (E.VWord 0xdecafbad),
       testCase "Subtyping in function return value" $
         do
           res <-
@@ -86,7 +86,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 0xdecafbad),
+          res @?= Just (E.VWord 0xdecafbad),
       testCase "Evaluate function without return value" $
         do
           res <-
@@ -98,7 +98,7 @@ blockTests =
               \ret\n\
               \}"
 
-          res @?= Left Nothing,
+          res @?= Nothing,
       testCase "Evaluate two basic blocks with unconditional jump" $
         do
           res <-
@@ -114,7 +114,7 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 2),
+          res @?= Just (E.VWord 2),
       testCase "Conditional jump with zero value" $
         do
           res <-
@@ -133,7 +133,7 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Left (Just $ E.VLong 23),
+          res @?= Just (E.VLong 23),
       testCase "Conditional jump with non-zero value" $
         do
           res <-
@@ -152,7 +152,7 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Left (Just $ E.VLong 42),
+          res @?= Just (E.VLong 42),
       testCase "Execute a function with parameters" $
         do
           res <-
@@ -165,7 +165,7 @@ blockTests =
               \ret %y\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 42),
+          res @?= Just (E.VWord 42),
       testCase "Function call instruction without return value" $
         do
           res <-
@@ -184,7 +184,7 @@ blockTests =
               \ret %y\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 0),
+          res @?= Just (E.VWord 0),
       testCase "Allocate, store and load value in memory" $
         do
           res <-
@@ -199,7 +199,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Left (Just $ E.VWord 2342)
+          res @?= Just (E.VWord 2342)
     ]
 
 simTests :: TestTree
