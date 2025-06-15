@@ -115,9 +115,9 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
     QBE.Single -> E.VSingle $ fromIntegral v
     QBE.Double -> E.VDouble $ fromIntegral v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
-  liftEither $ E.assertType ty (E.VSingle v)
+  liftEither $ E.subType ty (E.VSingle v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
-  liftEither $ E.assertType ty (E.VDouble v)
+  liftEither $ E.subType ty (E.VDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
   v <- gets envGlobals >>= maybeLookup . Map.lookup k
   liftEither $ E.subType ty v

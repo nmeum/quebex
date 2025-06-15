@@ -63,19 +63,4 @@ subType QBE.Single v@(VSingle _) = Right v
 subType QBE.Double v@(VDouble _) = Right v
 subType _ _ = Left TypingError
 
-assertType :: QBE.BaseType -> RegVal -> Either EvalError RegVal
-assertType QBE.Word v@(VWord _) = Right v
-assertType QBE.Long v@(VLong _) = Right v
-assertType QBE.Single v@(VSingle _) = Right v
-assertType QBE.Double v@(VDouble _) = Right v
-assertType _ _ = Left TypingError
-
-checkedEval ::
-  QBE.BaseType ->
-  (RegVal -> RegVal -> Either EvalError RegVal) ->
-  RegVal ->
-  RegVal ->
-  Either EvalError RegVal
-checkedEval retTy op lhs rhs = lhs `op` rhs >>= assertType retTy
-
 generateOperators

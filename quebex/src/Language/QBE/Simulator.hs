@@ -27,14 +27,6 @@ import Language.QBE.Types qualified as QBE
 -- value) or it can jump to another BasicBlock which will then be executed.
 type BlockResult = (Either (Maybe E.RegVal) QBE.Block)
 
-checkedEval ::
-  QBE.BaseType ->
-  (E.RegVal -> E.RegVal -> Either EvalError E.RegVal) ->
-  E.RegVal ->
-  E.RegVal ->
-  Exec E.RegVal
-checkedEval ty op lhs rhs = liftEither $ E.checkedEval ty op lhs rhs
-
 ------------------------------------------------------------------------
 
 execVolatile :: QBE.VolatileInstr -> Exec ()
@@ -56,11 +48,11 @@ execInstr :: QBE.BaseType -> QBE.Instr -> Exec E.RegVal
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  checkedEval retTy E.add v1 v2
+  liftEither $ v1 `E.add` v2
 execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
-  checkedEval retTy E.sub v1 v2
+  liftEither $ v1 `E.sub` v2
 execInstr _retTy (QBE.Load ty addr) = do
   (E.VLong addrVal) <- lookupValue QBE.Long addr
   -- TODO: Respect specified return type
