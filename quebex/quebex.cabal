@@ -31,6 +31,7 @@ library
       mtl
 
     exposed-modules:
+      Language.QBE.Analysis.CFG,
       Language.QBE.Simulator,
       Language.QBE.Simulator.State,
       Language.QBE.Simulator.Generator,
@@ -46,6 +47,7 @@ test-suite quebex-test
     main-is:          Main.hs
 
     other-modules:
+      Analysis,
       Simulator,
       Memory
 
