@@ -73,7 +73,6 @@ execStmt (QBE.Call ret toCall params) = do
   funcArgs <- lookupParams params
 
   mayRetVal <- execFunc funcDef funcArgs
-  -- TODO: Some code duplication with return value handling.
   case mayRetVal of
     Nothing ->
       -- XXX: Could also check funcDef for the return value.
@@ -85,7 +84,6 @@ execStmt (QBE.Call ret toCall params) = do
         Nothing -> throwError AssignedVoidReturnValue
         Just (ident, abity) -> do
           let baseTy = QBE.abityToBase abity
-          -- TODO: Need to zero and sign extension for subword types.
           subTyped <- liftEither $ E.subType baseTy retVal
           modifyFrame (storeLocal ident subTyped)
 
