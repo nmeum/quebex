@@ -35,8 +35,12 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
   -- take a word as argument. Only the first 16 or 8 bits of this word will be
   -- stored in memory at the address specified in the second argument.
   val <- case valTy of
-    QBE.Byte -> lookupValue QBE.Word valReg -- TODO: Extract first 8 bits
-    QBE.HalfWord -> lookupValue QBE.Word valReg -- TODO: Extract first 16 bits
+    QBE.Byte -> do
+      (E.VWord v) <- lookupValue QBE.Word valReg
+      pure $ E.VByte (fromIntegral v)
+    QBE.HalfWord -> do
+      (E.VWord v) <- lookupValue QBE.Word valReg
+      pure $ E.VHalf (fromIntegral v)
     (QBE.Base bt) -> lookupValue bt valReg
 
   (E.VLong addrVal) <- lookupValue QBE.Long addrReg
