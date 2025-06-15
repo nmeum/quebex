@@ -14,4 +14,5 @@ data EvalError
   | FunctionReturnIgnored
   | AssignedVoidReturnValue
   | InvaldSubWordExtension
+  | InvalidAddressType
   deriving (Show, Eq)

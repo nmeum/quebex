@@ -60,9 +60,9 @@ execInstr retTy (QBE.Load ty addr) = do
     QBE.LSubWord t -> liftEither $ E.extSubWord t val
     QBE.LBase _ -> pure val
   liftEither $ E.subType retTy ret
-execInstr _retTy (QBE.Alloc size align) =
-  -- TODO: Ensure that _retTy is a long?
+execInstr QBE.Long (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
+execInstr _ QBE.Alloc{} = throwError InvalidAddressType
 
 execStmt :: QBE.Statement -> Exec ()
 execStmt (QBE.Assign name ty inst) = do
