@@ -1,16 +1,14 @@
 module Simulator (simTests) where
 
 import Data.List (find)
-import Data.Map qualified as Map
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.State (RegMap)
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parseAndExec :: QBE.GlobalIdent -> RegMap -> String -> IO (Maybe E.RegVal)
+parseAndExec :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Maybe E.RegVal)
 parseAndExec funcName params input = do
   prog <- case parse "" input of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
@@ -36,7 +34,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "addNumbers")
-              Map.empty
+              []
               "function w $addNumbers() {\n\
               \@start\n\
               \%c =w add 1, 2\n\
@@ -49,7 +47,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "addMultiple")
-              Map.empty
+              []
               "function w $addMultiple() {\n\
               \@begin\n\
               \%val =w add 1, 2\n\
@@ -64,7 +62,7 @@ blockTests =
             -- 16045690984835251117 == 0xdeadbeefdecafbad
             parseAndExec
               (QBE.GlobalIdent "subtyping")
-              Map.empty
+              []
               "function w $subtyping() {\n\
               \@go\n\
               \%val =l add 16045690984835251117, 0\n\
@@ -79,7 +77,7 @@ blockTests =
             -- 16045690984835251117 == 0xdeadbeefdecafbad
             parseAndExec
               (QBE.GlobalIdent "subtyp")
-              Map.empty
+              []
               "function w $subtyp() {\n\
               \@start\n\
               \%v =l add 0, 16045690984835251117\n\
@@ -92,7 +90,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "noRet")
-              Map.empty
+              []
               "function $noRet() {\n\
               \@start\n\
               \ret\n\
@@ -104,7 +102,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "unconditionalJump")
-              Map.empty
+              []
               "function w $unconditionalJump() {\n\
               \@start\n\
               \%val =w add 0, 1\n\
@@ -120,7 +118,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "conditionalJumpTaken")
-              Map.empty
+              []
               "function l $conditionalJumpTaken() {\n\
               \@start\n\
               \%zero =w add 0, 0\n\
@@ -139,7 +137,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "conditionalJumpTaken")
-              Map.empty
+              []
               "function l $conditionalJumpTaken() {\n\
               \@start\n\
               \%zero =w add 1, 0\n\
@@ -158,7 +156,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "funcWithParam")
-              (Map.fromList [(QBE.LocalIdent "x", E.VWord 41)])
+              [E.VWord 41]
               "function w $funcWithParam(w %x) {\n\
               \@go\n\
               \%y =w add 1, %x\n\
@@ -171,7 +169,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "main")
-              Map.empty
+              []
               "function $foo(w %x) {\n\
               \@start\n\
               \%y =w sub 42, 0\n\
@@ -190,7 +188,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "main")
-              Map.empty
+              []
               "function w $foo(w %x) {\n\
               \@start\n\
               \%y =w sub %x, 19\n\
@@ -209,7 +207,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "allocate")
-              Map.empty
+              []
               "function w $allocate() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\
@@ -224,7 +222,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "allocate")
-              Map.empty
+              []
               "function w $allocate() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\
@@ -241,7 +239,7 @@ blockTests =
             -- 2863311530 == 0xaaaaaaaa
             parseAndExec
               (QBE.GlobalIdent "storeByte")
-              Map.empty
+              []
               "function w $storeByte() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\
@@ -252,13 +250,34 @@ blockTests =
               \}"
 
           res @?= Just (E.VWord 0xaaaaaaff),
+      testCase "Function with user-defined type as function parameter" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "type :one = { w }\n\
+              \function w $getone(:one %ptr) {\n\
+              \@start\n\
+              \%val =w loadw %ptr\n\
+              \ret %val\n\
+              \}\n\
+              \function w $main() {\n\
+              \@entry\n\
+              \%addr =l alloc4 4\n\
+              \storew 3735928559, %addr\n\
+              \%ret =w call $getone(l %addr)\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (E.VWord 0xdeadbeef),
       testCase "Subtyping with load instruction" $
         do
           res <-
             -- 16045690984835251117 == 0xdeadbeefdecafbad
             parseAndExec
               (QBE.GlobalIdent "allocate")
-              Map.empty
+              []
               "function w $allocate() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\
