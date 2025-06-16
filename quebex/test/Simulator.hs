@@ -3,13 +3,14 @@ module Simulator (simTests) where
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
+import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parseAndExec :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Maybe E.RegVal)
-parseAndExec funcName params input = do
+parseAndExec' :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Either EvalError (Maybe E.RegVal))
+parseAndExec' funcName params input = do
   prog <- case parse "" input of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
     Right r -> pure r
@@ -18,7 +19,11 @@ parseAndExec funcName params input = do
     Just x -> pure x
     Nothing -> fail $ "Unknown function: " ++ show funcName
 
-  evalRes <- runExec prog (execFunc func params)
+  runExec prog (execFunc func params)
+
+parseAndExec :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Maybe E.RegVal)
+parseAndExec funcName params input = do
+  evalRes <- parseAndExec' funcName params input
   case evalRes of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
@@ -271,6 +276,19 @@ blockTests =
               \}"
 
           res @?= Just (E.VWord 0xdeadbeef),
+      testCase "Invalid subtyping with subword function parameters" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "subword")
+              [E.VByte 0xff]
+              "function $subword(ub %val) {\n\
+              \@start\n\
+              \%val =w add %val, 1\n\
+              \ret\n\
+              \}"
+
+          res @?= Left TypingError,
       testCase "Subtyping with load instruction" $
         do
           res <-
