@@ -1,7 +1,7 @@
 module Main (main) where
 
-import Parser
 import Golden
+import Parser
 import Test.Tasty
 
 main :: IO ()

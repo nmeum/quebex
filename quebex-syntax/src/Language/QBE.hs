@@ -14,9 +14,9 @@ import Text.ParserCombinators.Parsec
     Parser,
     SourceName,
     choice,
+    eof,
     many,
     parse,
-    eof
   )
 
 data Definition

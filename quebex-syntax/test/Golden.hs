@@ -3,7 +3,7 @@ module Golden (goldenTests) where
 import Language.QBE (parse)
 import System.Exit (ExitCode (..))
 import System.FilePath
-import System.IO (IOMode (WriteMode), hClose, openFile, hGetContents)
+import System.IO (IOMode (WriteMode), hClose, hGetContents, openFile)
 import System.Process
 import Test.Tasty
 import Test.Tasty.Golden.Advanced

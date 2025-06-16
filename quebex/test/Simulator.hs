@@ -2,11 +2,11 @@ module Simulator (simTests) where
 
 import Data.List (find)
 import Data.Map qualified as Map
+import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State (RegMap)
 import Language.QBE.Types qualified as QBE
-import Language.QBE (parse, globalFuncs)
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -17,8 +17,8 @@ parseAndExec funcName params input = do
     Right r -> pure r
 
   func <- case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
-            Just x -> pure x
-            Nothing -> fail $ "Unknown function: " ++ show funcName
+    Just x -> pure x
+    Nothing -> fail $ "Unknown function: " ++ show funcName
 
   evalRes <- runExec prog (execFunc func params)
   case evalRes of

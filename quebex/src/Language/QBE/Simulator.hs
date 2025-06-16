@@ -66,7 +66,7 @@ execInstr retTy (QBE.Load ty addr) = do
   liftEither $ E.subType retTy ret
 execInstr QBE.Long (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
-execInstr _ QBE.Alloc{} = throwError InvalidAddressType
+execInstr _ QBE.Alloc {} = throwError InvalidAddressType
 
 execStmt :: QBE.Statement -> Exec ()
 execStmt (QBE.Assign name ty inst) = do

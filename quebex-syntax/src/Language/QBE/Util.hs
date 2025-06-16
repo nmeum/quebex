@@ -3,8 +3,8 @@
 module Language.QBE.Util where
 
 import Data.Word (Word64)
-import Numeric (readDec)
 import Language.QBE.Numbers (decimal, fractExponent, hexnum, sign)
+import Numeric (readDec)
 import Text.ParserCombinators.Parsec
   ( Parser,
     digit,

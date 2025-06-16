@@ -5,10 +5,10 @@
 module Language.QBE.Simulator.Expression where
 
 import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
+import Data.Int (Int16, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
-import Data.Int (Int8, Int16, Int64)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
-import Language.QBE.Simulator.Error (EvalError (TypingError, InvaldSubWordExtension))
+import Language.QBE.Simulator.Error (EvalError (InvaldSubWordExtension, TypingError))
 import Language.QBE.Simulator.Generator (generateOperators)
 import Language.QBE.Types qualified as QBE
 
