@@ -635,7 +635,7 @@ param = (Q.Env <$> (ws1 (string "env") >> local))
 params :: Parser [Q.FuncParam]
 params = between (ws $ char '(') (char ')') params'
   where
-    params' = sepBy param (ws $ char ',')
+    params' = sepBy (ws param) (ws $ char ',')
 \end{code}
 
 The parameter list is a comma separated list of temporary names prefixed
@@ -802,7 +802,7 @@ volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
 
 -- TODO: Not documented in the QBE BNF.
 statement :: Parser Q.Statement
-statement = try callInstr <|> assign <|> volatileInstr
+statement = (try callInstr) <|> assign <|> volatileInstr
 \end{code}
 
 An instruction has both a name and a return type, this return type is a base
