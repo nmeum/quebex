@@ -28,12 +28,12 @@ library
     exposed-modules:
       Language.QBE,
       Language.QBE.Types,
-      Language.QBE.Parser
+      Language.QBE.Parser,
+      Language.QBE.Numbers
 
     build-depends:
       base,
-      parsec,
-      parsec3-numbers
+      parsec
 
 test-suite quebex-syntax-test
     import:           warnings
