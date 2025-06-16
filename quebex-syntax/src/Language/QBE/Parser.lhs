@@ -609,14 +609,14 @@ in memory.
 \begin{code}
 subWordType :: Parser Q.SubWordType
 subWordType = choice
-  [ bind "sb" Q.SignedByte
-  , bind "ub" Q.UnsignedByte
+  [ try $ bind "sb" Q.SignedByte
+  , try $ bind "ub" Q.UnsignedByte
   , bind "sh" Q.SignedHalf
-  , bind "sh" Q.UnsignedHalf ]
+  , bind "uh" Q.UnsignedHalf ]
 
 abity :: Parser Q.Abity
-abity = (Q.ABase <$> baseType)
-    <|> (Q.ASubWordType <$> subWordType)
+abity = (Q.ASubWordType <$> subWordType)
+    <|> (Q.ABase <$> baseType)
     <|> (Q.AUserDef <$> userDef)
 \end{code}
 

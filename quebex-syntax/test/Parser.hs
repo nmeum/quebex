@@ -110,6 +110,10 @@ funcTests =
             b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
             f = FuncDef [LSection "foo" Nothing] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\"\nfunction w $bla(l %v) {\n@start\nret\n}" @?= Right f,
+      testCase "Function definition with subword return type" $
+        let b = [Block {label = BlockIdent "here", stmt = [], term = Halt}]
+            f = FuncDef [] (GlobalIdent "f") (Just (ASubWordType SignedHalf)) [] b
+         in parse "function sh $f() {\n@here\nhlt\n}" @?= Right f,
       testCase "Function definition with comments" $
         let p = [Regular (ABase Long) (LocalIdent "v")]
             b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
