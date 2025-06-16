@@ -15,7 +15,7 @@ haltIdent = QBE.BlockIdent "=halt"
 ------------------------------------------------------------------------
 
 build' :: [QBE.Block] -> [(QBE.BlockIdent, [QBE.BlockIdent])]
-build' blocks = foldl go [] blocks
+build' = foldl go []
   where
     go acc block@(QBE.Block {QBE.label = ident}) =
       let succs = case QBE.term block of

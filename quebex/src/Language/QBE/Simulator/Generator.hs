@@ -30,8 +30,8 @@ makeClause op (lhsCon, lhsExpr) (rhsCon, rhsExpr) resCon = do
 
   return $
     Clause
-      [ ConP lhsCon [] [(VarP lhs)],
-        ConP rhsCon [] [(VarP rhs)]
+      [ ConP lhsCon [] [VarP lhs],
+        ConP rhsCon [] [VarP rhs]
       ]
       (NormalB body)
       []
@@ -47,7 +47,7 @@ makeSubClauses op = do
 
   c1 <- makeClause op (wcon, VarE) (lcon, longToWord) wcon
   c2 <- makeClause op (lcon, longToWord) (wcon, VarE) wcon
-  return $ [c1, c2]
+  return [c1, c2]
   where
     longToWord :: Name -> Exp
     longToWord var =

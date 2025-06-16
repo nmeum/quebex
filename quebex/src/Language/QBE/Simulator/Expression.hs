@@ -36,7 +36,7 @@ toBytes val =
         (VDouble v) -> toBytes (VLong $ castDoubleToWord64 v)
   where
     bytesize :: (FiniteBits a) => a -> Int
-    bytesize v = (finiteBitSize v) `div` 8
+    bytesize v = finiteBitSize v `div` 8
 
 fromBytes :: QBE.ExtType -> [Word8] -> Maybe RegVal
 fromBytes ty lst =
@@ -48,12 +48,12 @@ fromBytes ty lst =
    in case (ty, lst) of
         (QBE.Byte, [byte]) -> Just $ VByte byte
         (QBE.HalfWord, bytes@[_, _]) -> Just (VHalf $ f bytes)
-        ((QBE.Base QBE.Word), bytes@[_, _, _, _]) -> Just (VWord $ f bytes)
-        ((QBE.Base QBE.Long), bytes@[_, _, _, _, _, _, _, _]) -> Just (VLong $ f bytes)
-        ((QBE.Base QBE.Single), bytes@[_, _, _, _]) ->
-          Just $ (VSingle $ castWord32ToFloat (f bytes))
-        ((QBE.Base QBE.Double), bytes@[_, _, _, _, _, _, _, _]) ->
-          Just $ (VDouble $ castWord64ToDouble (f bytes))
+        (QBE.Base QBE.Word, bytes@[_, _, _, _]) -> Just (VWord $ f bytes)
+        (QBE.Base QBE.Long, bytes@[_, _, _, _, _, _, _, _]) -> Just (VLong $ f bytes)
+        (QBE.Base QBE.Single, bytes@[_, _, _, _]) ->
+          Just (VSingle $ castWord32ToFloat (f bytes))
+        (QBE.Base QBE.Double, bytes@[_, _, _, _, _, _, _, _]) ->
+          Just (VDouble $ castWord64ToDouble (f bytes))
         _ -> Nothing
 
 extSubWord :: QBE.SubWordType -> RegVal -> Either EvalError RegVal

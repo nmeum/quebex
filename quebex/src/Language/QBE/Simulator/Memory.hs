@@ -35,7 +35,7 @@ mkMemory startAddr size = do
 
 -- Translate global address to a memory-local address.
 toMemAddr :: Memory -> Address -> Address
-toMemAddr mem addr = addr - (memStart mem)
+toMemAddr mem addr = addr - memStart mem
 
 -- | Returns the size of the memory in bytes.
 memSize :: Memory -> IO Size

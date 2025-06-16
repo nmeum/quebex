@@ -6,7 +6,7 @@ module Language.QBE
   )
 where
 
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Language.QBE.Types (DataDef, FuncDef, TypeDef)
 import Text.ParserCombinators.Parsec
@@ -36,7 +36,7 @@ parseDef =
 type Program = [Definition]
 
 globalFuncs :: Program -> [FuncDef]
-globalFuncs = catMaybes . map globalFuncs'
+globalFuncs = mapMaybe globalFuncs'
   where
     globalFuncs' :: Definition -> Maybe FuncDef
     globalFuncs' (DefFunc f) = Just f
