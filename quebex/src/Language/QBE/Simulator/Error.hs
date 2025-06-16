@@ -16,6 +16,7 @@ data EvalError
   | AssignedVoidReturnValue
   | InvaldSubWordExtension
   | InvalidAddressType
+  | FuncArgsMismatch QBE.GlobalIdent
   deriving (Eq)
 
 instance Show EvalError where
@@ -32,3 +33,4 @@ instance Show EvalError where
   show AssignedVoidReturnValue = "AssignedVoidReturnValue"
   show InvaldSubWordExtension = "InvaldSubWordExtension"
   show InvalidAddressType = "InvalidAddressType"
+  show (FuncArgsMismatch ident) = "FuncArgsMismatch: '" ++ show ident ++ "'"

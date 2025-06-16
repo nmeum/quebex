@@ -10,6 +10,7 @@ module Language.QBE.Simulator
   )
 where
 
+import Control.Monad (when)
 import Control.Monad.Except (liftEither, runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (runStateT)
@@ -122,11 +123,15 @@ execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: QBE.FuncDef -> RegMap -> Exec (Maybe E.RegVal)
+execFunc :: QBE.FuncDef -> [E.RegVal] -> Exec (Maybe E.RegVal)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
-execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) params = do
+execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
+  when (length params /= length args) $
+    throwError (FuncArgsMismatch $ QBE.fName func)
   pushStackFrame func
-  modifyFrame (pushParams params)
+
+  let vars = Map.fromList $ zip (map paramName params) args
+  modifyFrame (\s -> s {stkVars = vars})
 
   blockResult <- (execBlock block >>= go) <* popStackFrame
   case blockResult of
@@ -137,9 +142,10 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _}) params = do
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
 
-    pushParams :: RegMap -> StackFrame -> StackFrame
-    pushParams p s@(StackFrame {stkVars = v}) =
-      s {stkVars = Map.union p v}
+    paramName :: QBE.FuncParam -> QBE.LocalIdent
+    paramName (QBE.Regular _ n) = n
+    paramName (QBE.Env n) = n
+    paramName QBE.Variadic = error "variadic parameters not supported"
 
 runExec :: Program -> Exec a -> IO (Either EvalError a)
 runExec prog env = do
