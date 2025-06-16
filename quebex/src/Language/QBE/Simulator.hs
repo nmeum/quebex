@@ -99,7 +99,7 @@ execJump (QBE.Jump ident) = do
   blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
   case find (\x -> QBE.label x == ident) blocks of
     Just bl -> pure $ Right bl
-    Nothing -> throwError UnknownBlock
+    Nothing -> throwError (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
   (E.VWord condValue) <- lookupValue QBE.Word cond
   execJump $ QBE.Jump (if condValue /= 0 then ifT else ifF)

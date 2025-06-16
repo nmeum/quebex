@@ -103,9 +103,9 @@ readMemory ty addr = do
     Just x -> pure x
     Nothing -> throwError InvalidMemoryLoad
 
-maybeLookup :: Maybe E.RegVal -> Exec E.RegVal
-maybeLookup (Just x) = pure x
-maybeLookup Nothing = throwError UnknownVariable
+maybeLookup :: String -> Maybe E.RegVal -> Exec E.RegVal
+maybeLookup _ (Just x) = pure x
+maybeLookup name Nothing = throwError $ UnknownVariable name
 
 lookupValue :: QBE.BaseType -> QBE.Value -> Exec E.RegVal
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
@@ -119,13 +119,13 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
   liftEither $ E.subType ty (E.VDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- gets envGlobals >>= maybeLookup . Map.lookup k
+  v <- gets envGlobals >>= maybeLookup (show k) . Map.lookup k
   liftEither $ E.subType ty v
 lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- gets envGlobals >>= maybeLookup . Map.lookup k
+  v <- gets envGlobals >>= maybeLookup (show k) . Map.lookup k
   liftEither $ E.subType ty v
 lookupValue ty (QBE.VLocal k) = do
-  v <- activeFrame >>= maybeLookup . flip lookupLocal k
+  v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   liftEither $ E.subType ty v
 
 lookupFunc :: QBE.Value -> Exec QBE.FuncDef
@@ -133,7 +133,7 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   funcs <- gets envFuncs
   case Map.lookup name funcs of
     Just def -> pure def
-    Nothing -> throwError UnknownFunction
+    Nothing -> throwError (UnknownFunction name)
 lookupFunc _ = error "non-global functions not supported"
 
 lookupParam :: QBE.FuncParam -> Exec (QBE.LocalIdent, E.RegVal)
