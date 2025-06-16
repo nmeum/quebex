@@ -39,6 +39,13 @@ Further, whenever possible, dependencies on external libraries that are [not bun
 
 Long term, it is also of interest to build lifters which generate QBE from binaries (e.g. with [libriscv]).
 
+### Development
+
+Code should be formatted using [ormolu][ormolu github].
+A githook for this purpose is available which can be enabled using:
+
+	$ git config --local core.hooksPath .githooks
+
 [^1]: At the time of writing, KLEE recommends LLVM 13 and the current version is LLVM 20.
 [QBE]: https://c9x.me/compile/
 [QBE vs LLVM]: https://c9x.me/compile/doc/llvm.html
@@ -52,3 +59,4 @@ Long term, it is also of interest to build lifters which generate QBE from binar
 [GHC libraries]: https://ghc.gitlab.haskell.org/ghc/doc/libraries/index.html
 [learnyouahaskell]: https://learnyouahaskell.github.io/chapters.html
 [libriscv]: https://github.com/agra-uni-bremen/libriscv
+[ormolu github]: https://github.com/tweag/ormolu
