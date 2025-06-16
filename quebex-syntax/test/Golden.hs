@@ -3,45 +3,45 @@ module Golden (goldenTests) where
 import Language.QBE (parse)
 import System.Exit (ExitCode (..))
 import System.FilePath
-import System.IO (IOMode (WriteMode), hClose, openFile)
+import System.IO (IOMode (WriteMode), hClose, openFile, hGetContents)
 import System.Process
 import Test.Tasty
 import Test.Tasty.Golden.Advanced
 
-runQBE :: FilePath -> IO ExitCode
+type QBEResult = (ExitCode, String)
+
+runQBE :: FilePath -> IO QBEResult
 runQBE filePath = do
   devNull <- openFile "/dev/null" WriteMode
 
-  (_, _, _, p) <-
+  (_, _, Just herr, p) <-
     createProcess
       (proc "qbe" [filePath])
         { std_out = UseHandle devNull,
-          std_err = UseHandle devNull
+          std_err = CreatePipe
         }
 
-  waitForProcess p <* hClose devNull
+  ret <- waitForProcess p <* hClose devNull
+  out <- hGetContents herr
+  return (ret, out)
 
-runQuebex :: FilePath -> IO ExitCode
+runQuebex :: FilePath -> IO QBEResult
 runQuebex filePath = do
   content <- readFile filePath
   case parse filePath content of
-    Right _ -> pure ExitSuccess
-    Left _err -> do
-      -- fail $ show err
-      pure $ ExitFailure 1
+    Right _ -> pure (ExitSuccess, "")
+    Left err -> pure (ExitFailure 1, show err)
 
-simpleCmp :: ExitCode -> ExitCode -> IO (Maybe String)
-simpleCmp x y =
+simpleCmp :: QBEResult -> QBEResult -> IO (Maybe String)
+simpleCmp (exit, out) (exit', out') =
   return $
-    if x == y
+    if exit == exit'
       then Nothing
       else Just ("Parsing mismatch: " ++ err)
   where
     err :: String
-    err = "qbe=(" ++ show x ++ ") quebex=(" ++ show y ++ ")"
+    err = "qbe=(" ++ show exit ++ "): " ++ show out ++ " quebex=(" ++ show exit' ++ "):" ++ show out'
 
--- TODO: Could make {runQBE, runQuebex} return a pair which includes
--- the parser error message in order to output nicer erros in simpleCmp.
 runTest :: TestName -> TestTree
 runTest testName =
   goldenTest
