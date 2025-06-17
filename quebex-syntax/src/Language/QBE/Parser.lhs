@@ -858,7 +858,12 @@ argument.
 loadInstr :: Parser Q.Instr
 loadInstr = do
   _ <- string "load"
-  t <- ws1 ((Q.LSubWord <$> subWordType) <|> (Q.LBase <$> baseType))
+  t <- ws1 $ choice
+    [ try $ bind "sw" (Q.LBase Q.Word),
+      try $ bind "uw" (Q.LBase Q.Word),
+      try $ Q.LSubWord <$> subWordType,
+      Q.LBase <$> baseType
+    ]
   ws val <&> Q.Load t
 \end{code}
 

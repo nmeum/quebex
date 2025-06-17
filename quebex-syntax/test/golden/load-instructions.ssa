@@ -1,0 +1,12 @@
+function w $main() {
+@start.1
+	%addr =l alloc4 4
+	storew %addr, 255
+	%w.1 =w loadw %addr
+	%w.2 =w loadsw %addr
+	%w.3 =w loaduw %addr
+	%w.4 =s loads %addr
+	%w.5 =w loadsh %addr
+	%w.6 =w loaduh %addr
+	ret 0
+}
