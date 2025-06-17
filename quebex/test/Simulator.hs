@@ -289,6 +289,33 @@ blockTests =
               \}"
 
           res @?= Left TypingError,
+      testCase "Jump to unknown block within function" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "main")
+              []
+              "function $main() {\n\
+              \@start\n\
+              \jmp @foo\n\
+              \@bar\n\
+              \ret\n\
+              \}"
+
+          res @?= Left (UnknownBlock $ QBE.BlockIdent "foo"),
+      testCase "Call undefined function" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "main")
+              []
+              "function $main() {\n\
+              \@start\n\
+              \call $bar()\n\
+              \ret\n\
+              \}"
+
+          res @?= Left (UnknownFunction $ QBE.GlobalIdent "bar"),
       testCase "Subtyping with load instruction" $
         do
           res <-
