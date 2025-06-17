@@ -276,6 +276,27 @@ blockTests =
               \}"
 
           res @?= Just (E.VWord 0xdeadbeef),
+      testCase "Pointer arithmetic on user-defined type" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "type :abyteandmanywords = { w, b 100 }\n\
+              \function w $main() {\n\
+              \@start.1\n\
+              \%addr.0 =l alloc4 104\n\
+              \%addr.1 =l add %addr.0, 4\n\
+              \storeb 255, %addr.1\n\
+              \%addr.2 =l sub %addr.1, 4\n\
+              \storew 3735928304, %addr.2\n\
+              \%word =w loaduw %addr.0\n\
+              \%byte =w loadub %addr.1\n\
+              \%res  =w add %word, %byte\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (E.VWord 0xdeadbeef),
       testCase "Invalid subtyping with subword function parameters" $
         do
           res <-
@@ -368,6 +389,51 @@ blockTests =
               \}"
 
           res @?= Left TypingError,
+      testCase "Store float in memory and load it again" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "storeAndLoadFloat")
+              [E.VSingle 0.333333333]
+              "function s $storeAndLoadFloat(s %f) {\n\
+              \@start.1\n\
+              \%addr =l alloc4 4\n\
+              \stores %f, %addr\n\
+              \%loaded =s loads %addr\n\
+              \ret %loaded\n\
+              \}"
+
+          res @?= Just (E.VSingle 0.333333333),
+      testCase "Store double in memory and load it again" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "storeAndLoadDouble")
+              [E.VDouble 0.3333333331111]
+              "function d $storeAndLoadDouble(d %f) {\n\
+              \@start.1\n\
+              \%addr =l alloc4 8\n\
+              \stored %f, %addr\n\
+              \%loaded =d loadd %addr\n\
+              \ret %loaded\n\
+              \}"
+
+          res @?= Just (E.VDouble 0.3333333331111),
+      -- XXX: Doesn't work yet because we are not loading $data into memory.
+      -- testCase "Load data object from memory" $
+      --   do
+      --     res <-
+      --       parseAndExec
+      --         (QBE.GlobalIdent "main")
+      --         []
+      --         "data $a = { w 2342 2 3, b 0 }\n\
+      --         \function w $main() {\n\
+      --         \@start\n\
+      --         \%w =w loadw $a\n\
+      --         \ret %w\n\
+      --         \}"
+      --
+      --     res @?= Just (E.VWord 2342),
       testCase "Subtyping with load instruction" $
         do
           res <-

@@ -179,7 +179,7 @@ loadByteSize (LSubWord UnsignedHalf) = 2
 loadByteSize (LBase Word) = 4
 loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
-loadByteSize (LBase Double) = 4
+loadByteSize (LBase Double) = 8
 
 loadToExtType :: LoadType -> ExtType
 loadToExtType (LSubWord UnsignedByte) = Byte

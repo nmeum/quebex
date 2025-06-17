@@ -3,7 +3,6 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Except (ExceptT, liftEither, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
-import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E

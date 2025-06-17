@@ -1,0 +1,20 @@
+data $x = { w 0 }
+
+function w $foo() {
+@end
+	%v =w add 0, 0
+	ret %v
+}
+
+function w $main() {
+@start
+	%v =w add 0, 0
+	# Store can take a global value as an argument.
+	storew 42, $x
+	# Load can take a global value as an argument.
+	%y =w loadw $x
+	# Jump can take a global value as an argument.
+	jnz $x, @end, @end
+@end
+	ret 0
+}
