@@ -8,3 +8,8 @@ export function w $main(l %s0, l %s1) {
 	storew 43,  %A0
 	hlt
 }
+
+export function s $foo(s %s0, s %s1) {
+@start
+	ret %s0
+}

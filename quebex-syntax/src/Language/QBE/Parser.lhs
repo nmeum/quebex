@@ -615,7 +615,7 @@ subWordType = choice
   , bind "uh" Q.UnsignedHalf ]
 
 abity :: Parser Q.Abity
-abity = (Q.ASubWordType <$> subWordType)
+abity = try (Q.ASubWordType <$> subWordType)
     <|> (Q.ABase <$> baseType)
     <|> (Q.AUserDef <$> userDef)
 \end{code}
