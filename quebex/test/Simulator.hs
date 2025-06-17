@@ -316,6 +316,58 @@ blockTests =
               \}"
 
           res @?= Left (UnknownFunction $ QBE.GlobalIdent "bar"),
+      testCase "Arithemtics with single-precision float" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "addFloats")
+              [E.VSingle 2.0, E.VSingle 0.3]
+              "function s $addFloats(s %f1, s %f2) {\n\
+              \@start\n\
+              \%val =s add %f1, %f2\n\
+              \ret %val\n\
+              \}"
+
+          res @?= Just (E.VSingle 2.3),
+      testCase "Arithemtics with double-precision float" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "addFloats")
+              [E.VDouble 2.0, E.VDouble 0.3]
+              "function d $addFloats(d %f1, d %f2) {\n\
+              \@start\n\
+              \%val =d add %f1, %f2\n\
+              \ret %val\n\
+              \}"
+
+          res @?= Just (E.VDouble 2.3),
+      testCase "Arithemtics with float literal" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "addFloatAndLit")
+              [E.VSingle 4.2]
+              "function s $addFloatAndLit(s %f) {\n\
+              \@start\n\
+              \%v =s add %f, 1\n\
+              \ret %v\n\
+              \}"
+
+          res @?= Just (E.VSingle 5.2),
+      testCase "Invalid mixed float arithmetics" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "addFloatAndLong")
+              [E.VSingle 4.2, E.VLong 42]
+              "function s $addFloatAndLong(s %f, l %l) {\n\
+              \@start\n\
+              \%v =s add %f, %l\n\
+              \ret %v\n\
+              \}"
+
+          res @?= Left TypingError,
       testCase "Subtyping with load instruction" $
         do
           res <-
