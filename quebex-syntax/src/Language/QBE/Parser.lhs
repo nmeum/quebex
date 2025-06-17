@@ -474,7 +474,7 @@ field :: Parser Q.Field
 field = do
   -- TODO: newline is required if there is a number argument
   f <- wsNL subType
-  s <- optionMaybe decNumber
+  s <- ws $ optionMaybe decNumber
   pure (f, s)
 
 -- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".

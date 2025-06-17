@@ -20,6 +20,10 @@ typeTests =
         let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
             v = TypeDef (UserIdent "twofloats") Nothing (ARegular f)
          in parse "type :twofloats = { s, s }" @?= Right v,
+      testCase "Regular type with trailing whitespaces" $
+        let f = [(SExtType Byte, Nothing), (SExtType (Base Word), Just 100)]
+            v = TypeDef (UserIdent "abyteandmanywords") Nothing (ARegular f)
+         in parse "type :abyteandmanywords = { b, w 100 }" @?= Right v,
       testCase "Union type with multiple fields" $
         let f = [[(SExtType Byte, Nothing)], [(SExtType (Base Single), Nothing)]]
             v = TypeDef (UserIdent "un9") Nothing (AUnion f)
