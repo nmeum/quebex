@@ -30,7 +30,8 @@ library
 
     exposed-modules:
       Language.QBE.Simulator.Symbolic,
-      Language.QBE.Simulator.Symbolic.Expression
+      Language.QBE.Simulator.Symbolic.Expression,
+      Language.QBE.Simulator.Concolic.Expression
 
 test-suite quebex-symex-test
     import:           warnings
