@@ -2,11 +2,13 @@ module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector (..),
     half,
     toBytes,
+    fromBytes,
   )
 where
 
 import Control.Exception (assert)
 import Data.Word (Word16)
+import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 
@@ -32,3 +34,12 @@ toBytes BitVector {sexpr = s, qtype = ty} =
   where
     nthByte :: SMT.SExpr -> Integer -> SMT.SExpr
     nthByte expr n = SMT.extract expr ((n * 8) - 1) ((n - 1) * 8)
+
+fromBytes :: QBE.ExtType -> [BitVector] -> Maybe BitVector
+fromBytes _ [] = Nothing
+fromBytes ty (BitVector {sexpr = s} : xs) =
+  Just $ BitVector (foldl (\acc b -> SMT.concat (sexpr b) acc) s xs) ty
+
+instance E.Storable BitVector BitVector where
+  toBytes = toBytes
+  fromBytes = fromBytes
