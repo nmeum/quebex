@@ -34,10 +34,11 @@ library
       Language.QBE.Analysis.CFG,
       Language.QBE.Simulator,
       Language.QBE.Simulator.State,
-      Language.QBE.Simulator.Generator,
-      Language.QBE.Simulator.Expression,
       Language.QBE.Simulator.Error,
-      Language.QBE.Simulator.Memory
+      Language.QBE.Simulator.Memory,
+      Language.QBE.Simulator.Expression,
+      Language.QBE.Simulator.Default.Expression,
+      Language.QBE.Simulator.Default.Generator,
 
 test-suite quebex-test
     import:           warnings
@@ -53,6 +54,7 @@ test-suite quebex-test
 
     build-depends:
         base ^>=4.19.1.0,
+        array,
         parsec,
         quebex,
         quebex-syntax,

@@ -3,13 +3,13 @@ module Simulator (simTests) where
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
+import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Error
-import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parseAndExec' :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Either EvalError (Maybe E.RegVal))
+parseAndExec' :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Either EvalError (Maybe D.RegVal))
 parseAndExec' funcName params input = do
   prog <- case parse "" input of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
@@ -21,7 +21,7 @@ parseAndExec' funcName params input = do
 
   runExec prog (execFunc func params)
 
-parseAndExec :: QBE.GlobalIdent -> [E.RegVal] -> String -> IO (Maybe E.RegVal)
+parseAndExec :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Maybe D.RegVal)
 parseAndExec funcName params input = do
   evalRes <- parseAndExec' funcName params input
   case evalRes of
@@ -46,7 +46,7 @@ blockTests =
               \ret %c\n\
               \}"
 
-          res @?= Just (E.VWord 3),
+          res @?= Just (D.VWord 3),
       testCase "Evaluate single basic block with multiple instructions" $
         do
           res <-
@@ -60,7 +60,7 @@ blockTests =
               \ret %foo\n\
               \}"
 
-          res @?= Just (E.VWord 5),
+          res @?= Just (D.VWord 5),
       testCase "Evaluate expression with subtyping" $
         do
           res <-
@@ -75,7 +75,7 @@ blockTests =
               \ret %foo\n\
               \}"
 
-          res @?= Just (E.VWord 0xdecafbad),
+          res @?= Just (D.VWord 0xdecafbad),
       testCase "Subtyping in function return value" $
         do
           res <-
@@ -89,7 +89,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VWord 0xdecafbad),
+          res @?= Just (D.VWord 0xdecafbad),
       testCase "Evaluate function without return value" $
         do
           res <-
@@ -117,7 +117,7 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Just (E.VWord 2),
+          res @?= Just (D.VWord 2),
       testCase "Conditional jump with zero value" $
         do
           res <-
@@ -136,7 +136,7 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Just (E.VLong 23),
+          res @?= Just (D.VLong 23),
       testCase "Conditional jump with non-zero value" $
         do
           res <-
@@ -155,20 +155,20 @@ blockTests =
               \ret %val\n\
               \}"
 
-          res @?= Just (E.VLong 42),
+          res @?= Just (D.VLong 42),
       testCase "Execute a function with parameters" $
         do
           res <-
             parseAndExec
               (QBE.GlobalIdent "funcWithParam")
-              [E.VWord 41]
+              [D.VWord 41]
               "function w $funcWithParam(w %x) {\n\
               \@go\n\
               \%y =w add 1, %x\n\
               \ret %y\n\
               \}"
 
-          res @?= Just (E.VWord 42),
+          res @?= Just (D.VWord 42),
       testCase "Function call instruction without return value" $
         do
           res <-
@@ -187,7 +187,7 @@ blockTests =
               \ret %y\n\
               \}"
 
-          res @?= Just (E.VWord 0),
+          res @?= Just (D.VWord 0),
       testCase "Function call with return value" $
         do
           res <-
@@ -206,7 +206,7 @@ blockTests =
               \ret %ret\n\
               \}"
 
-          res @?= Just (E.VWord 23),
+          res @?= Just (D.VWord 23),
       testCase "Allocate, store and load value in memory" $
         do
           res <-
@@ -221,7 +221,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VWord 2342),
+          res @?= Just (D.VWord 2342),
       testCase "Load with sub word type" $
         do
           res <-
@@ -237,7 +237,7 @@ blockTests =
               \}"
 
           -- 249 (0xf9) sign extended to 32-bit.
-          res @?= Just (E.VWord 0xfffffff9),
+          res @?= Just (D.VWord 0xfffffff9),
       testCase "Store subword in memory" $
         do
           res <-
@@ -254,7 +254,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VWord 0xaaaaaaff),
+          res @?= Just (D.VWord 0xaaaaaaff),
       testCase "Function with user-defined type as function parameter" $
         do
           res <-
@@ -275,7 +275,7 @@ blockTests =
               \ret %ret\n\
               \}"
 
-          res @?= Just (E.VWord 0xdeadbeef),
+          res @?= Just (D.VWord 0xdeadbeef),
       testCase "Pointer arithmetic on user-defined type" $
         do
           res <-
@@ -296,13 +296,13 @@ blockTests =
               \ret %res\n\
               \}"
 
-          res @?= Just (E.VWord 0xdeadbeef),
+          res @?= Just (D.VWord 0xdeadbeef),
       testCase "Invalid subtyping with subword function parameters" $
         do
           res <-
             parseAndExec'
               (QBE.GlobalIdent "subword")
-              [E.VByte 0xff]
+              [D.VByte 0xff]
               "function $subword(ub %val) {\n\
               \@start\n\
               \%val =w add %val, 1\n\
@@ -342,46 +342,46 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "addFloats")
-              [E.VSingle 2.0, E.VSingle 0.3]
+              [D.VSingle 2.0, D.VSingle 0.3]
               "function s $addFloats(s %f1, s %f2) {\n\
               \@start\n\
               \%val =s add %f1, %f2\n\
               \ret %val\n\
               \}"
 
-          res @?= Just (E.VSingle 2.3),
+          res @?= Just (D.VSingle 2.3),
       testCase "Arithemtics with double-precision float" $
         do
           res <-
             parseAndExec
               (QBE.GlobalIdent "addFloats")
-              [E.VDouble 2.0, E.VDouble 0.3]
+              [D.VDouble 2.0, D.VDouble 0.3]
               "function d $addFloats(d %f1, d %f2) {\n\
               \@start\n\
               \%val =d add %f1, %f2\n\
               \ret %val\n\
               \}"
 
-          res @?= Just (E.VDouble 2.3),
+          res @?= Just (D.VDouble 2.3),
       testCase "Arithemtics with float literal" $
         do
           res <-
             parseAndExec
               (QBE.GlobalIdent "addFloatAndLit")
-              [E.VSingle 4.2]
+              [D.VSingle 4.2]
               "function s $addFloatAndLit(s %f) {\n\
               \@start\n\
               \%v =s add %f, 1\n\
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VSingle 5.2),
+          res @?= Just (D.VSingle 5.2),
       testCase "Invalid mixed float arithmetics" $
         do
           res <-
             parseAndExec'
               (QBE.GlobalIdent "addFloatAndLong")
-              [E.VSingle 4.2, E.VLong 42]
+              [D.VSingle 4.2, D.VLong 42]
               "function s $addFloatAndLong(s %f, l %l) {\n\
               \@start\n\
               \%v =s add %f, %l\n\
@@ -394,7 +394,7 @@ blockTests =
           res <-
             parseAndExec
               (QBE.GlobalIdent "storeAndLoadFloat")
-              [E.VSingle 0.333333333]
+              [D.VSingle 0.333333333]
               "function s $storeAndLoadFloat(s %f) {\n\
               \@start.1\n\
               \%addr =l alloc4 4\n\
@@ -403,13 +403,13 @@ blockTests =
               \ret %loaded\n\
               \}"
 
-          res @?= Just (E.VSingle 0.333333333),
+          res @?= Just (D.VSingle 0.333333333),
       testCase "Store double in memory and load it again" $
         do
           res <-
             parseAndExec
               (QBE.GlobalIdent "storeAndLoadDouble")
-              [E.VDouble 0.3333333331111]
+              [D.VDouble 0.3333333331111]
               "function d $storeAndLoadDouble(d %f) {\n\
               \@start.1\n\
               \%addr =l alloc4 8\n\
@@ -418,7 +418,7 @@ blockTests =
               \ret %loaded\n\
               \}"
 
-          res @?= Just (E.VDouble 0.3333333331111),
+          res @?= Just (D.VDouble 0.3333333331111),
       -- XXX: Doesn't work yet because we are not loading $data into memory.
       -- testCase "Load data object from memory" $
       --   do
@@ -433,7 +433,7 @@ blockTests =
       --         \ret %w\n\
       --         \}"
       --
-      --     res @?= Just (E.VWord 2342),
+      --     res @?= Just (D.VWord 2342),
       testCase "Subtyping with load instruction" $
         do
           res <-
@@ -449,7 +449,7 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (E.VWord 0xdecafbad)
+          res @?= Just (D.VWord 0xdecafbad)
     ]
 
 simTests :: TestTree
