@@ -37,7 +37,7 @@ data BaseType
   | Double
   deriving (Show, Eq)
 
-baseTypeByteSize :: BaseType -> Integer
+baseTypeByteSize :: BaseType -> Int
 baseTypeByteSize Word = 4
 baseTypeByteSize Long = 8
 baseTypeByteSize Single = 4
@@ -49,7 +49,7 @@ data ExtType
   | HalfWord
   deriving (Show, Eq)
 
-extTypeByteSize :: ExtType -> Integer
+extTypeByteSize :: ExtType -> Int
 extTypeByteSize (Base b) = baseTypeByteSize b
 extTypeByteSize Byte = 1
 extTypeByteSize HalfWord = 2
