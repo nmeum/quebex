@@ -1,0 +1,50 @@
+cabal-version:      3.4
+name:               quebex-symex
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            GPL-3.0-only
+license-file:       LICENSE
+author:             Sören Tempel
+maintainer:         soeren+git@soeren-tempel.net
+-- copyright:
+category:           Language
+build-type:         Simple
+-- extra-doc-files:
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall
+
+library
+    import:           warnings
+    -- other-modules:
+    hs-source-dirs:   src
+    default-language: GHC2021
+
+    build-depends:
+      base ^>=4.19.1.0,
+      quebex,
+      quebex-syntax,
+      simple-smt
+
+    exposed-modules:
+      Language.QBE.Simulator.Symbolic,
+      Language.QBE.Simulator.Symbolic.Expression
+
+test-suite quebex-symex-test
+    import:           warnings
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+
+    other-modules:
+      Expression
+
+    build-depends:
+        base ^>=4.19.1.0,
+        quebex-symex,
+        simple-smt,
+        tasty        >=1.4.3,
+        tasty-hunit  >=0.10

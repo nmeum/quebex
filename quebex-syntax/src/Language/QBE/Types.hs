@@ -37,11 +37,22 @@ data BaseType
   | Double
   deriving (Show, Eq)
 
+baseTypeByteSize :: BaseType -> Integer
+baseTypeByteSize Word = 4
+baseTypeByteSize Long = 8
+baseTypeByteSize Single = 4
+baseTypeByteSize Double = 8
+
 data ExtType
   = Base BaseType
   | Byte
   | HalfWord
   deriving (Show, Eq)
+
+extTypeByteSize :: ExtType -> Integer
+extTypeByteSize (Base b) = baseTypeByteSize b
+extTypeByteSize Byte = 1
+extTypeByteSize HalfWord = 2
 
 data SubWordType
   = SignedByte
