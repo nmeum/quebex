@@ -13,6 +13,7 @@ import Language.QBE.Simulator.Expression as E
 import Language.QBE.Types qualified as QBE
 
 -- TODO: Can we just wrap base type here?
+-- TODO: Do not export the constructors
 data RegVal
   = VByte Word8
   | VHalf Word16

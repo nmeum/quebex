@@ -1,10 +1,12 @@
 module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector,
+    fromReg,
     getValue,
   )
 where
 
 import Control.Exception (assert)
+import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -16,6 +18,14 @@ data BitVector
     qtype :: QBE.ExtType
   }
   deriving (Show, Eq)
+
+fromReg :: D.RegVal -> BitVector
+fromReg (D.VByte v) = BitVector (SMT.bvBin 8 $ fromIntegral v) QBE.Byte
+fromReg (D.VHalf v) = BitVector (SMT.bvBin 16 $ fromIntegral v) QBE.HalfWord
+fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) (QBE.Base QBE.Word)
+fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) (QBE.Base QBE.Long)
+fromReg (D.VSingle _) = error "symbolic floats not supported"
+fromReg (D.VDouble _) = error "symbolic doubles not supported"
 
 -- | Only intended for testing purposes.
 getValue :: BitVector -> SMT.SExpr
