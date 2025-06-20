@@ -444,7 +444,7 @@ blockTests =
               "function w $allocate() {\n\
               \@start\n\
               \%addr =l alloc4 4\n\
-              \storew 16045690984835251117, %addr\n\
+              \storel 16045690984835251117, %addr\n\
               \%v =w loadl %addr\n\
               \ret %v\n\
               \}"
