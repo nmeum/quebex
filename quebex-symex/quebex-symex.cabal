@@ -41,7 +41,9 @@ test-suite quebex-symex-test
     main-is:          Main.hs
 
     other-modules:
-      Expression
+      Symbolic,
+      Concolic,
+      Util
 
     build-depends:
         base ^>=4.19.1.0,

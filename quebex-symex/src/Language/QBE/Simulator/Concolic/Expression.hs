@@ -1,6 +1,5 @@
 module Language.QBE.Simulator.Concolic.Expression
   ( Concolic (concrete, symbolic),
-    ConcolicByte,
     unconstrained,
     hasSymbolic,
   )
@@ -22,6 +21,7 @@ data Concolic
   { concrete :: D.RegVal,
     symbolic :: Maybe SE.BitVector
   }
+  deriving (Show)
 
 unconstrained :: SMT.Solver -> String -> QBE.BaseType -> IO Concolic
 unconstrained solver name ty = do
@@ -47,6 +47,7 @@ data ConcolicByte
   { concreteByte :: Word8,
     symbolicByte :: Maybe SE.BitVector
   }
+  deriving (Show)
 
 hasSymbolicByte :: ConcolicByte -> Bool
 hasSymbolicByte ConcolicByte {symbolicByte = Just _} = True
