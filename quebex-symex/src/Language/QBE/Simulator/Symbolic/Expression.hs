@@ -1,5 +1,6 @@
 module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector,
+    fromSExpr,
     fromReg,
     getValue,
   )
@@ -8,6 +9,7 @@ where
 import Control.Exception (assert)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Symbolic (bitSize)
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 
@@ -18,6 +20,9 @@ data BitVector
     qtype :: QBE.ExtType
   }
   deriving (Show, Eq)
+
+fromSExpr :: QBE.BaseType -> SMT.SExpr -> BitVector
+fromSExpr ty sexpr = BitVector sexpr (QBE.Base ty)
 
 fromReg :: D.RegVal -> BitVector
 fromReg (D.VByte v) = BitVector (SMT.bvBin 8 $ fromIntegral v) QBE.Byte
@@ -30,9 +35,6 @@ fromReg (D.VDouble _) = error "symbolic doubles not supported"
 -- | Only intended for testing purposes.
 getValue :: BitVector -> SMT.SExpr
 getValue = sexpr
-
-bitSize :: QBE.ExtType -> Int
-bitSize ty = QBE.extTypeByteSize ty * 8
 
 ------------------------------------------------------------------------
 

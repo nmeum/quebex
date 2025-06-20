@@ -1,5 +1,6 @@
 module Language.QBE.Simulator.Concolic.Expression
   ( Concolic (concrete, symbolic),
+    unconstrained,
     hasSymbolic,
   )
 where
@@ -8,13 +9,25 @@ import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Symbolic (bitSize)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Types qualified as QBE
+import SimpleSMT qualified as SMT
 
 data Concolic
   = Concolic
   { concrete :: D.RegVal,
     symbolic :: Maybe SE.BitVector
   }
+
+unconstrained :: SMT.Solver -> String -> QBE.BaseType -> IO Concolic
+unconstrained solver name ty = do
+  s <- SMT.declare solver name (SMT.tBits numBits)
+  -- TODO: Random value for concrete part
+  return $ Concolic (E.fromLit ty 0) (Just $ SE.fromSExpr ty s)
+  where
+    numBits :: Integer
+    numBits = fromIntegral $ bitSize (QBE.Base ty)
 
 hasSymbolic :: Concolic -> Bool
 hasSymbolic Concolic {symbolic = Just _} = True
