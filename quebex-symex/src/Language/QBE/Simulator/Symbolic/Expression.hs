@@ -58,7 +58,7 @@ toBytes BitVector {sexpr = s, qtype = ty} =
 fromBytes :: QBE.ExtType -> [BitVector] -> Maybe BitVector
 fromBytes _ [] = Nothing
 fromBytes ty bytes@(BitVector {sexpr = s} : xs) =
-  if (length bytes /= QBE.extTypeByteSize ty)
+  if length bytes /= QBE.extTypeByteSize ty
     then Nothing
     else Just $ BitVector (foldl concatBV s xs) ty
   where
@@ -67,7 +67,7 @@ fromBytes ty bytes@(BitVector {sexpr = s} : xs) =
       assert (qtype byte == QBE.Byte) $
         SMT.concat (sexpr byte) acc
 
-instance E.Storable BitVector BitVector where
+instance E.Storable BitVector where
   toBytes = toBytes
   fromBytes = fromBytes
 

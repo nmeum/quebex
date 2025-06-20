@@ -3,9 +3,8 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Except (ExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
-import Data.Array.IO (IOUArray)
+import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
-import Data.Word (Word8)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -68,7 +67,7 @@ data Env v
   = Env
   { envGlobals :: Map.Map QBE.GlobalIdent v,
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
-    envMem :: MEM.Memory IOUArray Word8,
+    envMem :: MEM.Memory IOArray v,
     envStk :: [StackFrame v],
     envStkPtr :: MEM.Address
   }
@@ -118,7 +117,7 @@ stackAlloc size align = do
     alignAddr :: MEM.Address -> MEM.Address -> MEM.Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
 
-writeMemory :: (E.Storable v Word8) => MEM.Address -> QBE.ExtType -> v -> Exec v ()
+writeMemory :: (Show v, E.Storable v) => MEM.Address -> QBE.ExtType -> v -> Exec v ()
 writeMemory addr extType regVal = do
   mem <- gets envMem
 
@@ -133,7 +132,7 @@ writeMemory addr extType regVal = do
         QBE.HalfWord -> take 2 bytes
         QBE.Base _ -> bytes
 
-readMemory :: (E.Storable v Word8) => QBE.LoadType -> MEM.Address -> Exec v v
+readMemory :: (Show v, E.Storable v) => QBE.LoadType -> MEM.Address -> Exec v v
 readMemory ty addr = do
   mem <- gets envMem
   bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)

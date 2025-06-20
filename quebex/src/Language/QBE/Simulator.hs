@@ -18,7 +18,6 @@ import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Map qualified as Map
 import Data.Maybe (isNothing)
-import Data.Word (Word8)
 import Language.QBE (Program, globalFuncs)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
@@ -31,7 +30,7 @@ type BlockResult v = (Either (Maybe v) QBE.Block)
 
 ------------------------------------------------------------------------
 
-execVolatile :: (E.Storable v Word8, E.ValueRepr v) => QBE.VolatileInstr -> Exec v ()
+execVolatile :: (Show v, E.Storable v, E.ValueRepr v) => QBE.VolatileInstr -> Exec v ()
 execVolatile (QBE.Store valTy valReg addrReg) = do
   -- Since byte and half are not first-class types in the IL, they are
   -- stored as words and have to be looked up as such.
@@ -45,7 +44,7 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
 -- TODO: Implement blit
 execVolatile (QBE.Blit {}) = error "blit not implemented"
 
-execInstr :: (E.Storable v Word8, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v v
+execInstr :: (Show v, E.Storable v, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v v
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
@@ -66,7 +65,7 @@ execInstr QBE.Long (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 execInstr _ QBE.Alloc {} = throwError InvalidAddressType
 
-execStmt :: (E.Storable v Word8, E.ValueRepr v) => QBE.Statement -> Exec v ()
+execStmt :: (Show v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v ()
 execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
@@ -116,12 +115,12 @@ execJump (QBE.Return v) = do
         then pure (Left Nothing)
         else throwError InvalidReturnValue
 
-execBlock :: (E.Storable v Word8, E.ValueRepr v) => QBE.Block -> Exec v (BlockResult v)
+execBlock :: (Show v, E.Storable v, E.ValueRepr v) => QBE.Block -> Exec v (BlockResult v)
 execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: (E.Storable v Word8, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v (Maybe v)
+execFunc :: (Show v, E.Storable v, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
   when (length params /= length args) $
@@ -136,7 +135,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     Right _block -> throwError MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (E.Storable v Word8, E.ValueRepr v) => (BlockResult v) -> Exec v (BlockResult v)
+    go :: (Show v, E.Storable v, E.ValueRepr v) => (BlockResult v) -> Exec v (BlockResult v)
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
 

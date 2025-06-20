@@ -4,9 +4,15 @@ import Data.Word (Word64)
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
-class Storable v b where
-  toBytes :: v -> [b]
-  fromBytes :: QBE.ExtType -> [b] -> Maybe v
+-- TODO: We could use 'FlexibleContexts` here (which is part of GHC 2021)
+-- to require a second type parameter which corresponds to the byte representation.
+-- For example, 'Word8' for 'RegVal'. However, QBE requires an internal dynamic
+-- typing representation anyhow so every 'ValueRepr' needs some way to represent
+-- byte values anyhow. Nonetheless, a Word8 representation would allow using an
+-- IOUArray instead of an IOARray for the Memory.
+class Storable v where
+  toBytes :: v -> [v]
+  fromBytes :: QBE.ExtType -> [v] -> Maybe v
 
 class ValueRepr v where
   -- TODO: Change this to fromWord64 and rely on long subtyping

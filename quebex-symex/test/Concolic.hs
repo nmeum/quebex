@@ -17,7 +17,7 @@ storeTests =
         do
           let value = E.fromLit QBE.Word 0xdeadbeef :: C.Concolic
 
-          let bytes = E.toBytes value :: [C.ConcolicByte]
+          let bytes = E.toBytes value
           length bytes @?= 4
 
           let valueFromBytes = fromJust $ E.fromBytes (QBE.Base QBE.Word) bytes
