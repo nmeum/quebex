@@ -1,12 +1,15 @@
 module Language.QBE.Simulator.Concolic.Expression
   ( Concolic (concrete, symbolic),
+    ConcolicByte,
     unconstrained,
     hasSymbolic,
   )
 where
 
+import Control.Exception (assert)
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
+import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic (bitSize)
@@ -37,7 +40,41 @@ getSymbolicDef :: Concolic -> SE.BitVector
 getSymbolicDef Concolic {concrete = c, symbolic = s} =
   fromMaybe (SE.fromReg c) s
 
--- TODO: Storable instance
+------------------------------------------------------------------------
+
+data ConcolicByte
+  = ConcolicByte
+  { concreteByte :: Word8,
+    symbolicByte :: Maybe SE.BitVector
+  }
+
+hasSymbolicByte :: ConcolicByte -> Bool
+hasSymbolicByte ConcolicByte {symbolicByte = Just _} = True
+hasSymbolicByte _ = False
+
+getSymbolicDefByte :: ConcolicByte -> SE.BitVector
+getSymbolicDefByte ConcolicByte {concreteByte = cb, symbolicByte = sb} =
+  fromMaybe (SE.fromByte cb) sb
+
+instance E.Storable Concolic ConcolicByte where
+  toBytes Concolic {concrete = c, symbolic = s} =
+    let cbytes = E.toBytes c
+        nbytes = length cbytes
+        sbytes = maybe (replicate nbytes Nothing) (map Just . E.toBytes) s
+     in assert (nbytes == length sbytes) $
+          zipWith ConcolicByte cbytes sbytes
+
+  fromBytes ty bytes =
+    do
+      let conBytes = map concreteByte bytes
+      con <- E.fromBytes ty conBytes
+
+      let mkConcolic = Concolic con
+      if any hasSymbolicByte bytes
+        then do
+          let symBVs = map getSymbolicDefByte bytes
+          E.fromBytes ty symBVs <&> mkConcolic . Just
+        else Just $ mkConcolic Nothing
 
 ------------------------------------------------------------------------
 
@@ -59,7 +96,7 @@ binaryOp ::
   Maybe Concolic
 binaryOp fnCon fnSym lhs rhs =
   do
-    c <- (concrete lhs) `fnCon` (concrete rhs)
+    c <- concrete lhs `fnCon` concrete rhs
     if hasSymbolic lhs || hasSymbolic rhs
       then
         let lhsS = getSymbolicDef lhs
@@ -74,10 +111,10 @@ instance E.ValueRepr Concolic where
 
   fromAddress addr = Concolic (E.fromAddress addr) Nothing
   toAddress Concolic {concrete = c} = E.toAddress c
-
-  extend ty v = unaryOp (E.extend ty) (E.extend ty) v
-  subType ty v = unaryOp (E.subType ty) (E.subType ty) v
   isZero Concolic {concrete = c} = E.isZero c
 
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub
+
+  extend ty = unaryOp (E.extend ty) (E.extend ty)
+  subType ty = unaryOp (E.subType ty) (E.subType ty)
