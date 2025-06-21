@@ -70,8 +70,10 @@ unaryOp ::
   Maybe Concolic
 unaryOp fnCon fnSym Concolic {concrete = c, symbolic = s} = do
   c' <- fnCon c
-  s' <- s <&> fnSym
-  return Concolic {concrete = c', symbolic = s'}
+  let con = Concolic c'
+  case s of
+    Just s' -> fnSym s' <&> con . Just
+    Nothing -> pure $ con Nothing
 
 binaryOp ::
   (D.RegVal -> D.RegVal -> Maybe D.RegVal) ->
