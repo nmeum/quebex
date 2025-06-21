@@ -1,5 +1,6 @@
 module Simulator (simTests) where
 
+import Language.QBE.Simulator.Tracer as T
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
@@ -19,7 +20,7 @@ parseAndExec' funcName params input = do
     Just x -> pure x
     Nothing -> fail $ "Unknown function: " ++ show funcName
 
-  runExec prog (execFunc func params)
+  runExec prog (execFunc func params) T.NoOp
 
 parseAndExec :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Maybe D.RegVal)
 parseAndExec funcName params input = do

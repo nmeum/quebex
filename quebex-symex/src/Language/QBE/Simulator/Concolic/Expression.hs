@@ -1,5 +1,5 @@
 module Language.QBE.Simulator.Concolic.Expression
-  ( Concolic (concrete, symbolic),
+  ( Concolic (..),
     unconstrained,
     hasSymbolic,
   )

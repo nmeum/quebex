@@ -10,6 +10,7 @@ module Language.QBE.Simulator
   )
 where
 
+import Language.QBE.Simulator.Tracer qualified as T
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
@@ -30,7 +31,7 @@ type BlockResult v = (Either (Maybe v) QBE.Block)
 
 ------------------------------------------------------------------------
 
-execVolatile :: (Show v, E.Storable v, E.ValueRepr v) => QBE.VolatileInstr -> Exec v ()
+execVolatile :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.VolatileInstr -> Exec v t ()
 execVolatile (QBE.Store valTy valReg addrReg) = do
   -- Since byte and half are not first-class types in the IL, they are
   -- stored as words and have to be looked up as such.
@@ -44,7 +45,7 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
 -- TODO: Implement blit
 execVolatile (QBE.Blit {}) = error "blit not implemented"
 
-execInstr :: (Show v, E.Storable v, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v v
+execInstr :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v t v
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
@@ -65,7 +66,7 @@ execInstr QBE.Long (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 execInstr _ QBE.Alloc {} = throwError InvalidAddressType
 
-execStmt :: (Show v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v ()
+execStmt :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v t ()
 execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
@@ -90,7 +91,7 @@ execStmt (QBE.Call ret toCall params) = do
           subTyped <- subTypeE baseTy retVal
           modifyFrame (storeLocal ident subTyped)
 
-execJump :: (E.ValueRepr v) => QBE.JumpInstr -> Exec v (BlockResult v)
+execJump :: (T.Tracer t v, E.ValueRepr v) => QBE.JumpInstr -> Exec v t (BlockResult v)
 execJump QBE.Halt = throwError EncounteredHalt
 execJump (QBE.Jump ident) = do
   blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
@@ -100,7 +101,10 @@ execJump (QBE.Jump ident) = do
 execJump (QBE.Jnz cond ifT ifF) = do
   -- TODO: subtyping
   condValue <- lookupValue QBE.Word cond
-  execJump $ QBE.Jump (if (not $ E.isZero condValue) then ifT else ifF)
+  let condResult = not $ E.isZero condValue
+
+  trackBranch condValue condResult
+  execJump $ QBE.Jump (if condResult then ifT else ifF)
 execJump (QBE.Return v) = do
   func <- activeFrame <&> stkFunc
   case QBE.fAbity func of
@@ -115,12 +119,12 @@ execJump (QBE.Return v) = do
         then pure (Left Nothing)
         else throwError InvalidReturnValue
 
-execBlock :: (Show v, E.Storable v, E.ValueRepr v) => QBE.Block -> Exec v (BlockResult v)
+execBlock :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Block -> Exec v t (BlockResult v)
 execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: (Show v, E.Storable v, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v (Maybe v)
+execFunc :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v t (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
   when (length params /= length args) $
@@ -135,7 +139,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     Right _block -> throwError MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (Show v, E.Storable v, E.ValueRepr v) => (BlockResult v) -> Exec v (BlockResult v)
+    go :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => (BlockResult v) -> Exec v t (BlockResult v)
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
 
@@ -144,7 +148,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName (QBE.Env n) = n
     paramName QBE.Variadic = error "variadic parameters not supported"
 
-runExec :: (E.ValueRepr v) => Program -> Exec v a -> IO (Either EvalError a)
-runExec prog env = do
-  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 128
+runExec :: (T.Tracer t v, E.ValueRepr v) => Program -> Exec v t a -> t -> IO (Either EvalError a)
+runExec prog env tracer = do
+  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 128 tracer
   runExceptT (runStateT env emptyEnv) <&> fmap fst

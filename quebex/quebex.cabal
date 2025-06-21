@@ -34,6 +34,7 @@ library
       Language.QBE.Analysis.CFG,
       Language.QBE.Simulator,
       Language.QBE.Simulator.State,
+      Language.QBE.Simulator.Tracer,
       Language.QBE.Simulator.Error,
       Language.QBE.Simulator.Memory,
       Language.QBE.Simulator.Expression,

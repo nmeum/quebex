@@ -9,30 +9,31 @@ import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
+import Language.QBE.Simulator.Tracer qualified as T
 
-type Exec v a = StateT (Env v) (ExceptT EvalError IO) a
+type Exec val tracer ret = StateT (Env val tracer) (ExceptT EvalError IO) ret
 
 -- TODO: Move this elsewhere or just provide a Maybe -> Exec lifter
 
-toAddressE :: (E.ValueRepr v) => v -> Exec v MEM.Address
+toAddressE :: (E.ValueRepr v) => v -> Exec v t MEM.Address
 toAddressE addr =
   case E.toAddress addr of
     Nothing -> throwError InvalidAddressType
     Just rt -> pure rt
 
-subTypeE :: (E.ValueRepr v) => QBE.BaseType -> v -> Exec v v
+subTypeE :: (E.ValueRepr v) => QBE.BaseType -> v -> Exec v t v
 subTypeE ty v =
   case E.subType ty v of
     Nothing -> throwError TypingError
     Just rt -> pure rt
 
-extendE :: (E.ValueRepr v) => QBE.SubWordType -> v -> Exec v v
+extendE :: (E.ValueRepr v) => QBE.SubWordType -> v -> Exec v t v
 extendE ty v =
   case E.extend ty v of
     Nothing -> throwError InvaldSubWordExtension
     Just rt -> pure rt
 
-runBinary :: (E.ValueRepr v) => QBE.BaseType -> (v -> v -> Maybe v) -> v -> v -> Exec v v
+runBinary :: (E.ValueRepr v) => QBE.BaseType -> (v -> v -> Maybe v) -> v -> v -> Exec v t v
 runBinary ty op lhs rhs = do
   lhs' <- subTypeE ty lhs
   rhs' <- subTypeE ty rhs
@@ -63,43 +64,44 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 
 ------------------------------------------------------------------------
 
-data Env v
+data Env val tracer
   = Env
-  { envGlobals :: Map.Map QBE.GlobalIdent v,
+  { envGlobals :: Map.Map QBE.GlobalIdent val,
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
-    envMem :: MEM.Memory IOArray v,
-    envStk :: [StackFrame v],
-    envStkPtr :: MEM.Address
+    envMem :: MEM.Memory IOArray val,
+    envStk :: [StackFrame val],
+    envStkPtr :: MEM.Address,
+    envTracer :: tracer
   }
 
-mkEnv :: [QBE.FuncDef] -> MEM.Address -> MEM.Size -> IO (Env v)
-mkEnv funcs a s = do
+mkEnv :: (T.Tracer t v) => [QBE.FuncDef] -> MEM.Address -> MEM.Size -> t -> IO (Env v t)
+mkEnv funcs a s t = do
   mem <- MEM.mkMemory a s
-  return $ Env Map.empty (makeFuncs funcs) mem [] (s - 1)
+  return $ Env Map.empty (makeFuncs funcs) mem [] (s - 1) t
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
 
-activeFrame :: Exec v (StackFrame v)
+activeFrame :: Exec v t (StackFrame v)
 activeFrame = do
   env <- get
   case env of
     Env {envStk = x : _} -> pure x
     _ -> throwError EmptyStack
 
-modifyFrame :: (StackFrame v -> StackFrame v) -> Exec v ()
+modifyFrame :: (StackFrame v -> StackFrame v) -> Exec v t ()
 modifyFrame func = do
   stack <- gets envStk
   case stack of
     (x : xs) -> modify (\s -> s {envStk = func x : xs})
     _ -> throwError EmptyStack
 
-pushStackFrame :: QBE.FuncDef -> Exec v ()
+pushStackFrame :: QBE.FuncDef -> Exec v t ()
 pushStackFrame f = do
   stkPtr <- gets envStkPtr
   modify (\s -> s {envStk = mkStackFrame f stkPtr : envStk s})
 
-popStackFrame :: Exec v ()
+popStackFrame :: Exec v t ()
 popStackFrame = do
   stk <- gets envStk
   case stk of
@@ -107,7 +109,7 @@ popStackFrame = do
     ((StackFrame {stkFp = fp}) : xs) ->
       modify (\s -> s {envStk = xs, envStkPtr = fp})
 
-stackAlloc :: (E.ValueRepr v) => MEM.Size -> MEM.Address -> Exec v v
+stackAlloc :: (E.ValueRepr v) => MEM.Size -> MEM.Address -> Exec v t v
 stackAlloc size align = do
   stkPtr <- gets envStkPtr
   let newStkPtr = alignAddr (stkPtr - size) align
@@ -117,7 +119,7 @@ stackAlloc size align = do
     alignAddr :: MEM.Address -> MEM.Address -> MEM.Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
 
-writeMemory :: (Show v, E.Storable v) => MEM.Address -> QBE.ExtType -> v -> Exec v ()
+writeMemory :: (E.Storable v) => MEM.Address -> QBE.ExtType -> v -> Exec v t ()
 writeMemory addr extType regVal = do
   mem <- gets envMem
 
@@ -132,7 +134,7 @@ writeMemory addr extType regVal = do
         QBE.HalfWord -> take 2 bytes
         QBE.Base _ -> bytes
 
-readMemory :: (Show v, E.Storable v) => QBE.LoadType -> MEM.Address -> Exec v v
+readMemory :: (E.Storable v) => QBE.LoadType -> MEM.Address -> Exec v t v
 readMemory ty addr = do
   mem <- gets envMem
   bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)
@@ -141,11 +143,11 @@ readMemory ty addr = do
     Just x -> pure x
     Nothing -> throwError InvalidMemoryLoad
 
-maybeLookup :: String -> Maybe v -> Exec v v
+maybeLookup :: String -> Maybe v -> Exec v t v
 maybeLookup _ (Just x) = pure x
 maybeLookup name Nothing = throwError $ UnknownVariable name
 
-lookupValue :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> Exec v v
+lookupValue :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> Exec v t v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit ty v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
@@ -162,7 +164,7 @@ lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   subTypeE ty v
 
-lookupFunc :: QBE.Value -> Exec v QBE.FuncDef
+lookupFunc :: QBE.Value -> Exec v t QBE.FuncDef
 lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   funcs <- gets envFuncs
   case Map.lookup name funcs of
@@ -170,12 +172,21 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
     Nothing -> throwError (UnknownFunction name)
 lookupFunc _ = error "non-global functions not supported"
 
-lookupParam :: (E.ValueRepr v) => QBE.FuncParam -> Exec v v
+lookupParam :: (E.ValueRepr v) => QBE.FuncParam -> Exec v t v
 lookupParam (QBE.Regular abity ident) = do
   value <- lookupValue (QBE.abityToBase abity) (QBE.VLocal ident)
   return value
 lookupParam (QBE.Env _) = error "env function parameters not supported"
 lookupParam QBE.Variadic = error "variadic functions not supported"
 
-lookupParams :: (E.ValueRepr v) => [QBE.FuncParam] -> Exec v [v]
+lookupParams :: (E.ValueRepr v) => [QBE.FuncParam] -> Exec v t [v]
 lookupParams params = mapM lookupParam params
+
+------------------------------------------------------------------------
+
+-- TODO: Refactor with generic lift function
+
+trackBranch :: (T.Tracer t v, E.ValueRepr v) => v -> Bool -> Exec v t ()
+trackBranch condValue condResult = do
+  let newTracer = \t -> T.branch t condValue condResult
+  modify (\s@Env { envTracer = t } -> s { envTracer = newTracer t })

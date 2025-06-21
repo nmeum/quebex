@@ -30,6 +30,7 @@ library
 
     exposed-modules:
       Language.QBE.Simulator.Symbolic,
+      Language.QBE.Simulator.Symbolic.Tracer,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.Expression
 
