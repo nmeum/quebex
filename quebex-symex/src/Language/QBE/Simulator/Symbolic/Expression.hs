@@ -1,6 +1,5 @@
 module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector (..),
-    fromByte,
     fromSExpr,
     fromReg,
     getValue,
@@ -8,7 +7,6 @@ module Language.QBE.Simulator.Symbolic.Expression
 where
 
 import Control.Exception (assert)
-import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic (bitSize)
@@ -22,10 +20,6 @@ data BitVector
     qtype :: QBE.ExtType
   }
   deriving (Show, Eq)
-
--- TODO: Remove this (needed by 'ConcolicByte').
-fromByte :: Word8 -> BitVector
-fromByte b = BitVector (SMT.bvBin 8 $ fromIntegral b) QBE.Byte
 
 fromSExpr :: QBE.BaseType -> SMT.SExpr -> BitVector
 fromSExpr ty sexpr = BitVector sexpr (QBE.Base ty)
