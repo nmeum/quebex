@@ -2,6 +2,7 @@ module Simulator (simTests) where
 
 import Control.Monad.State (gets)
 import Data.List (find)
+import Data.Maybe (fromJust)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
@@ -55,7 +56,7 @@ traceTests =
       testCase "Branch tracing with symbolic branch" $
         do
           s <- getSolver
-          c <- CE.unconstrained s "input" QBE.Word
+          c <- CE.unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
 
           t <-
@@ -71,7 +72,7 @@ traceTests =
               \ret\n\
               \}"
 
-          length t @?= 1
+          t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
     ]
 
 simTests :: TestTree

@@ -8,6 +8,7 @@ where
 import Control.Exception (assert)
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
+import Data.Word (Word64)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic (bitSize)
@@ -22,11 +23,11 @@ data Concolic
   }
   deriving (Show)
 
-unconstrained :: SMT.Solver -> String -> QBE.BaseType -> IO Concolic
-unconstrained solver name ty = do
+-- | Create a new 'Concolic' value with an unconstrained symbolic part.
+unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO Concolic
+unconstrained solver initConc name ty = do
   s <- SMT.declare solver name (SMT.tBits numBits)
-  -- TODO: Random value for concrete part
-  return $ Concolic (E.fromLit ty 0) (Just $ SE.fromSExpr ty s)
+  return $ Concolic (E.fromLit ty initConc) (Just $ SE.fromSExpr ty s)
   where
     numBits :: Integer
     numBits = fromIntegral $ bitSize (QBE.Base ty)
