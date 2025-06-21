@@ -54,7 +54,7 @@ traceTests =
 
           -- Trace must be empty because it doesn't branch on symbolic values.
           length t @?= 0,
-      testCase "Branch tracing with symbolic branch" $
+      testCase "Branch tracing and solving with single symbolic branch" $
         do
           s <- getSolver
           c <- CE.unconstrained s 0 "input" QBE.Word
@@ -75,10 +75,16 @@ traceTests =
 
           t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
 
-          -- There is only one solution for this trace.
-          -- Therefore, we can deterministicly check the model.
-          model <- ST.solveTrace s ST.newPathSel t
-          model @?= Just [(SMT.Atom "input", SMT.Bits 32 0)]
+          let pathSel = ST.trackTrace ST.newPathSel t
+          (mm, newPathSel) <- ST.findUnexplored s pathSel
+          case mm of
+            (Just [(_, (SMT.Bits _ v))]) ->
+              assertBool "condition must be /= 0" (v /= 0)
+            _ -> assertFailure "unexpected model"
+
+          -- There are only two branches: input == 0 and input /= 0
+          (nxt, _) <- ST.findUnexplored s newPathSel
+          nxt @?= Nothing
     ]
 
 simTests :: TestTree

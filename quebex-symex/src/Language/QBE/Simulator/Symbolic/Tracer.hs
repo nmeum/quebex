@@ -8,10 +8,11 @@ module Language.QBE.Simulator.Symbolic.Tracer
     PathSel,
     newPathSel,
     trackTrace,
-    solveTrace,
+    findUnexplored,
   )
 where
 
+import Control.Applicative ((<|>))
 import Language.QBE.Simulator.Concolic.Expression qualified as C
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Tracer qualified as T
@@ -45,7 +46,7 @@ newExecTrace = []
 
 -- Return all branch conditions of an 'ExecTrace'.
 toSExprs :: ExecTrace -> [SMT.SExpr]
-toSExprs = map (\(_, (MkBranch _ bv)) -> SE.sexpr bv)
+toSExprs = map (\(_, MkBranch _ bv) -> SE.sexpr bv)
 
 -- Append a branch to the execution trace, denoting via a 'Bool'
 -- if the branch was taken or if it was not taken.
@@ -197,3 +198,43 @@ solveTrace solver (MkPathSel _ oldTrace) newTrace = do
         prefixLength' n (x : xs) (y : ys)
           | x == y = prefixLength' (n + 1) xs ys
           | otherwise = n
+
+-- Find an assignment that causes exploration of a new execution path through
+-- the tested software. This function updates the metadata in the execution
+-- tree and thus returns a new execution tree, even if no satisfiable
+-- assignment was found.
+findUnexplored :: SMT.Solver -> PathSel -> IO (Maybe Model, PathSel)
+findUnexplored solver tracer@(MkPathSel tree _) = do
+  case negateBranch tree of
+    Nothing -> pure (Nothing, tracer)
+    Just nt -> do
+      let nextTracer = MkPathSel (addTrace tree nt) nt
+      res <- solveTrace solver tracer nt
+      case res of
+        Nothing -> findUnexplored solver nextTracer
+        Just m -> pure (Just m, nextTracer)
+  where
+    -- Negate an unnegated branch in the execution tree and return an
+    -- 'ExecTrace' which leads to an unexplored execution path. If no
+    -- such path exists, then 'Nothing' is returned. If such a path
+    -- exists a concrete variable assignment for it can be calculated
+    -- using 'solveTrace'.
+    --
+    -- The branch node metadata in the resulting 'ExecTree' is updated
+    -- to reflect that negation of the selected branch node was attempted.
+    -- If further branches are to be negated, the resulting trace should
+    -- be added to the 'ExecTree' using 'addTrace' to update the metadata
+    -- in the tree as well.
+    negateBranch :: ExecTree -> Maybe ExecTrace
+    negateBranch Leaf = Nothing
+    negateBranch (Node (MkBranch wasNeg ast) Nothing _)
+      | wasNeg = Nothing
+      | otherwise = Just [(True, MkBranch True ast)]
+    negateBranch (Node (MkBranch wasNeg ast) _ Nothing)
+      | wasNeg = Nothing
+      | otherwise = Just [(False, MkBranch True ast)]
+    negateBranch (Node br (Just ifTrue) (Just ifFalse)) =
+      do
+        -- TODO: Randomly prefer either the left or right child
+        (++) [(True, br)] <$> negateBranch ifTrue
+        <|> (++) [(False, br)] <$> negateBranch ifFalse
