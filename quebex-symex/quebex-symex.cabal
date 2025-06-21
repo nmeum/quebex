@@ -44,10 +44,12 @@ test-suite quebex-symex-test
     other-modules:
       Symbolic,
       Concolic,
+      Simulator,
       Util
 
     build-depends:
         base ^>=4.19.1.0,
+        mtl,
         quebex,
         quebex-syntax,
         quebex-symex,
