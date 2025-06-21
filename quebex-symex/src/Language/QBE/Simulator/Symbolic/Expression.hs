@@ -2,6 +2,7 @@ module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector (..),
     fromSExpr,
     fromReg,
+    toCond,
     getValue,
   )
 where
@@ -31,6 +32,18 @@ fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) (QBE.Base QBE.Wo
 fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) (QBE.Base QBE.Long)
 fromReg (D.VSingle _) = error "symbolic floats not supported"
 fromReg (D.VDouble _) = error "symbolic doubles not supported"
+
+-- In the QBE a condition (see `jnz`) is true if the Word value is not zero.
+toCond :: Bool -> BitVector -> SMT.SExpr
+toCond isTrue BitVector {sexpr = s, qtype = ty} =
+  -- Equality is only defined for Words.
+  assert (ty == QBE.Base QBE.Word) $
+    let zeroSExpr = sexpr (fromReg $ E.fromLit QBE.Word 0)
+     in toCond' s zeroSExpr
+  where
+    toCond' lhs rhs
+      | isTrue = SMT.not (SMT.eq lhs rhs) -- /= 0
+      | otherwise = SMT.eq lhs rhs -- == 0
 
 -- | Only intended for testing purposes.
 getValue :: BitVector -> SMT.SExpr

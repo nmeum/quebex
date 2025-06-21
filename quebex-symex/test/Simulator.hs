@@ -9,6 +9,7 @@ import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.State (envTracer)
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
+import SimpleSMT qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
 import Util
@@ -73,6 +74,11 @@ traceTests =
               \}"
 
           t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
+
+          -- There is only one solution for this trace.
+          -- Therefore, we can deterministicly check the model.
+          model <- ST.solveTrace s ST.newPathSel t
+          model @?= Just [(SMT.Atom "input", SMT.Bits 32 0)]
     ]
 
 simTests :: TestTree
