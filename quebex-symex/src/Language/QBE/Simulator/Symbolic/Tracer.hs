@@ -1,4 +1,16 @@
-module Language.QBE.Simulator.Symbolic.Tracer where
+module Language.QBE.Simulator.Symbolic.Tracer
+  ( Branch,
+    newBranch,
+    ExecTrace,
+    newExecTrace,
+    appendBranch,
+    appendCons,
+    PathSel,
+    newPathSel,
+    trackTrace,
+    solveTrace,
+  )
+where
 
 import Language.QBE.Simulator.Concolic.Expression qualified as C
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
@@ -30,6 +42,10 @@ type ExecTrace = [(Bool, Branch)]
 -- Create a new empty execution tree.
 newExecTrace :: ExecTrace
 newExecTrace = []
+
+-- Return all branch conditions of an 'ExecTrace'.
+toSExprs :: ExecTrace -> [SMT.SExpr]
+toSExprs = map (\(_, (MkBranch _ bv)) -> SE.sexpr bv)
 
 -- Append a branch to the execution trace, denoting via a 'Bool'
 -- if the branch was taken or if it was not taken.
@@ -144,34 +160,26 @@ type Model = [(SMT.SExpr, SMT.Value)]
 -- If such an assignment does not exist, then 'Nothing' is returned.
 solveTrace :: SMT.Solver -> PathSel -> ExecTrace -> IO (Maybe Model)
 solveTrace solver (MkPathSel _ oldTrace) newTrace = do
-  -- In an 'ExecTrace' we consider the first n-1 as the path constraits,
-  -- while the last element of an 'ExecTrace' is the condition that should
-  -- be solved.
-  let newCons = init newTrace
-  let oldCons = if null oldTrace then [] else init oldTrace
-
   -- Determine the common prefix of the current trace and the old trace
   -- drop constraints beyond this common prefix from the current solver
   -- context. Thereby, keeping the common prefix and making use of
   -- incremental solving capabilities.
-  let prefix = prefixLength newCons oldCons
-  let toDrop = length oldCons - prefix
-  SMT.popMany solver (fromIntegral toDrop)
+  let prefix = prefixLength newTrace oldTrace
+  let toDrop = length oldTrace - prefix
+  SMT.popMany solver $ fromIntegral toDrop
 
   -- Only enforce new constraints, i.e. those beyond the common prefix.
-  assertTrace (drop prefix newCons)
-  let (bool, MkBranch _ cond) = last newTrace
+  assertTrace (drop prefix newTrace)
 
-  -- TODO: assert the whole trace with 'assertTrace'
-  isSat <- SMT.assert solver (SE.toCond bool cond) >> SMT.check solver
+  isSat <- SMT.check solver
   case isSat of
-    SMT.Sat -> Just <$> SMT.getExprs solver [SE.sexpr cond]
+    SMT.Sat -> Just <$> SMT.getExprs solver (toSExprs newTrace)
     SMT.Unsat -> pure Nothing
     SMT.Unknown -> error "To-Do: Unknown Result" -- TODO
   where
-    -- Add all conditions enforced by the given 'ExecTrace' to
-    -- the solver. Should only be called for n-1 elements of
-    -- an 'ExecTrace' (i.e. the constraints).
+    -- Add all conditions enforced by the given 'ExecTrace' to the solver.
+    -- Returns a list of all asserted conditions.
+    assertTrace :: ExecTrace -> IO ()
     assertTrace [] = pure ()
     assertTrace t = do
       let conds = map (\(b, MkBranch _ c) -> SE.toCond b c) t
