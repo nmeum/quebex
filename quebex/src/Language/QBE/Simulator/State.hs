@@ -8,8 +8,8 @@ import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
-import Language.QBE.Types qualified as QBE
 import Language.QBE.Simulator.Tracer qualified as T
+import Language.QBE.Types qualified as QBE
 
 type Exec val tracer ret = StateT (Env val tracer) (ExceptT EvalError IO) ret
 
@@ -37,7 +37,7 @@ runBinary :: (E.ValueRepr v) => QBE.BaseType -> (v -> v -> Maybe v) -> v -> v ->
 runBinary ty op lhs rhs = do
   lhs' <- subTypeE ty lhs
   rhs' <- subTypeE ty rhs
-  case (op lhs' rhs') of
+  case op lhs' rhs' of
     Nothing -> throwError TypingError
     Just rt -> pure rt
 
@@ -174,13 +174,12 @@ lookupFunc _ = error "non-global functions not supported"
 
 lookupParam :: (E.ValueRepr v) => QBE.FuncParam -> Exec v t v
 lookupParam (QBE.Regular abity ident) = do
-  value <- lookupValue (QBE.abityToBase abity) (QBE.VLocal ident)
-  return value
+  lookupValue (QBE.abityToBase abity) (QBE.VLocal ident)
 lookupParam (QBE.Env _) = error "env function parameters not supported"
 lookupParam QBE.Variadic = error "variadic functions not supported"
 
 lookupParams :: (E.ValueRepr v) => [QBE.FuncParam] -> Exec v t [v]
-lookupParams params = mapM lookupParam params
+lookupParams = mapM lookupParam
 
 ------------------------------------------------------------------------
 
@@ -188,5 +187,5 @@ lookupParams params = mapM lookupParam params
 
 trackBranch :: (T.Tracer t v, E.ValueRepr v) => v -> Bool -> Exec v t ()
 trackBranch condValue condResult = do
-  let newTracer = \t -> T.branch t condValue condResult
-  modify (\s@Env { envTracer = t } -> s { envTracer = newTracer t })
+  let newTracer t = T.branch t condValue condResult
+  modify (\s@Env {envTracer = t} -> s {envTracer = newTracer t})

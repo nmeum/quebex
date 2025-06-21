@@ -40,9 +40,7 @@ typingErrorClause :: Clause
 typingErrorClause =
   Clause
     [WildP, WildP]
-    ( NormalB $
-        (ConE $ mkName "Nothing")
-    )
+    (NormalB (ConE $ mkName "Nothing"))
     []
 
 generateOperator :: (Name, Name) -> Q Dec

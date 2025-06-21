@@ -10,7 +10,6 @@ module Language.QBE.Simulator
   )
 where
 
-import Language.QBE.Simulator.Tracer qualified as T
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.IO.Class (liftIO)
@@ -23,6 +22,7 @@ import Language.QBE (Program, globalFuncs)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State
+import Language.QBE.Simulator.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 
 -- Execution of a BasicBlock can either return (with an optional return
@@ -139,7 +139,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     Right _block -> throwError MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => (BlockResult v) -> Exec v t (BlockResult v)
+    go :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => BlockResult v -> Exec v t (BlockResult v)
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock
 
