@@ -1,14 +1,10 @@
--- |
--- Module      :  Text/Parsec/Number.hs
--- Description :  portable number parsers
--- Copyright   :  (c) C. Maeder 2013-2014
--- License     :  BSD
+-- SPDX-FileCopyrightText: 1999-2001 Daan Leijen
+-- SPDX-FileCopyrightText: 2007 Paolo Martini
+-- SPDX-FileCopyrightText: 2013-2014 Christian Maeder <chr.maeder@web.de>
+-- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
--- Maintainer  :  chr.maeder@web.de
--- Stability   :  provisional
--- Portability :  non-portable (FlexibleContexts)
---
--- a copy of Text.ParserCombinators.Parsec.Number from the parsec-number package adjusted for parsec3.
+-- SPDX-License-Identifier: BSD-2-Clause AND GPL-3.0-only
+
 module Language.QBE.Numbers where
 
 import Control.Monad (ap)

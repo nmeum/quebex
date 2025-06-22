@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# SPDX-FileCopyrightText: 2023,2025 Sören Tempel <soeren+git@soeren-tempel.net>
+#
+# SPDX-License-Identifier: GPL-3.0-only
 
 if ! command -v ormolu 1>/dev/null; then
 	echo "error: ormolu is not installed" 1>&2
@@ -15,4 +19,16 @@ if [ -n "${files}" ]; then
 	printf "The following files need to be formated with 'ormolu':\n\n" 1>&2
 	printf "%s\n" "${files}" | sed 's/^/\t/' 1>&2
 	exit 1
+fi
+
+########################################################################
+
+if command -v reuse 1>/dev/null; then
+	reuse lint --quiet
+	if [ $? -ne 0 ]; then
+		echo "reuse-lint failed, run it to figure out why." 1>&2
+		exit 1
+	fi
+else
+	echo "WARNING: reuse-lint is not installed!" 1>&2
 fi

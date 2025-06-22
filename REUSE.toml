@@ -1,0 +1,15 @@
+version = 1
+
+# cabal requires the first line in the file to be the `cabal-version` field.
+# The license header needs to be added after which looks weird; hence, we are
+# specifying the license for `*.cabal` files here.
+[[annotations]]
+path = "**/*.cabal"
+SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
+SPDX-License-Identifier = "GPL-3.0-only"
+
+# We don't want to force comment headers for test files.
+[[annotations]]
+path = "quebex-syntax/test/golden/*"
+SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
+SPDX-License-Identifier = "GPL-3.0-only"
