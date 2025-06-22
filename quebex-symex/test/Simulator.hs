@@ -1,7 +1,7 @@
 module Simulator (simTests) where
 
 import Control.Monad.State (gets)
-import Data.List (find)
+import Data.List (find, sort)
 import Data.Maybe (fromJust)
 import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator
@@ -36,6 +36,9 @@ parseAndExec funcName params input = do
   case sTrace of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
+
+branchPoints :: [ST.ExecTrace] -> [[Bool]]
+branchPoints = sort . map (map fst)
 
 ------------------------------------------------------------------------
 
@@ -146,7 +149,32 @@ exploreTests =
           let funcDef = findFunc prog (QBE.GlobalIdent "branchOnInput")
           eTraces <- explore prog funcDef [("cond1", QBE.Word), ("cond2", QBE.Word)]
 
-          length eTraces @?= 4
+          let branches = branchPoints eTraces
+          branches @?= [[False, False], [False, True], [True, False], [True, True]],
+      testCase "Unsatisfiable branches" $
+        do
+          prog <-
+            parseProg
+              "function $branchOnInput(w %cond1) {\n\
+              \@jump.1\n\
+              \jnz %cond1, @branch.1, @branch.2\n\
+              \@branch.1\n\
+              \jmp @jump.2\n\
+              \@branch.2\n\
+              \jmp @jump.2\n\
+              \@jump.2\n\
+              \jnz %cond1, @branch.3, @branch.4\n\
+              \@branch.3\n\
+              \ret\n\
+              \@branch.4\n\
+              \ret\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "branchOnInput")
+          eTraces <- explore prog funcDef [("cond1", QBE.Word)]
+
+          let branches = branchPoints eTraces
+          branches @?= [[False, False], [True, True]]
     ]
 
 simTests :: TestTree
