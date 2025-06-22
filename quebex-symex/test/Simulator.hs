@@ -3,11 +3,14 @@ module Simulator (simTests) where
 import Control.Monad.State (gets)
 import Data.List (find, sort)
 import Data.Maybe (fromJust)
+import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
+import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State (envTracer)
 import Language.QBE.Simulator.Symbolic (explore, z3Solver)
+import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -36,6 +39,12 @@ parseAndExec funcName params input = do
   case sTrace of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
+
+unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO CE.Concolic
+unconstrained solver initCon name ty = do
+  let concrete = E.fromLit ty initCon
+  symbolic <- SE.symbolic solver name ty
+  pure $ CE.Concolic concrete (Just symbolic)
 
 branchPoints :: [ST.ExecTrace] -> [[Bool]]
 branchPoints = sort . map (map fst)
@@ -67,7 +76,7 @@ traceTests =
       testCase "Branch tracing and solving with single symbolic branch" $
         do
           s <- z3Solver
-          c <- CE.unconstrained s 0 "input" QBE.Word
+          c <- unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
 
           t <-
@@ -98,8 +107,8 @@ traceTests =
       testCase "Tracing with multiple branches" $
         do
           s <- z3Solver
-          c1 <- CE.unconstrained s 0 "cond1" QBE.Word
-          c2 <- CE.unconstrained s 0 "cond2" QBE.Word
+          c1 <- unconstrained s 0 "cond1" QBE.Word
+          c2 <- unconstrained s 0 "cond2" QBE.Word
 
           t <-
             parseAndExec
