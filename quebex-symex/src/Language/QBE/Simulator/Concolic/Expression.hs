@@ -30,7 +30,7 @@ unconstrained solver initConc name ty = do
   return $ Concolic (E.fromLit ty initConc) (Just $ SE.fromSExpr ty s)
   where
     numBits :: Integer
-    numBits = fromIntegral $ SE.bitSize (QBE.Base ty)
+    numBits = fromIntegral $ QBE.baseTypeBitSize ty
 
 hasSymbolic :: Concolic -> Bool
 hasSymbolic Concolic {symbolic = Just _} = True

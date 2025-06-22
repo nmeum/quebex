@@ -5,7 +5,6 @@ module Language.QBE.Simulator.Symbolic.Expression
     symbolic,
     toCond,
     getValue,
-    bitSize, -- TODO
   )
 where
 
@@ -14,10 +13,6 @@ import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
-
--- TODO: Move this elsewhere.
-bitSize :: QBE.ExtType -> Int
-bitSize ty = QBE.extTypeByteSize ty * 8
 
 -- TODO: Consider making this a sum type
 data BitVector
@@ -70,7 +65,7 @@ toBytes BitVector {sexpr = s, qtype = ty} =
     map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. size `div` 8]
   where
     size :: Integer
-    size = fromIntegral $ bitSize ty
+    size = fromIntegral $ QBE.extTypeBitSize ty
 
     nthByte :: SMT.SExpr -> Integer -> SMT.SExpr
     nthByte expr n = SMT.extract expr ((n * 8) - 1) ((n - 1) * 8)
@@ -102,7 +97,7 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
 instance E.ValueRepr BitVector where
   fromLit ty n =
     let exty = QBE.Base ty
-        size = fromIntegral $ bitSize exty
+        size = fromIntegral $ QBE.extTypeBitSize exty
      in BitVector (SMT.bvBin size $ fromIntegral n) exty
 
   fromFloat = error "symbolic floats currently unsupported"
@@ -110,7 +105,7 @@ instance E.ValueRepr BitVector where
 
   fromAddress addr =
     let ty = QBE.Base QBE.Long
-     in BitVector (SMT.bvBin (fromIntegral (bitSize ty)) (fromIntegral addr)) ty
+     in BitVector (SMT.bvBin (fromIntegral (QBE.extTypeBitSize ty)) (fromIntegral addr)) ty
 
   -- XXX: This only works for constants values, but this is fine since we implement
   -- concolic execution and can obtain the address from the concrete value part.
