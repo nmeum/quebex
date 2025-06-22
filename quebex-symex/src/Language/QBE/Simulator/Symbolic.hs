@@ -1,5 +1,6 @@
 module Language.QBE.Simulator.Symbolic (explore, z3Solver) where
 
+import Control.Exception (throwIO)
 import Control.Monad (void)
 import Control.Monad.State (gets)
 import Language.QBE (Program)
@@ -58,8 +59,7 @@ explore prog entryPoint entryParams = newEngine >>= explore'
     explore' :: ExpEngine -> IO [T.ExecTrace]
     explore' engine@ExpEngine {expSolver = solver, expStore = store} = do
       values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
-      -- TODO: Proper error handling for traceFunc
-      (Right eTrace) <- traceFunc prog entryPoint values
+      eTrace <- traceFunc prog entryPoint values >>= either throwIO pure
 
       (model, nEngine) <- findNext engine eTrace
       case model of

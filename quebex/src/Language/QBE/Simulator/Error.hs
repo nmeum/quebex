@@ -1,5 +1,6 @@
 module Language.QBE.Simulator.Error where
 
+import Control.Exception (Exception)
 import Language.QBE.Types qualified as QBE
 
 data EvalError
@@ -34,3 +35,5 @@ instance Show EvalError where
   show InvaldSubWordExtension = "InvaldSubWordExtension"
   show InvalidAddressType = "InvalidAddressType"
   show (FuncArgsMismatch ident) = "FuncArgsMismatch: '" ++ show ident ++ "'"
+
+instance Exception EvalError
