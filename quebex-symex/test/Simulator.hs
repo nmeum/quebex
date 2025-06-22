@@ -3,10 +3,11 @@ module Simulator (simTests) where
 import Control.Monad.State (gets)
 import Data.List (find)
 import Data.Maybe (fromJust)
-import Language.QBE (globalFuncs, parse)
+import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.State (envTracer)
+import Language.QBE.Simulator.Symbolic (explore)
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -14,16 +15,23 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Util
 
--- TODO: Code duplication with quebex/test/Simulator.hs
-parseAndExec :: QBE.GlobalIdent -> [CE.Concolic] -> String -> IO ST.ExecTrace
-parseAndExec funcName params input = do
-  prog <- case parse "" input of
+parseProg :: String -> IO Program
+parseProg input =
+  case parse "" input of
     Left e -> fail $ "Unexpected parsing error: " ++ show e
     Right r -> pure r
 
-  func <- case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
-    Just x -> pure x
-    Nothing -> fail $ "Unknown function: " ++ show funcName
+findFunc :: Program -> QBE.GlobalIdent -> QBE.FuncDef
+findFunc prog funcName =
+  case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
+    Just x -> x
+    Nothing -> error $ "Unknown function: " ++ show funcName
+
+-- TODO: Code duplication with quebex/test/Simulator.hs
+parseAndExec :: QBE.GlobalIdent -> [CE.Concolic] -> String -> IO ST.ExecTrace
+parseAndExec funcName params input = do
+  prog <- parseProg input
+  let func = findFunc prog funcName
 
   sTrace <- runExec prog (execFunc func params >> gets envTracer) ST.newExecTrace
   case sTrace of
@@ -113,8 +121,37 @@ traceTests =
           length t @?= 2
     ]
 
+exploreTests :: TestTree
+exploreTests =
+  testGroup
+    "Tests for Symbolic Program Exploration"
+    [ testCase "Explore program with four execution paths" $
+        do
+          prog <-
+            parseProg
+              "function $branchOnInput(w %cond1, w %cond2) {\n\
+              \@jump.1\n\
+              \jnz %cond1, @branch.1, @branch.2\n\
+              \@branch.1\n\
+              \jmp @jump.2\n\
+              \@branch.2\n\
+              \jmp @jump.2\n\
+              \@jump.2\n\
+              \jnz %cond2, @branch.3, @branch.4\n\
+              \@branch.3\n\
+              \ret\n\
+              \@branch.4\n\
+              \ret\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "branchOnInput")
+          eTraces <- explore prog funcDef [("cond1", QBE.Word), ("cond2", QBE.Word)]
+
+          length eTraces @?= 4
+    ]
+
 simTests :: TestTree
 simTests =
   testGroup
     "Tests for the Symbolic Simulator"
-    [traceTests]
+    [traceTests, exploreTests]

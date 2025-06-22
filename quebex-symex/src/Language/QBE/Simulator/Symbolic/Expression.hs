@@ -5,15 +5,19 @@ module Language.QBE.Simulator.Symbolic.Expression
     symbolic,
     toCond,
     getValue,
+    bitSize, -- TODO
   )
 where
 
 import Control.Exception (assert)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Symbolic (bitSize)
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
+
+-- TODO: Move this elsewhere.
+bitSize :: QBE.ExtType -> Int
+bitSize ty = QBE.extTypeByteSize ty * 8
 
 -- TODO: Consider making this a sum type
 data BitVector

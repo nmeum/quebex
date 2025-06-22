@@ -11,7 +11,6 @@ import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Symbolic (bitSize)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -31,7 +30,7 @@ unconstrained solver initConc name ty = do
   return $ Concolic (E.fromLit ty initConc) (Just $ SE.fromSExpr ty s)
   where
     numBits :: Integer
-    numBits = fromIntegral $ bitSize (QBE.Base ty)
+    numBits = fromIntegral $ SE.bitSize (QBE.Base ty)
 
 hasSymbolic :: Concolic -> Bool
 hasSymbolic Concolic {symbolic = Just _} = True

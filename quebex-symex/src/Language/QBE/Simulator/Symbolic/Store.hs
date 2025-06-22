@@ -6,11 +6,11 @@ module Language.QBE.Simulator.Symbolic.Store
   )
 where
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (intercalate)
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Default.Expression qualified as D
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer (Model)
@@ -21,45 +21,54 @@ import System.Random.Stateful (IOGenM, StdGen, initStdGen, newIOGenM, uniformWor
 -- A variable store mapping variable names to concrete values.
 data Store
   = Store
-  { sValues :: Map.Map String D.RegVal,
-    -- TODO: Consider using an 'AtomicGenM' to enable concurrency.
-    sRandGen :: IOGenM StdGen
+  { cValues :: Map.Map String DE.RegVal,
+    sValues :: IORef (Map.Map String SE.BitVector),
+    randGen :: IOGenM StdGen
   }
 
 instance Show Store where
-  show (Store {sValues = m}) =
+  show (Store {cValues = m}) =
     intercalate "\n" $
       map (\(k, v) -> k ++ "\t= " ++ show v) (Map.toList m)
 
 -- | Create a new (empty) store.
-empty :: (MonadIO m) => m Store
+empty :: IO Store
 empty = do
   r <- initStdGen
   g <- newIOGenM r
-  pure $ Store Map.empty g
+  s <- newIORef Map.empty
+  pure $ Store Map.empty s g
 
 -- | Create a variable store from a 'Model'.
 setModel :: Store -> Model -> Maybe Store
 setModel store model = do
   modelMap <- Map.fromList <$> mapM go model
-  pure $ store {sValues = modelMap}
+  pure $ store {cValues = modelMap}
   where
-    go :: (SMT.SExpr, SMT.Value) -> Maybe (String, D.RegVal)
+    go :: (SMT.SExpr, SMT.Value) -> Maybe (String, DE.RegVal)
     go (SMT.Atom name, SMT.Bits n v) = do
-      regVal <- D.fromBits n v
+      regVal <- DE.fromBits n v
       pure (name, regVal)
     go _ = Nothing
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
-getConcolic :: (MonadIO m) => SMT.Solver -> Store -> String -> QBE.BaseType -> m CE.Concolic
-getConcolic solver Store {sValues = vals, sRandGen = randGen} name ty = do
+getConcolic :: SMT.Solver -> Store -> String -> QBE.BaseType -> IO CE.Concolic
+getConcolic solver store@Store {sValues = sym} name ty = do
   concrete <-
-    case Map.lookup name vals of
+    case Map.lookup name (cValues store) of
       Just x -> pure x
       Nothing ->
         -- TODO: The uniform generater must consider the bounds of QBE.BaseType.
-        E.fromLit ty <$> uniformWord64 randGen
+        E.fromLit ty <$> uniformWord64 (randGen store)
 
-  symbolic <- liftIO $ SE.symbolic solver name ty
+  symbolicMap <- readIORef sym
+  symbolic <-
+    case Map.lookup name symbolicMap of
+      Just x -> pure x
+      Nothing -> do
+        symbolic <- SE.symbolic solver name ty
+        writeIORef sym (Map.insert name symbolic symbolicMap)
+        pure symbolic
+
   pure $ CE.Concolic concrete (Just symbolic)
