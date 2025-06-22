@@ -2,6 +2,7 @@ module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector (..),
     fromSExpr,
     fromReg,
+    symbolic,
     toCond,
     getValue,
   )
@@ -18,7 +19,7 @@ import SimpleSMT qualified as SMT
 data BitVector
   = BitVector
   { sexpr :: SMT.SExpr,
-    qtype :: QBE.ExtType
+    qtype :: QBE.ExtType -- TODO: Can we use the BaseType here?
   }
   deriving (Show, Eq)
 
@@ -32,6 +33,14 @@ fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) (QBE.Base QBE.Wo
 fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) (QBE.Base QBE.Long)
 fromReg (D.VSingle _) = error "symbolic floats not supported"
 fromReg (D.VDouble _) = error "symbolic doubles not supported"
+
+symbolic :: SMT.Solver -> String -> QBE.BaseType -> IO BitVector
+symbolic solver name ty = do
+  s <- SMT.declare solver name (SMT.tBits numBits)
+  return $ BitVector s (QBE.Base ty)
+  where
+    -- TODO: Cleanup Concolic/Symbolic constructors, move this to a common function.
+    numBits = fromIntegral $ QBE.baseTypeByteSize ty * 8
 
 -- In the QBE a condition (see `jnz`) is true if the Word value is not zero.
 toCond :: Bool -> BitVector -> SMT.SExpr

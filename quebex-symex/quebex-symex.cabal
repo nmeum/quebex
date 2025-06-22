@@ -24,12 +24,15 @@ library
 
     build-depends:
       base ^>=4.19.1.0,
+      containers,
+      random,
       quebex,
       quebex-syntax,
       simple-smt
 
     exposed-modules:
       Language.QBE.Simulator.Symbolic,
+      Language.QBE.Simulator.Symbolic.Store,
       Language.QBE.Simulator.Symbolic.Tracer,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.Expression

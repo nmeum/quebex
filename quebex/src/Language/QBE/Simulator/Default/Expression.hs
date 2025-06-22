@@ -4,9 +4,9 @@
 
 module Language.QBE.Simulator.Default.Expression where
 
-import Data.Functor ((<&>))
 import Control.Monad (foldM)
 import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
+import Data.Functor ((<&>))
 import Data.Int (Int16, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
@@ -24,6 +24,15 @@ data RegVal
   | VSingle Float
   | VDouble Double
   deriving (Show, Eq)
+
+fromBits :: Int -> Integer -> Maybe RegVal
+fromBits 8 = Just . VByte . fromIntegral
+fromBits 16 = Just . VHalf . fromIntegral
+fromBits 32 = Just . VWord . fromIntegral
+fromBits 64 = Just . VLong . fromIntegral
+fromBits _ = const Nothing
+
+------------------------------------------------------------------------
 
 regToBytes :: RegVal -> [RegVal]
 regToBytes val =
@@ -46,9 +55,10 @@ regFromBytes :: QBE.ExtType -> [RegVal] -> Maybe RegVal
 regFromBytes ty lst =
   let f a =
         foldM
-          (\x (r, i) -> do
-            byte <- getByte r
-            pure $ (fromIntegral byte `shift` (i * 8)) .|. x)
+          ( \x (r, i) -> do
+              byte <- getByte r
+              pure $ (fromIntegral byte `shift` (i * 8)) .|. x
+          )
           0
           $ zip a [0 ..]
    in case (ty, lst) of
@@ -69,6 +79,8 @@ regFromBytes ty lst =
 instance Storable RegVal where
   toBytes = regToBytes
   fromBytes = regFromBytes
+
+------------------------------------------------------------------------
 
 -- TODO: Insert the generated code directly into the instance declaration.
 generateOperators

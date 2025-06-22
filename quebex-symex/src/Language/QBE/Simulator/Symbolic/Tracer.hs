@@ -8,6 +8,7 @@ module Language.QBE.Simulator.Symbolic.Tracer
     PathSel,
     newPathSel,
     trackTrace,
+    Model,
     findUnexplored,
   )
 where
@@ -154,6 +155,8 @@ trackTrace (MkPathSel tree t) trace =
   MkPathSel (addTrace tree trace) t
 
 -- Assignments returned by the Solver for a given query.
+--
+-- TODO: Use custom newtype to ensure that we only store Atoms in the 'Model'.
 type Model = [(SMT.SExpr, SMT.Value)]
 
 -- For a given execution trace, return an assignment (represented

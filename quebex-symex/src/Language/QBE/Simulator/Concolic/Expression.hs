@@ -26,6 +26,7 @@ data Concolic
 -- | Create a new 'Concolic' value with an unconstrained symbolic part.
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO Concolic
 unconstrained solver initConc name ty = do
+  -- TODO: Use SE.symbolic here
   s <- SMT.declare solver name (SMT.tBits numBits)
   return $ Concolic (E.fromLit ty initConc) (Just $ SE.fromSExpr ty s)
   where
