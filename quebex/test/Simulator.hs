@@ -455,6 +455,25 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0xdecafbad),
+      testCase "Subtyped branch condition" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "condJump")
+              []
+              "function w $condJump() {\n\
+              \@start\n\
+              \%zero =l add 0, 0\n\
+              \jnz %zero, @nonZero, @zero\n\
+              \@nonZero\n\
+              \%val =w add 0, 42\n\
+              \ret %val\n\
+              \@zero\n\
+              \%val =w add 0, 23\n\
+              \ret %val\n\
+              \}"
+
+          res @?= Just (D.VWord 23),
       testCase "Multiple jumps" $
         do
           res <-

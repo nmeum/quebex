@@ -103,7 +103,6 @@ execJump (QBE.Jump ident) = do
     Just bl -> pure $ Right bl
     Nothing -> throwError (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
-  -- TODO: subtyping
   condValue <- lookupValue QBE.Word cond
   let condResult = not $ E.isZero condValue
 
