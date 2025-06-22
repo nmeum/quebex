@@ -1,5 +1,5 @@
 cabal-version:      3.4
-name:               quebex
+name:               quebex-symex
 version:            0.1.0.0
 -- synopsis:
 -- description:
@@ -24,24 +24,21 @@ library
 
     build-depends:
       base ^>=4.19.1.0,
-      array,
-      template-haskell,
-      quebex-syntax,
+      mtl,
       containers,
-      mtl
+      random,
+      quebex,
+      quebex-syntax,
+      simple-smt
 
     exposed-modules:
-      Language.QBE.Analysis.CFG,
-      Language.QBE.Simulator,
-      Language.QBE.Simulator.State,
-      Language.QBE.Simulator.Tracer,
-      Language.QBE.Simulator.Error,
-      Language.QBE.Simulator.Memory,
-      Language.QBE.Simulator.Expression,
-      Language.QBE.Simulator.Default.Expression,
-      Language.QBE.Simulator.Default.Generator,
+      Language.QBE.Simulator.Symbolic,
+      Language.QBE.Simulator.Symbolic.Store,
+      Language.QBE.Simulator.Symbolic.Tracer,
+      Language.QBE.Simulator.Symbolic.Expression,
+      Language.QBE.Simulator.Concolic.Expression
 
-test-suite quebex-test
+test-suite quebex-symex-test
     import:           warnings
     default-language: GHC2021
     type:             exitcode-stdio-1.0
@@ -49,16 +46,16 @@ test-suite quebex-test
     main-is:          Main.hs
 
     other-modules:
-      Analysis,
-      Simulator,
-      Memory
+      Symbolic,
+      Concolic,
+      Simulator
 
     build-depends:
         base ^>=4.19.1.0,
-        array,
-        parsec,
+        mtl,
         quebex,
         quebex-syntax,
-        containers,
+        quebex-symex,
+        simple-smt,
         tasty        >=1.4.3,
         tasty-hunit  >=0.10

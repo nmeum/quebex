@@ -11,47 +11,55 @@ module Language.QBE.Simulator.Memory
 where
 
 import Data.Array.IO
-  ( IOUArray,
+  ( MArray,
     getBounds,
-    newArray,
+    newArray_,
     readArray,
     writeArray,
   )
-import Data.Word (Word64, Word8)
+import Data.Word (Word64)
 
+-- | Type used to represent an address in memory.
+--
+-- TODO: Make 'Memory' polymorph over the adddress type.
 type Address = Word64
 
+-- | Type used to represen the memory's size.
 type Size = Word64
 
-data Memory = Memory
+-- | Memory parameterized over the Array type (e.g. 'IOUArray') and a byte
+-- polymorphic representation (e.g. 'Word8').
+data Memory a v = Memory
   { memStart :: Address,
-    memBytes :: IOUArray Address Word8
+    memBytes :: a Address v
   }
 
-mkMemory :: Address -> Size -> IO Memory
+------------------------------------------------------------------------
+
+mkMemory :: (MArray t a IO) => Address -> Size -> IO (Memory t a)
 mkMemory startAddr size = do
-  ary <- newArray (0, size - 1) 0
+  ary <- newArray_ (0, size - 1)
   return $ Memory startAddr ary
 
 -- Translate global address to a memory-local address.
-toMemAddr :: Memory -> Address -> Address
+toMemAddr :: Memory t a -> Address -> Address
 toMemAddr mem addr = addr - memStart mem
 
 -- | Returns the size of the memory in bytes.
-memSize :: Memory -> IO Size
+memSize :: (MArray t a IO) => Memory t a -> IO Size
 memSize = fmap ((+ 1) . snd) . getBounds . memBytes
 
-storeBytes :: Memory -> Address -> [Word8] -> IO ()
+storeBytes :: (MArray t a IO) => Memory t a -> Address -> [a] -> IO ()
 storeBytes mem addr bytes =
   mapM_ (\(off, val) -> storeByte mem (addr + off) val) $
     zip [0 ..] bytes
   where
-    storeByte :: Memory -> Address -> Word8 -> IO ()
+    storeByte :: (MArray t a IO) => Memory t a -> Address -> a -> IO ()
     storeByte m a = writeArray (memBytes m) $ toMemAddr mem a
 
-loadBytes :: Memory -> Address -> Size -> IO [Word8]
+loadBytes :: (MArray t a IO) => Memory t a -> Address -> Size -> IO [a]
 loadBytes mem addr byteSize =
   mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
   where
-    loadByte :: Memory -> Address -> IO Word8
+    loadByte :: (MArray t a IO) => Memory t a -> Address -> IO a
     loadByte m = readArray (memBytes m) . toMemAddr m
