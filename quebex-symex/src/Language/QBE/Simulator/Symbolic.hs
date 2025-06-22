@@ -25,27 +25,26 @@ z3Solver = do
 data ExpEngine
   = ExpEngine
   { expSolver :: SMT.Solver,
-    expPathSel :: T.PathSel
+    expPathSel :: T.PathSel,
+    expStore :: ST.Store
   }
 
 newEngine :: IO ExpEngine
 newEngine = do
-  s <- z3Solver -- TODO: Make this configurable
-  pure $ ExpEngine s T.newPathSel
+  solver <- z3Solver -- TODO: Make this configurable
+  ExpEngine solver T.newPathSel <$> ST.empty
 
-nextStore :: ExpEngine -> ST.Store -> T.ExecTrace -> IO (Maybe ST.Store, ExpEngine)
-nextStore e store eTrace = do
+findNext :: ExpEngine -> T.ExecTrace -> IO (Maybe T.Model, ExpEngine)
+findNext e eTrace = do
   let pathSel = T.trackTrace (expPathSel e) eTrace
   (model, newPathSel) <- T.findUnexplored (expSolver e) pathSel
 
   let ne = e {expPathSel = newPathSel}
   case model of
     Nothing ->
-      pure (Nothing, ne)
-    Just nm -> do
-      case ST.setModel store nm of
-        Nothing -> error "invalid model" -- TODO
-        Just st -> pure (Just st, ne)
+      pure (model, ne)
+    Just nm ->
+      ST.setModel (expStore e) nm >> pure (Just nm, ne)
 
 ------------------------------------------------------------------------
 
@@ -54,17 +53,15 @@ traceFunc prog func params =
   runExec prog (execFunc func params >> gets envTracer) T.newExecTrace
 
 explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [T.ExecTrace]
-explore prog entryPoint entryParams = do
-  exEng <- newEngine
-  ST.empty >>= explore' exEng
+explore prog entryPoint entryParams = newEngine >>= explore'
   where
-    explore' :: ExpEngine -> ST.Store -> IO [T.ExecTrace]
-    explore' engine@ExpEngine {expSolver = solver} store = do
+    explore' :: ExpEngine -> IO [T.ExecTrace]
+    explore' engine@ExpEngine {expSolver = solver, expStore = store} = do
       values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
       -- TODO: Proper error handling for traceFunc
       (Right eTrace) <- traceFunc prog entryPoint values
 
-      (nStore, nEngine) <- nextStore engine store eTrace
-      case nStore of
+      (model, nEngine) <- findNext engine eTrace
+      case model of
         Nothing -> pure [eTrace]
-        Just st -> (:) eTrace <$> explore' nEngine st
+        Just _m -> (:) eTrace <$> explore' nEngine

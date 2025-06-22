@@ -1,13 +1,14 @@
 module Language.QBE.Simulator.Symbolic.Store
   ( Store,
     empty,
+    toList,
     setModel,
     getConcolic,
   )
 where
 
+import Data.Functor (($>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import Data.List (intercalate)
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
@@ -21,45 +22,46 @@ import System.Random.Stateful (IOGenM, StdGen, initStdGen, newIOGenM, uniformWor
 -- A variable store mapping variable names to concrete values.
 data Store
   = Store
-  { cValues :: Map.Map String DE.RegVal,
+  { cValues :: IORef (Map.Map String DE.RegVal),
     sValues :: IORef (Map.Map String SE.BitVector),
     randGen :: IOGenM StdGen
   }
 
-instance Show Store where
-  show (Store {cValues = m}) =
-    intercalate "\n" $
-      map (\(k, v) -> k ++ "\t= " ++ show v) (Map.toList m)
-
 -- | Create a new (empty) store.
 empty :: IO Store
 empty = do
-  r <- initStdGen
-  g <- newIOGenM r
-  s <- newIORef Map.empty
-  pure $ Store Map.empty s g
+  ranGen <- initStdGen >>= newIOGenM
+  conMap <- newIORef Map.empty
+  symMap <- newIORef Map.empty
+  pure $ Store conMap symMap ranGen
+
+toList :: Store -> IO [(String, DE.RegVal)]
+toList store = Map.toList <$> readIORef (cValues store)
 
 -- | Create a variable store from a 'Model'.
-setModel :: Store -> Model -> Maybe Store
-setModel store model = do
-  modelMap <- Map.fromList <$> mapM go model
-  pure $ store {cValues = modelMap}
+setModel :: Store -> Model -> IO ()
+setModel store model =
+  let modelMap = Map.fromList (map go model)
+   in writeIORef (cValues store) modelMap
   where
-    go :: (SMT.SExpr, SMT.Value) -> Maybe (String, DE.RegVal)
-    go (SMT.Atom name, SMT.Bits n v) = do
-      regVal <- DE.fromBits n v
-      pure (name, regVal)
-    go _ = Nothing
+    -- TODO: Better error handling → revise 'Model' type.
+    go :: (SMT.SExpr, SMT.Value) -> (String, DE.RegVal)
+    go (SMT.Atom name, SMT.Bits n v) =
+      case DE.fromBits n v of
+        Just x -> (name, x)
+        Nothing -> error "invalid bitsize in solver model"
+    go _ = error "malformed entry in solver model"
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
 getConcolic :: SMT.Solver -> Store -> String -> QBE.BaseType -> IO CE.Concolic
-getConcolic solver store@Store {sValues = sym} name ty = do
+getConcolic solver store@Store {cValues = con, sValues = sym} name ty = do
+  concreteMap <- readIORef con
   concrete <-
-    case Map.lookup name (cValues store) of
+    case Map.lookup name concreteMap of
       Just x -> pure x
       Nothing ->
-        -- TODO: The uniform generater must consider the bounds of QBE.BaseType.
+        -- TODO: The uniform generator must consider the bounds of QBE.BaseType.
         E.fromLit ty <$> uniformWord64 (randGen store)
 
   symbolicMap <- readIORef sym
@@ -67,8 +69,7 @@ getConcolic solver store@Store {sValues = sym} name ty = do
     case Map.lookup name symbolicMap of
       Just x -> pure x
       Nothing -> do
-        symbolic <- SE.symbolic solver name ty
-        writeIORef sym (Map.insert name symbolic symbolicMap)
-        pure symbolic
+        s <- SE.symbolic solver name ty
+        writeIORef sym (Map.insert name s symbolicMap) $> s
 
   pure $ CE.Concolic concrete (Just symbolic)
