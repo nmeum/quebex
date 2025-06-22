@@ -141,7 +141,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
   where
     go :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => BlockResult v -> Exec v t (BlockResult v)
     go retValue@(Left _) = pure retValue
-    go (Right nextBlock) = execBlock nextBlock
+    go (Right nextBlock) = execBlock nextBlock >>= go
 
     paramName :: QBE.FuncParam -> QBE.LocalIdent
     paramName (QBE.Regular _ n) = n

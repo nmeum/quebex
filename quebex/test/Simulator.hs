@@ -1,11 +1,11 @@
 module Simulator (simTests) where
 
-import Language.QBE.Simulator.Tracer as T
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Error
+import Language.QBE.Simulator.Tracer as T
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -450,7 +450,29 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (D.VWord 0xdecafbad)
+          res @?= Just (D.VWord 0xdecafbad),
+      testCase "Multiple jumps" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "branchOnInput")
+              [D.VWord 0, D.VWord 0]
+              "function w $branchOnInput(w %cond1, w %cond2) {\n\
+              \@jump.1\n\
+              \jnz %cond1, @branch.1, @branch.2\n\
+              \@branch.1\n\
+              \jmp @jump.2\n\
+              \@branch.2\n\
+              \jmp @jump.2\n\
+              \@jump.2\n\
+              \jnz %cond2, @branch.3, @branch.4\n\
+              \@branch.3\n\
+              \ret 3\n\
+              \@branch.4\n\
+              \ret 4\n\
+              \}"
+
+          res @?= Just (D.VWord 4)
     ]
 
 simTests :: TestTree
