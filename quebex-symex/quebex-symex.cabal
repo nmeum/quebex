@@ -48,8 +48,7 @@ test-suite quebex-symex-test
     other-modules:
       Symbolic,
       Concolic,
-      Simulator,
-      Util
+      Simulator
 
     build-depends:
         base ^>=4.19.1.0,

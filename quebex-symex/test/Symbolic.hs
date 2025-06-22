@@ -6,12 +6,12 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Symbolic (z3Solver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
-import Util
 
 ------------------------------------------------------------------------
 
@@ -22,13 +22,13 @@ storeTests =
     "Storage Instance Tests"
     [ testCase "Create bitvector and convert it to bytes" $
         do
-          s <- getSolver
+          s <- z3Solver
           let bytes = (E.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           values <- mapM (SMT.getExpr s . SE.getValue) bytes
           values @?= [SMT.Bits 8 0xef, SMT.Bits 8 0xbe, SMT.Bits 8 0xad, SMT.Bits 8 0xde],
       testCase "Convert bitvector to bytes and back" $
         do
-          s <- getSolver
+          s <- z3Solver
 
           let bytes = (E.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           length bytes @?= 4
@@ -45,7 +45,7 @@ valueReprTests =
     "Symbolic ValueRepr Tests"
     [ testCase "Create from literal and add" $
         do
-          s <- getSolver
+          s <- z3Solver
 
           let v1 = E.fromLit QBE.Word 127
           let v2 = E.fromLit QBE.Word 128
@@ -61,7 +61,7 @@ valueReprTests =
           (v1 `E.add` v2) @?= Nothing,
       testCase "Subtyping" $
         do
-          s <- getSolver
+          s <- z3Solver
 
           let v1 = E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector
           let v2 = E.fromLit QBE.Long 0xff :: SE.BitVector
@@ -81,7 +81,7 @@ valueReprTests =
           expr @?= SMT.Bits 32 0xdeadbfee,
       testCase "Extend subwords" $
         do
-          s <- getSolver
+          s <- z3Solver
 
           let bytes = (E.toBytes (E.fromLit QBE.Word 0xacacacac :: SE.BitVector) :: [SE.BitVector])
           let byte = head bytes

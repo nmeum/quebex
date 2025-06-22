@@ -1,4 +1,4 @@
-module Language.QBE.Simulator.Symbolic (explore) where
+module Language.QBE.Simulator.Symbolic (explore, z3Solver) where
 
 import Control.Monad (void)
 import Control.Monad.State (gets)

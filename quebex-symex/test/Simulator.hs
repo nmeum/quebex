@@ -7,13 +7,12 @@ import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.State (envTracer)
-import Language.QBE.Simulator.Symbolic (explore)
+import Language.QBE.Simulator.Symbolic (explore, z3Solver)
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
-import Util
 
 parseProg :: String -> IO Program
 parseProg input =
@@ -64,7 +63,7 @@ traceTests =
           length t @?= 0,
       testCase "Branch tracing and solving with single symbolic branch" $
         do
-          s <- getSolver
+          s <- z3Solver
           c <- CE.unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
 
@@ -95,7 +94,7 @@ traceTests =
           nxt @?= Nothing,
       testCase "Tracing with multiple branches" $
         do
-          s <- getSolver
+          s <- z3Solver
           c1 <- CE.unconstrained s 0 "cond1" QBE.Word
           c2 <- CE.unconstrained s 0 "cond2" QBE.Word
 
