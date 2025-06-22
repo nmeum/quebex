@@ -84,7 +84,33 @@ traceTests =
 
           -- There are only two branches: input == 0 and input /= 0
           (nxt, _) <- ST.findUnexplored s newPathSel
-          nxt @?= Nothing
+          nxt @?= Nothing,
+      testCase "Tracing with multiple branches" $
+        do
+          s <- getSolver
+          c1 <- CE.unconstrained s 0 "cond1" QBE.Word
+          c2 <- CE.unconstrained s 0 "cond2" QBE.Word
+
+          t <-
+            parseAndExec
+              (QBE.GlobalIdent "branchOnInput")
+              [c1, c2]
+              "function $branchOnInput(w %cond1, w %cond2) {\n\
+              \@jump.1\n\
+              \jnz %cond1, @branch.1, @branch.2\n\
+              \@branch.1\n\
+              \jmp @jump.2\n\
+              \@branch.2\n\
+              \jmp @jump.2\n\
+              \@jump.2\n\
+              \jnz %cond2, @branch.3, @branch.4\n\
+              \@branch.3\n\
+              \ret\n\
+              \@branch.4\n\
+              \ret\n\
+              \}"
+
+          length t @?= 2
     ]
 
 simTests :: TestTree
