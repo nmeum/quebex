@@ -3,7 +3,7 @@ name:               quebex-syntax
 version:            0.1.0.0
 -- synopsis:
 -- description:
-license:            GPL-3.0-only
+license:            GPL-3.0-only AND BSD-2-Clause AND MIT
 license-file:       ../LICENSES/GPL-3.0-only.txt
 author:             Sören Tempel
 maintainer:         soeren+git@soeren-tempel.net
