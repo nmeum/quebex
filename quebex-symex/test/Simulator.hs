@@ -12,9 +12,9 @@ import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Backend.DFS (findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
+import Language.QBE.Simulator.Explorer (explore, z3Solver)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State (envTracer)
-import Language.QBE.Simulator.Symbolic (explore, z3Solver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE

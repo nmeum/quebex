@@ -8,8 +8,8 @@ module Symbolic (exprTests) where
 import Control.Monad.IO.Class (liftIO)
 import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
+import Language.QBE.Simulator.Explorer (z3Solver)
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Symbolic (z3Solver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT

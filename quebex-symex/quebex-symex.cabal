@@ -36,7 +36,7 @@ library
       Language.QBE.Backend.Store,
       Language.QBE.Backend.ExecTree,
       Language.QBE.Backend.DFS,
-      Language.QBE.Simulator.Symbolic,
+      Language.QBE.Simulator.Explorer,
       Language.QBE.Simulator.Symbolic.Tracer,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.Expression

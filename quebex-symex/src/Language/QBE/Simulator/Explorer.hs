@@ -1,8 +1,7 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
-
-module Language.QBE.Simulator.Symbolic (explore, z3Solver) where
+module Language.QBE.Simulator.Explorer (explore, z3Solver) where
 
 import Control.Exception (throwIO)
 import Control.Monad.State (gets)
@@ -27,19 +26,19 @@ z3Solver = do
 
 ------------------------------------------------------------------------
 
-data ExpEngine
-  = ExpEngine
+data Engine
+  = Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expStore :: ST.Store
   }
 
-newEngine :: IO ExpEngine
+newEngine :: IO Engine
 newEngine = do
   solver <- z3Solver -- TODO: Make this configurable
-  ExpEngine solver newPathSel <$> ST.empty
+  Engine solver newPathSel <$> ST.empty
 
-findNext :: ExpEngine -> T.ExecTrace -> IO (Maybe Model, ExpEngine)
+findNext :: Engine -> T.ExecTrace -> IO (Maybe Model, Engine)
 findNext e eTrace = do
   let pathSel = trackTrace (expPathSel e) eTrace
   (model, nextPathSel) <- findUnexplored (expSolver e) pathSel
@@ -60,8 +59,8 @@ traceFunc prog func params =
 explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [T.ExecTrace]
 explore prog entryPoint entryParams = newEngine >>= explore'
   where
-    explore' :: ExpEngine -> IO [T.ExecTrace]
-    explore' engine@ExpEngine {expSolver = solver, expStore = store} = do
+    explore' :: Engine -> IO [T.ExecTrace]
+    explore' engine@Engine {expSolver = solver, expStore = store} = do
       values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
       eTrace <- traceFunc prog entryPoint values >>= either throwIO pure
 
