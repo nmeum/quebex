@@ -32,7 +32,7 @@ storeTests =
         do
           s <- getSolver
           let bytes = (E.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
-          values <- mapM (SMT.getExpr s . SE.getValue) bytes
+          values <- mapM (SMT.getExpr s . SE.toSExpr) bytes
           values @?= [SMT.Bits 8 0xef, SMT.Bits 8 0xbe, SMT.Bits 8 0xad, SMT.Bits 8 0xde],
       testCase "Convert bitvector to bytes and back" $
         do
@@ -42,7 +42,7 @@ storeTests =
           length bytes @?= 4
 
           value <- case E.fromBytes (QBE.Base QBE.Word) bytes of
-            Just x -> SMT.getExpr s (SE.getValue x) <&> Just
+            Just x -> SMT.getExpr s (SE.toSExpr x) <&> Just
             Nothing -> pure Nothing
           value @?= Just (SMT.Bits 32 0xdeadbeef)
     ]
@@ -58,7 +58,7 @@ valueReprTests =
           let v1 = E.fromLit QBE.Word 127
           let v2 = E.fromLit QBE.Word 128
 
-          expr <- SMT.getExpr s (SE.getValue $ fromJust $ v1 `E.add` v2)
+          expr <- SMT.getExpr s (SE.toSExpr $ fromJust $ v1 `E.add` v2)
           expr @?= SMT.Bits 32 0xff,
       testCase "Add incompatible values" $
         do
@@ -75,16 +75,16 @@ valueReprTests =
           let v2 = E.fromLit QBE.Long 0xff :: SE.BitVector
 
           let v1sub = fromJust $ E.subType QBE.Word v1
-          v1sub' <- SMT.getExpr s (SE.getValue v1sub)
+          v1sub' <- SMT.getExpr s (SE.toSExpr v1sub)
           v1sub' @?= SMT.Bits 32 0xdeadbeef
 
           let v2sub = fromJust $ E.subType QBE.Word v2
-          v2sub' <- SMT.getExpr s (SE.getValue v2sub)
+          v2sub' <- SMT.getExpr s (SE.toSExpr v2sub)
           v2sub' @?= SMT.Bits 32 0xff
 
           let subtypedAddExpr = v1sub `E.add` v2sub
           liftIO $ print subtypedAddExpr
-          expr <- SMT.getExpr s (SE.getValue (fromJust subtypedAddExpr))
+          expr <- SMT.getExpr s (SE.toSExpr (fromJust subtypedAddExpr))
 
           expr @?= SMT.Bits 32 0xdeadbfee,
       testCase "Extend subwords" $
@@ -95,11 +95,11 @@ valueReprTests =
           let byte = head bytes
 
           let sext = fromJust $ E.extend QBE.SignedByte byte
-          sextVal <- SMT.getExpr s (SE.getValue sext)
+          sextVal <- SMT.getExpr s (SE.toSExpr sext)
           sextVal @?= SMT.Bits 64 0xffffffffffffffac
 
           let zext = fromJust $ E.extend QBE.UnsignedByte byte
-          zextVal <- SMT.getExpr s (SE.getValue zext)
+          zextVal <- SMT.getExpr s (SE.toSExpr zext)
           zextVal @?= SMT.Bits 64 0xac
     ]
 

@@ -47,7 +47,7 @@ newExecTrace = []
 
 -- Return all branch conditions of an 'ExecTrace'.
 toSExprs :: ExecTrace -> [SMT.SExpr]
-toSExprs = map (\(_, Branch _ bv) -> SE.sexpr bv)
+toSExprs = map (\(_, Branch _ bv) -> SE.toSExpr bv)
 
 -- Append a branch to the execution trace, denoting via a 'Bool'
 -- if the branch was taken or if it was not taken.
