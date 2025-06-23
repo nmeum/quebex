@@ -5,7 +5,6 @@
 
 module Symbolic (exprTests) where
 
-import Control.Monad.IO.Class (liftIO)
 import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
 import Language.QBE.Simulator.Explorer (z3Solver)
