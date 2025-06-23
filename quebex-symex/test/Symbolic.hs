@@ -83,7 +83,6 @@ valueReprTests =
           v2sub' @?= SMT.Bits 32 0xff
 
           let subtypedAddExpr = v1sub `E.add` v2sub
-          liftIO $ print subtypedAddExpr
           expr <- SMT.getExpr s (SE.toSExpr (fromJust subtypedAddExpr))
 
           expr @?= SMT.Bits 32 0xdeadbfee,
