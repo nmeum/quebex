@@ -49,9 +49,11 @@ test-suite quebex-symex-test
     main-is:          Main.hs
 
     other-modules:
+      Util,
+      Backend,
+      Explorer,
       Symbolic,
       Concolic,
-      Simulator
 
     build-depends:
         base ^>=4.19.1.0,

@@ -1,0 +1,50 @@
+-- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+--
+-- SPDX-License-Identifier: GPL-3.0-only
+
+module Util where
+
+import Control.Monad.State (gets)
+import Data.List (find, sort)
+import Data.Word (Word64)
+import Language.QBE (Program, globalFuncs, parse)
+import Language.QBE.Simulator (execFunc, runExec)
+import Language.QBE.Simulator.Concolic.Expression qualified as CE
+import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.State (envTracer)
+import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
+import Language.QBE.Types qualified as QBE
+import SimpleSMT qualified as SMT
+
+parseProg :: String -> IO Program
+parseProg input =
+  case parse "" input of
+    Left e -> fail $ "Unexpected parsing error: " ++ show e
+    Right r -> pure r
+
+findFunc :: Program -> QBE.GlobalIdent -> QBE.FuncDef
+findFunc prog funcName =
+  case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
+    Just x -> x
+    Nothing -> error $ "Unknown function: " ++ show funcName
+
+-- TODO: Code duplication with quebex/test/Simulator.hs
+parseAndExec :: QBE.GlobalIdent -> [CE.Concolic] -> String -> IO ST.ExecTrace
+parseAndExec funcName params input = do
+  prog <- parseProg input
+  let func = findFunc prog funcName
+
+  sTrace <- runExec prog (execFunc func params >> gets envTracer) ST.newExecTrace
+  case sTrace of
+    Left e -> fail $ "Unexpected evaluation error: " ++ show e
+    Right r -> pure r
+
+unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO CE.Concolic
+unconstrained solver initCon name ty = do
+  let concrete = E.fromLit ty initCon
+  symbolic <- SE.symbolic solver name ty
+  pure $ CE.Concolic concrete (Just symbolic)
+
+branchPoints :: [ST.ExecTrace] -> [[Bool]]
+branchPoints = sort . map (map fst)

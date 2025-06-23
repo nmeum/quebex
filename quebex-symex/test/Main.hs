@@ -4,8 +4,9 @@
 
 module Main (main) where
 
+import Backend (backendTests)
 import Concolic qualified as CE
-import Simulator qualified as SIM
+import Explorer (exploreTests)
 import Symbolic qualified as SE
 import Test.Tasty
 
@@ -16,4 +17,8 @@ tests :: TestTree
 tests =
   testGroup
     "Tests"
-    [SE.exprTests, CE.exprTests, SIM.simTests]
+    [ SE.exprTests,
+      CE.exprTests,
+      backendTests,
+      exploreTests
+    ]
