@@ -15,7 +15,7 @@ import Control.Applicative ((<|>))
 import Language.QBE.Backend (Model)
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
-import Language.QBE.Simulator.Symbolic.Tracer (Branch (..), ExecTrace, toSExprs)
+import Language.QBE.Simulator.Symbolic.Tracer (Branch (..), ExecTrace)
 import SimpleSMT qualified as SMT
 
 -- The 'PathSel' encapsulates data for the Dynamic Symbolic Execution (DSE)
@@ -37,8 +37,8 @@ trackTrace (PathSel tree t) trace =
 -- For a given execution trace, return an assignment (represented
 -- as a 'Model') which statisfies all symbolic branch conditions.
 -- If such an assignment does not exist, then 'Nothing' is returned.
-solveTrace :: SMT.Solver -> PathSel -> ExecTrace -> IO (Maybe Model)
-solveTrace solver (PathSel _ oldTrace) newTrace = do
+solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model)
+solveTrace solver vars (PathSel _ oldTrace) newTrace = do
   -- Determine the common prefix of the current trace and the old trace
   -- drop constraints beyond this common prefix from the current solver
   -- context. Thereby, keeping the common prefix and making use of
@@ -52,7 +52,7 @@ solveTrace solver (PathSel _ oldTrace) newTrace = do
 
   isSat <- SMT.check solver
   case isSat of
-    SMT.Sat -> Just <$> SMT.getExprs solver (toSExprs newTrace)
+    SMT.Sat -> Just <$> SMT.getExprs solver (vars)
     SMT.Unsat -> pure Nothing
     SMT.Unknown -> error "To-Do: Unknown Result" -- TODO
   where
@@ -81,15 +81,17 @@ solveTrace solver (PathSel _ oldTrace) newTrace = do
 -- the tested software. This function updates the metadata in the execution
 -- tree and thus returns a new execution tree, even if no satisfiable
 -- assignment was found.
-findUnexplored :: SMT.Solver -> PathSel -> IO (Maybe Model, PathSel)
-findUnexplored solver tracer@(PathSel tree _) = do
+--
+-- TODO: Can we get by without passing 'inputVars` here again?
+findUnexplored :: SMT.Solver -> [SMT.SExpr] -> PathSel -> IO (Maybe Model, PathSel)
+findUnexplored solver inputVars tracer@(PathSel tree _) = do
   case negateBranch tree of
     Nothing -> pure (Nothing, tracer)
     Just nt -> do
       let nextTracer = PathSel (addTrace tree nt) nt
-      res <- solveTrace solver tracer nt
+      res <- solveTrace solver inputVars tracer nt
       case res of
-        Nothing -> findUnexplored solver nextTracer
+        Nothing -> findUnexplored solver inputVars nextTracer
         Just m -> pure (Just m, nextTracer)
   where
     -- Negate an unnegated branch in the execution tree and return an

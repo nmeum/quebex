@@ -39,16 +39,17 @@ newEngine = do
   Engine solver newPathSel <$> ST.empty
 
 findNext :: Engine -> T.ExecTrace -> IO (Maybe Model, Engine)
-findNext e eTrace = do
+findNext e@(Engine {expStore = store}) eTrace = do
   let pathSel = trackTrace (expPathSel e) eTrace
-  (model, nextPathSel) <- findUnexplored (expSolver e) pathSel
+  symVars <- ST.sexprs store
+  (model, nextPathSel) <- findUnexplored (expSolver e) symVars pathSel
 
   let ne = e {expPathSel = nextPathSel}
   case model of
     Nothing ->
       pure (model, ne)
     Just nm ->
-      ST.setModel (expStore e) nm >> pure (Just nm, ne)
+      ST.setModel store nm >> pure (Just nm, ne)
 
 ------------------------------------------------------------------------
 

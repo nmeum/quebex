@@ -8,6 +8,7 @@ import Data.Maybe (fromJust)
 import Language.QBE.Backend.DFS (findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Explorer (z3Solver)
+import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -42,6 +43,7 @@ traceTests =
           s <- z3Solver
           c <- unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
+          let inputs = map (SE.toSExpr . fromJust . CE.symbolic) [c]
 
           t <-
             parseAndExec
@@ -59,14 +61,14 @@ traceTests =
           t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
 
           let pathSel = trackTrace newPathSel t
-          (mm, nextPathSel) <- findUnexplored s pathSel
+          (mm, nextPathSel) <- findUnexplored s inputs pathSel
           case mm of
             (Just [(_, (SMT.Bits _ v))]) ->
               assertBool "condition must be /= 0" (v /= 0)
             _ -> assertFailure "unexpected model"
 
           -- There are only two branches: input == 0 and input /= 0
-          (nxt, _) <- findUnexplored s nextPathSel
+          (nxt, _) <- findUnexplored s inputs nextPathSel
           nxt @?= Nothing,
       testCase "Tracing with multiple branches" $
         do

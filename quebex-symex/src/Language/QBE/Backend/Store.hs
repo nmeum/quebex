@@ -6,6 +6,7 @@ module Language.QBE.Backend.Store
   ( Store,
     empty,
     toList,
+    sexprs,
     setModel,
     getConcolic,
   )
@@ -39,6 +40,10 @@ empty = do
   symMap <- newIORef Map.empty
   pure $ Store conMap symMap ranGen
 
+sexprs :: Store -> IO [SMT.SExpr]
+sexprs Store {sValues = m} =
+  map SE.toSExpr <$> (Map.elems <$> readIORef m)
+
 toList :: Store -> IO [(String, DE.RegVal)]
 toList store = Map.toList <$> readIORef (cValues store)
 
@@ -54,7 +59,7 @@ setModel store model =
       case DE.fromBits n v of
         Just x -> (name, x)
         Nothing -> error "invalid bitsize in solver model"
-    go _ = error "malformed entry in solver model"
+    go entry = error ("malformed entry in solver model: " ++ show entry)
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
