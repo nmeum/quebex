@@ -5,7 +5,6 @@
 module Language.QBE.Simulator.Symbolic (explore, z3Solver) where
 
 import Control.Exception (throwIO)
-import Control.Monad (void)
 import Control.Monad.State (gets)
 import Language.QBE (Program)
 import Language.QBE.Simulator (execFunc, runExec)
@@ -22,7 +21,6 @@ z3Solver = do
   -- l <- SMT.newLogger 0
   s <- SMT.newSolver "z3" ["-in", "-smt2"] Nothing
   SMT.setLogic s "QF_BV"
-  void $ SMT.check s
   return s
 
 ------------------------------------------------------------------------
