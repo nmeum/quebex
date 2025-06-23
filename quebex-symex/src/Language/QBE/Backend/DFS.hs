@@ -12,8 +12,8 @@ module Language.QBE.Backend.DFS
 where
 
 import Control.Applicative ((<|>))
-import Language.QBE.Backend (Model)
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
+import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer (Branch (..), ExecTrace)
 import SimpleSMT qualified as SMT
@@ -37,8 +37,8 @@ trackTrace (PathSel tree t) trace =
 -- For a given execution trace, return an assignment (represented
 -- as a 'Model') which statisfies all symbolic branch conditions.
 -- If such an assignment does not exist, then 'Nothing' is returned.
-solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model)
-solveTrace solver vars (PathSel _ oldTrace) newTrace = do
+solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model.Model)
+solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
   -- Determine the common prefix of the current trace and the old trace
   -- drop constraints beyond this common prefix from the current solver
   -- context. Thereby, keeping the common prefix and making use of
@@ -52,7 +52,7 @@ solveTrace solver vars (PathSel _ oldTrace) newTrace = do
 
   isSat <- SMT.check solver
   case isSat of
-    SMT.Sat -> Just <$> SMT.getExprs solver (vars)
+    SMT.Sat -> Just <$> Model.getModel solver inputVars
     SMT.Unsat -> pure Nothing
     SMT.Unknown -> error "To-Do: Unknown Result" -- TODO
   where
@@ -83,7 +83,7 @@ solveTrace solver vars (PathSel _ oldTrace) newTrace = do
 -- assignment was found.
 --
 -- TODO: Can we get by without passing 'inputVars` here again?
-findUnexplored :: SMT.Solver -> [SMT.SExpr] -> PathSel -> IO (Maybe Model, PathSel)
+findUnexplored :: SMT.Solver -> [SMT.SExpr] -> PathSel -> IO (Maybe Model.Model, PathSel)
 findUnexplored solver inputVars tracer@(PathSel tree _) = do
   case negateBranch tree of
     Nothing -> pure (Nothing, tracer)
@@ -115,6 +115,5 @@ findUnexplored solver inputVars tracer@(PathSel tree _) = do
       | otherwise = Just [(False, Branch True ast)]
     negateBranch (Node br (Just ifTrue) (Just ifFalse)) =
       do
-        -- TODO: Randomly prefer either the left or right child
         (++) [(True, br)] <$> negateBranch ifTrue
         <|> (++) [(False, br)] <$> negateBranch ifFalse

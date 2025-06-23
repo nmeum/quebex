@@ -6,8 +6,8 @@ module Language.QBE.Simulator.Explorer (explore, z3Solver) where
 import Control.Exception (throwIO)
 import Control.Monad.State (gets)
 import Language.QBE (Program)
-import Language.QBE.Backend (Model)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
+import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Simulator (execFunc, runExec)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE

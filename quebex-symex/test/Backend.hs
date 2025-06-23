@@ -6,12 +6,13 @@ module Backend (backendTests) where
 
 import Data.Maybe (fromJust)
 import Language.QBE.Backend.DFS (findUnexplored, newPathSel, trackTrace)
+import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (z3Solver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
 import Util
@@ -62,8 +63,10 @@ traceTests =
 
           let pathSel = trackTrace newPathSel t
           (mm, nextPathSel) <- findUnexplored s inputs pathSel
-          case mm of
-            (Just [(_, (SMT.Bits _ v))]) ->
+
+          assign <- Model.toList (fromJust mm)
+          case assign of
+            [(_, DE.VWord v)] ->
               assertBool "condition must be /= 0" (v /= 0)
             _ -> assertFailure "unexpected model"
 

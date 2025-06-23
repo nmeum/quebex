@@ -14,7 +14,7 @@ where
 import Data.Functor (($>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map qualified as Map
-import Language.QBE.Backend (Model)
+import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
@@ -45,18 +45,10 @@ sexprs Store {sValues = m} =
   map SE.toSExpr <$> (Map.elems <$> readIORef m)
 
 -- | Create a variable store from a 'Model'.
-setModel :: Store -> Model -> IO ()
-setModel store model =
-  let modelMap = Map.fromList (map go model)
-   in writeIORef (cValues store) modelMap
-  where
-    -- TODO: Better error handling → revise 'Model' type.
-    go :: (SMT.SExpr, SMT.Value) -> (String, DE.RegVal)
-    go (SMT.Atom name, SMT.Bits n v) =
-      case DE.fromBits n v of
-        Just x -> (name, x)
-        Nothing -> error "invalid bitsize in solver model"
-    go entry = error ("malformed entry in solver model: " ++ show entry)
+setModel :: Store -> Model.Model -> IO ()
+setModel store model = do
+  modelMap <- Map.fromList <$> Model.toList model
+  writeIORef (cValues store) modelMap
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
