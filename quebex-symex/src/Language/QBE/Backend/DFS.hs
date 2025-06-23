@@ -12,6 +12,8 @@ module Language.QBE.Backend.DFS
 where
 
 import Control.Applicative ((<|>))
+import Control.Exception (throwIO)
+import Language.QBE.Backend (SolverError (UnknownResult), prefixLength)
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
@@ -37,6 +39,8 @@ trackTrace (PathSel tree t) trace =
 -- For a given execution trace, return an assignment (represented
 -- as a 'Model') which statisfies all symbolic branch conditions.
 -- If such an assignment does not exist, then 'Nothing' is returned.
+--
+-- Throws a 'SolverError' on an unknown solver result (e.g., on timeout).
 solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model.Model)
 solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
   -- Determine the common prefix of the current trace and the old trace
@@ -54,7 +58,7 @@ solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
   case isSat of
     SMT.Sat -> Just <$> Model.getModel solver inputVars
     SMT.Unsat -> pure Nothing
-    SMT.Unknown -> error "To-Do: Unknown Result" -- TODO
+    SMT.Unknown -> throwIO UnknownResult
   where
     -- Add all conditions enforced by the given 'ExecTrace' to the solver.
     -- Returns a list of all asserted conditions.
@@ -63,19 +67,6 @@ solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
     assertTrace t = do
       let conds = map (\(b, Branch _ c) -> SE.toCond b c) t
       mapM_ (\c -> SMT.push solver >> SMT.assert solver c) conds
-
-    -- Determine the length of the common prefix of two lists.
-    --
-    -- TODO: Move this elsewhere.
-    prefixLength :: (Eq a) => [a] -> [a] -> Int
-    prefixLength = prefixLength' 0
-      where
-        prefixLength' :: (Eq a) => Int -> [a] -> [a] -> Int
-        prefixLength' n [] _ = n
-        prefixLength' n _ [] = n
-        prefixLength' n (x : xs) (y : ys)
-          | x == y = prefixLength' (n + 1) xs ys
-          | otherwise = n
 
 -- Find an assignment that causes exploration of a new execution path through
 -- the tested software. This function updates the metadata in the execution
