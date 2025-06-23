@@ -5,7 +5,6 @@
 module Language.QBE.Backend.Store
   ( Store,
     empty,
-    toList,
     sexprs,
     setModel,
     getConcolic,
@@ -40,12 +39,10 @@ empty = do
   symMap <- newIORef Map.empty
   pure $ Store conMap symMap ranGen
 
+-- | Obtain symbolic values as a list of 'SimpleSMT' expressions.
 sexprs :: Store -> IO [SMT.SExpr]
 sexprs Store {sValues = m} =
   map SE.toSExpr <$> (Map.elems <$> readIORef m)
-
-toList :: Store -> IO [(String, DE.RegVal)]
-toList store = Map.toList <$> readIORef (cValues store)
 
 -- | Create a variable store from a 'Model'.
 setModel :: Store -> Model -> IO ()
