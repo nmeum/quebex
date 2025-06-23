@@ -9,6 +9,7 @@ import Data.List (find, sort)
 import Data.Maybe (fromJust)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
+import Language.QBE.Backend.DFS (findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Expression qualified as E
@@ -98,15 +99,15 @@ traceTests =
 
           t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
 
-          let pathSel = ST.trackTrace ST.newPathSel t
-          (mm, newPathSel) <- ST.findUnexplored s pathSel
+          let pathSel = trackTrace newPathSel t
+          (mm, nextPathSel) <- findUnexplored s pathSel
           case mm of
             (Just [(_, (SMT.Bits _ v))]) ->
               assertBool "condition must be /= 0" (v /= 0)
             _ -> assertFailure "unexpected model"
 
           -- There are only two branches: input == 0 and input /= 0
-          (nxt, _) <- ST.findUnexplored s newPathSel
+          (nxt, _) <- findUnexplored s nextPathSel
           nxt @?= Nothing,
       testCase "Tracing with multiple branches" $
         do

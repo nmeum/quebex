@@ -7,11 +7,13 @@ module Language.QBE.Simulator.Symbolic (explore, z3Solver) where
 import Control.Exception (throwIO)
 import Control.Monad.State (gets)
 import Language.QBE (Program)
+import Language.QBE.Backend (Model)
+import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
+import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Simulator (execFunc, runExec)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Simulator.State (envTracer)
-import Language.QBE.Simulator.Symbolic.Store qualified as ST
 import Language.QBE.Simulator.Symbolic.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -28,21 +30,21 @@ z3Solver = do
 data ExpEngine
   = ExpEngine
   { expSolver :: SMT.Solver,
-    expPathSel :: T.PathSel,
+    expPathSel :: PathSel,
     expStore :: ST.Store
   }
 
 newEngine :: IO ExpEngine
 newEngine = do
   solver <- z3Solver -- TODO: Make this configurable
-  ExpEngine solver T.newPathSel <$> ST.empty
+  ExpEngine solver newPathSel <$> ST.empty
 
-findNext :: ExpEngine -> T.ExecTrace -> IO (Maybe T.Model, ExpEngine)
+findNext :: ExpEngine -> T.ExecTrace -> IO (Maybe Model, ExpEngine)
 findNext e eTrace = do
-  let pathSel = T.trackTrace (expPathSel e) eTrace
-  (model, newPathSel) <- T.findUnexplored (expSolver e) pathSel
+  let pathSel = trackTrace (expPathSel e) eTrace
+  (model, nextPathSel) <- findUnexplored (expSolver e) pathSel
 
-  let ne = e {expPathSel = newPathSel}
+  let ne = e {expPathSel = nextPathSel}
   case model of
     Nothing ->
       pure (model, ne)

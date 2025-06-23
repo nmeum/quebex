@@ -14,6 +14,8 @@ import Data.Maybe (fromMaybe)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Simulator.Symbolic.Tracer (ExecTrace, appendBranch, newBranch)
+import Language.QBE.Simulator.Tracer (Tracer (..))
 
 data Concolic
   = Concolic
@@ -51,6 +53,11 @@ instance E.Storable Concolic where
           let symBVs = map getSymbolicDef bytes
           E.fromBytes ty symBVs <&> mkConcolic . Just
         else Just $ mkConcolic Nothing
+
+instance Tracer ExecTrace Concolic where
+  branch t Concolic {symbolic = Just s} condResult =
+    appendBranch t condResult (newBranch s)
+  branch t _ _ = t
 
 ------------------------------------------------------------------------
 

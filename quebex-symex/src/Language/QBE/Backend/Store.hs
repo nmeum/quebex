@@ -2,7 +2,7 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Symbolic.Store
+module Language.QBE.Backend.Store
   ( Store,
     empty,
     toList,
@@ -14,11 +14,11 @@ where
 import Data.Functor (($>))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map qualified as Map
+import Language.QBE.Backend (Model)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
-import Language.QBE.Simulator.Symbolic.Tracer (Model)
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import System.Random.Stateful (IOGenM, StdGen, initStdGen, newIOGenM, uniformWord64)
