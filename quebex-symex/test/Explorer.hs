@@ -132,5 +132,45 @@ exploreTests =
           eTraces <- explore prog funcDef [("x", QBE.Word)]
 
           let branches = branchPoints eTraces
-          branches @?= [[False, False], [True, True]]
+          branches @?= [[False, False], [True, True]],
+      testCase "Branch on a specific concrete 64-bit value" $
+        do
+          prog <-
+            parseProg
+              "function $f(l %input.0) {\n\
+              \@start\n\
+              \%input.1 =l sub %input.0, 42\n\
+              \jnz %input.1, @not42, @is42\n\
+              \@not42\n\
+              \ret\n\
+              \@is42\n\
+              \ret\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "f")
+          eTraces <- explore prog funcDef [("y", QBE.Long)]
+
+          branchPoints eTraces @?= [[False], [True]]
+          let assign = fromJust $ findAssign eTraces [False]
+          Map.lookup "y" assign @?= (Just $ DE.VLong 42),
+      testCase "Branching with subtyping" $
+        do
+          prog <-
+            parseProg
+              "function $f(l %input.0, w %input.1) {\n\
+              \@start\n\
+              \%added =w add %input.1, 1\n\
+              \%subed =w sub %added, %input.1\n\
+              \%result =w add %added, %subed\n\
+              \jnz %result, @b1, @b2\n\
+              \@b1\n\
+              \jnz %input.0, @b2, @b2\n\
+              \@b2\n\
+              \ret\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "f")
+          eTraces <- explore prog funcDef [("y", QBE.Long), ("x", QBE.Word)]
+
+          branchPoints eTraces @?= [[False], [True, False], [True, True]]
     ]
