@@ -5,7 +5,7 @@
 module Util where
 
 import Control.Monad.State (gets)
-import Data.List (find, sort)
+import Data.List (find)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator (execFunc, runExec)
@@ -45,6 +45,3 @@ unconstrained solver initCon name ty = do
   let concrete = E.fromLit ty initCon
   symbolic <- SE.symbolic solver name ty
   pure $ CE.Concolic concrete (Just symbolic)
-
-branchPoints :: [ST.ExecTrace] -> [[Bool]]
-branchPoints = sort . map (map fst)

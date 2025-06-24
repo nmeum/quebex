@@ -4,11 +4,28 @@
 
 module Explorer (exploreTests) where
 
+import Data.List (sort)
+import Data.Map qualified as Map
+import Data.Maybe (fromJust)
+import Language.QBE.Backend.Store qualified as ST
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (explore)
+import Language.QBE.Simulator.Symbolic.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 import Util
+
+branchPoints :: [(ST.Assign, T.ExecTrace)] -> [[Bool]]
+branchPoints lst = sort $ map (\(_, t) -> map fst t) lst
+
+findAssign :: [(ST.Assign, T.ExecTrace)] -> [Bool] -> Maybe ST.Assign
+findAssign [] _ = Nothing
+findAssign ((a, eTrace) : xs) toFind
+  | map fst eTrace == toFind = Just a
+  | otherwise = findAssign xs toFind
+
+------------------------------------------------------------------------
 
 exploreTests :: TestTree
 exploreTests =
@@ -79,9 +96,11 @@ exploreTests =
           let funcDef = findFunc prog (QBE.GlobalIdent "branchArithmetics")
           eTraces <- explore prog funcDef [("input", QBE.Word)]
 
-          -- TODO: Obtain model for false Branch (input should be 0xffffffff).
           let branches = branchPoints eTraces
-          branches @?= [[False], [True]],
+          branches @?= [[False], [True]]
+
+          let assign = fromJust $ findAssign eTraces [False]
+          Map.lookup "input" assign @?= (Just $ DE.VWord 0),
       testCase "Store symbolic value and memory, load it and pass it to function" $
         do
           prog <-

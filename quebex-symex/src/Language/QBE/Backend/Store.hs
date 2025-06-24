@@ -4,8 +4,10 @@
 
 module Language.QBE.Backend.Store
   ( Store,
+    Assign,
     empty,
     sexprs,
+    assign,
     setModel,
     getConcolic,
   )
@@ -23,10 +25,13 @@ import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import System.Random.Stateful (IOGenM, StdGen, initStdGen, newIOGenM, uniformWord64)
 
+-- | Concrete variable assignment.
+type Assign = Map.Map String DE.RegVal
+
 -- A variable store mapping variable names to concrete values.
 data Store
   = Store
-  { cValues :: IORef (Map.Map String DE.RegVal),
+  { cValues :: IORef Assign,
     sValues :: IORef (Map.Map String SE.BitVector),
     randGen :: IOGenM StdGen
   }
@@ -43,6 +48,10 @@ empty = do
 sexprs :: Store -> IO [SMT.SExpr]
 sexprs Store {sValues = m} =
   map SE.toSExpr <$> (Map.elems <$> readIORef m)
+
+-- | Obtain a list of concrete variable assignments.
+assign :: Store -> IO Assign
+assign store = readIORef (cValues store)
 
 -- | Create a variable store from a 'Model'.
 setModel :: Store -> Model.Model -> IO ()

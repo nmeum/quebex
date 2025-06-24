@@ -57,15 +57,16 @@ traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic] -> IO (Either EvalError T.E
 traceFunc prog func params =
   runExec prog (execFunc func params >> gets envTracer) T.newExecTrace
 
-explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [T.ExecTrace]
+explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore prog entryPoint entryParams = newEngine >>= explore'
   where
-    explore' :: Engine -> IO [T.ExecTrace]
+    explore' :: Engine -> IO [(ST.Assign, T.ExecTrace)]
     explore' engine@Engine {expSolver = solver, expStore = store} = do
+      varAssign <- ST.assign store
       values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
       eTrace <- traceFunc prog entryPoint values >>= either throwIO pure
 
       (model, nEngine) <- findNext engine eTrace
       case model of
-        Nothing -> pure [eTrace]
-        Just _m -> (:) eTrace <$> explore' nEngine
+        Nothing -> pure [(varAssign, eTrace)]
+        Just _m -> (:) (varAssign, eTrace) <$> explore' nEngine
