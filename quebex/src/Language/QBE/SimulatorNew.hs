@@ -4,13 +4,14 @@
 
 module Language.QBE.SimulatorNew where
 
-import Control.Monad.Error.Class (MonadError)
-import Control.Monad ((>=>), foldM)
+import Control.Monad (foldM)
+import Control.Monad.Cont (ContT (ContT))
 import Data.Map qualified as Map
-import Control.Monad.Cont (ContT(ContT))
-import Control.Monad.Reader (ReaderT, withReaderT, runReaderT, ask)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
+
+data ExecResult v = Halted | Return (Maybe v)
+  deriving (Show)
 
 data ExecState v = JumpState (Env v)
   deriving (Show)
@@ -26,7 +27,8 @@ data ExecState v = JumpState (Env v)
 data Env val
   = Env
   { envGlobals :: Map.Map QBE.GlobalIdent val,
-    envLocals  :: Map.Map QBE.LocalIdent val }
+    envLocals :: Map.Map QBE.LocalIdent val
+  }
   deriving (Show, Eq)
 
 mkEnv :: (E.ValueRepr v) => Env v
@@ -58,28 +60,33 @@ execInstr env retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue env retTy lhs
   v2 <- lookupValue env retTy rhs
   runBinary retTy E.add v1 v2
+execInstr _ _ _ = error "execInstr not implemented"
 
 modifyFrame :: (E.ValueRepr v) => Env v -> QBE.LocalIdent -> v -> Env v
-modifyFrame env@Env { envLocals = locals } name value =
-  env { envLocals = Map.insert name value locals }
+modifyFrame env@Env {envLocals = locals} name value =
+  env {envLocals = Map.insert name value locals}
 
 -- TODO: change this to execStmt
-execStmt :: (E.ValueRepr v) => Env v -> QBE.Statement -> ContT () IO (Env v)
+execStmt :: (E.ValueRepr v) => Env v -> QBE.Statement -> ContT (ExecResult v) IO (Env v)
 execStmt env (QBE.Assign name ty inst) =
   ContT $ \cont ->
     do
       case execInstr env ty inst of
-        Nothing  -> error "invalid instr"
+        Nothing -> error "invalid instr"
         Just val -> cont (modifyFrame env name val)
+execStmt _ _ = error "statement not implemented"
 
-execStmts :: (E.ValueRepr v) => Env v -> [QBE.Statement] -> ContT () IO (Env v)
+execStmts :: (E.ValueRepr v) => Env v -> [QBE.Statement] -> ContT (ExecResult v) IO (Env v)
 execStmts env stmts = foldM (\acc x -> execStmt acc x) env stmts
+
 -- execStmts env [] = ContT $ \cont -> cont env
 -- execStmts env (stmt:rest) = execStmt env stmt >>= flip execStmts rest
 
-execJump :: (E.ValueRepr v) => Env v -> QBE.JumpInstr -> ContT () IO (ExecState v)
+execJump :: (E.ValueRepr v) => Env v -> QBE.JumpInstr -> ContT (ExecResult v) IO (ExecState v)
+execJump _ QBE.Halt = ContT $ \_ -> pure Halted
 execJump env _instr = ContT $ \cont -> (cont $ JumpState env)
---execJump env instr = error "jump not implemented"
 
-execBlock :: (E.ValueRepr v) => Env v -> QBE.Block -> ContT () IO (ExecState v)
+-- execJump env instr = error "jump not implemented"
+
+execBlock :: (E.ValueRepr v) => Env v -> QBE.Block -> ContT (ExecResult v) IO (ExecState v)
 execBlock env block = execStmts env (QBE.stmt block) >>= (\e -> execJump e (QBE.term block))
