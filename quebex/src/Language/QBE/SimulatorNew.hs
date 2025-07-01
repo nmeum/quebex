@@ -13,6 +13,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as QBE
 
 data ExecState v = JumpState (Env v)
+  deriving (Show)
 
 -- Idea:
 --  1. Tracing is implemented as a continuation with >=>
@@ -76,9 +77,9 @@ execStmts env stmts = foldM (\acc x -> execStmt acc x) env stmts
 -- execStmts env [] = ContT $ \cont -> cont env
 -- execStmts env (stmt:rest) = execStmt env stmt >>= flip execStmts rest
 
-execJump :: (E.ValueRepr v) => Env v -> QBE.JumpInstr -> ContT () IO (Env v)
-execJump env _instr = ContT $ \cont -> cont env
+execJump :: (E.ValueRepr v) => Env v -> QBE.JumpInstr -> ContT () IO (ExecState v)
+execJump env _instr = ContT $ \cont -> (cont $ JumpState env)
 --execJump env instr = error "jump not implemented"
 
-execBlock :: (E.ValueRepr v) => Env v -> QBE.Block -> ContT () IO (Env v)
+execBlock :: (E.ValueRepr v) => Env v -> QBE.Block -> ContT () IO (ExecState v)
 execBlock env block = execStmts env (QBE.stmt block) >>= (\e -> execJump e (QBE.term block))
