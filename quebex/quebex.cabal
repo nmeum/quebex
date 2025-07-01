@@ -33,6 +33,7 @@ library
     exposed-modules:
       Language.QBE.Analysis.CFG,
       Language.QBE.Simulator,
+      Language.QBE.SimulatorNew,
       Language.QBE.Simulator.State,
       Language.QBE.Simulator.Tracer,
       Language.QBE.Simulator.Error,
