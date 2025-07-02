@@ -34,3 +34,4 @@ class ValueRepr v where
 
   add :: v -> v -> Maybe v
   sub :: v -> v -> Maybe v
+  mul :: v -> v -> Maybe v

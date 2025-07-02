@@ -100,6 +100,7 @@ instance E.ValueRepr Concolic where
 
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub
+  mul = binaryOp E.mul E.mul
 
   extend ty = unaryOp (E.extend ty) (E.extend ty)
   subType ty = unaryOp (E.subType ty) (E.subType ty)

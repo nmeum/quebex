@@ -76,6 +76,10 @@ execInstr retTy (QBE.Sub lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
   runBinary retTy E.sub v1 v2
+execInstr retTy (QBE.Mul lhs rhs) = do
+  v1 <- lookupValue retTy lhs
+  v2 <- lookupValue retTy rhs
+  runBinary retTy E.mul v1 v2
 execInstr retTy (QBE.Load ty addr) = do
   addrVal <- lookupValue QBE.Long addr
 

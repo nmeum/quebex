@@ -784,6 +784,7 @@ instr =
   choice
     [ try $ binaryInstr Q.Add "add",
       try $ binaryInstr Q.Sub "sub",
+      try $ binaryInstr Q.Mul "mul",
       try $ loadInstr,
       try $ allocInstr
     ]

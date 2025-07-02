@@ -6,10 +6,12 @@ module Language.QBE.Simulator.Default.Generator (generateOperators) where
 
 import Language.Haskell.TH
 
-operators :: [(Name, Name)]
+operators :: [(Name, Exp)]
 operators =
-  [ (mkName "add'", mkName "+"),
-    (mkName "sub'", mkName "-")
+  [ (mkName "add'", ParensE (VarE $ mkName "+")),
+    (mkName "sub'", ParensE (VarE $ mkName "-")),
+    -- (mkName "div'", ParensE (VarE $ mkName "/")),
+    (mkName "mul'", ParensE (VarE $ mkName "*"))
   ]
 
 cons :: [Name]
@@ -30,7 +32,7 @@ makeClause op con = do
   let body =
         AppE
           (ConE (mkName "Just"))
-          (AppE (ConE con) (UInfixE (VarE lhs) op (VarE rhs)))
+          (AppE (ConE con) (AppE (AppE op (VarE lhs)) (VarE rhs)))
 
   return $
     Clause
@@ -47,10 +49,8 @@ typingErrorClause =
     (NormalB (ConE $ mkName "Nothing"))
     []
 
-generateOperator :: (Name, Name) -> Q Dec
-generateOperator (name, op) = do
-  let opExpr = VarE op
-
+generateOperator :: (Name, Exp) -> Q Dec
+generateOperator (name, opExpr) = do
   valDefs <- mapM (makeClause opExpr) cons
   return $ FunD name (valDefs ++ [typingErrorClause])
 

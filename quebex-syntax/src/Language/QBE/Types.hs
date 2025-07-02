@@ -215,6 +215,8 @@ loadToExtType (LBase Double) = Base Double
 data Instr
   = Add Value Value
   | Sub Value Value
+  | -- | Div Value Value
+    Mul Value Value
   | Alloc AllocSize Word64
   | Load LoadType Value
   deriving (Show, Eq)

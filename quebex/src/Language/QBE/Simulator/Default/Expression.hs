@@ -124,3 +124,4 @@ instance ValueRepr RegVal where
 
   add = add'
   sub = sub'
+  mul = mul'
