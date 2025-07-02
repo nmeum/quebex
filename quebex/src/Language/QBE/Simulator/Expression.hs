@@ -35,3 +35,22 @@ class ValueRepr v where
   add :: v -> v -> Maybe v
   sub :: v -> v -> Maybe v
   mul :: v -> v -> Maybe v
+
+  eq :: v -> v -> Maybe v
+  ne :: v -> v -> Maybe v
+  ule :: v -> v -> Maybe v
+  ult :: v -> v -> Maybe v
+  uge :: v -> v -> Maybe v
+  ugt :: v -> v -> Maybe v
+
+boolToValue :: (ValueRepr v) => Bool -> v
+boolToValue True = fromLit QBE.Long 1
+boolToValue False = fromLit QBE.Long 0
+
+compareExpr :: (ValueRepr v) => QBE.CmpOp -> (v -> v -> Maybe v)
+compareExpr QBE.CEq = eq
+compareExpr QBE.CNe = ne
+compareExpr QBE.CUle = ule
+compareExpr QBE.CUlt = ult
+compareExpr QBE.CUge = uge
+compareExpr QBE.CUgt = ugt

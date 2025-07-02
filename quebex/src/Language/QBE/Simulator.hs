@@ -91,6 +91,12 @@ execInstr retTy (QBE.Load ty addr) = do
 execInstr QBE.Long (QBE.Alloc size align) =
   stackAlloc (fromIntegral $ QBE.getSize size) align
 execInstr _ QBE.Alloc {} = throwError InvalidAddressType
+execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
+  v1 <- lookupValue cmpTy lhs
+  v2 <- lookupValue cmpTy rhs
+
+  let exprOp = E.compareExpr cmpOp
+  runBinary retTy exprOp v1 v2
 
 execStmt :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v t ()
 execStmt (QBE.Assign name ty inst) = do

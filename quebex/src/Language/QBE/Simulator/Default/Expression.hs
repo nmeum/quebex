@@ -125,3 +125,10 @@ instance ValueRepr RegVal where
   add = add'
   sub = sub'
   mul = mul'
+
+  eq = eq'
+  ne = ne'
+  ule = ule'
+  ult = ult'
+  uge = uge'
+  ugt = ugt'
