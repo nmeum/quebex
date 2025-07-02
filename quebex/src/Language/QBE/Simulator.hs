@@ -25,6 +25,7 @@ import Data.Maybe (isNothing)
 import Language.QBE (Program, globalFuncs)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory (addrOverlap)
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
@@ -46,8 +47,25 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
 
   addrVal <- lookupValue QBE.Long addrReg
   toAddressE addrVal >>= (\a -> writeMemory a valTy val)
--- TODO: Implement blit
-execVolatile (QBE.Blit {}) = error "blit not implemented"
+execVolatile (QBE.Blit src dst toCopy) = do
+  srcAddr <- lookupValue QBE.Long src >>= toAddressE
+  dstAddr <- lookupValue QBE.Long dst >>= toAddressE
+
+  -- The third argument is the number of bytes to copy. The source and
+  -- destination spans are required to be either non-overlapping, or fully
+  -- overlapping (source address identical to the destination address).
+  when (srcAddr /= dstAddr && addrOverlap srcAddr dstAddr toCopy) $
+    throwError $
+      OverlappingBlit srcAddr dstAddr
+
+  -- Somehow allow specialization of memory copies, e.g. for quebex-symex.
+  when (toCopy > 0) $
+    mapM_
+      ( \off -> do
+          srcByte <- readMemory (QBE.LSubWord QBE.UnsignedByte) (srcAddr + off)
+          writeMemory (dstAddr + off) QBE.Byte srcByte
+      )
+      [0 .. toCopy - 1]
 
 execInstr :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v t v
 execInstr retTy (QBE.Add lhs rhs) = do

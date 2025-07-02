@@ -31,5 +31,10 @@ memTests =
         storeBytes m 0x2 [0xbe, 0xef]
         loadBytes m 0x0 2 >>= assertEqual "" [0xde, 0xad]
         loadBytes m 0x2 2 >>= assertEqual "" [0xbe, 0xef]
-        loadBytes m 0x0 4 >>= assertEqual "" [0xde, 0xad, 0xbe, 0xef]
+        loadBytes m 0x0 4 >>= assertEqual "" [0xde, 0xad, 0xbe, 0xef],
+      testCase "Overlapping memory address" $ do
+        addrOverlap 0x100 0x100 1 @?= True
+        addrOverlap 100 200 50 @?= False
+        addrOverlap 116 120 4 @?= False
+        addrOverlap 100 100 0 @?= False
     ]

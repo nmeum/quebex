@@ -9,6 +9,7 @@ module Language.QBE.Simulator.Memory
     Memory (..),
     mkMemory,
     toMemAddr,
+    addrOverlap,
     memSize,
     loadBytes,
     storeBytes,
@@ -49,6 +50,14 @@ mkMemory startAddr size = do
 -- Translate global address to a memory-local address.
 toMemAddr :: Memory t a -> Address -> Address
 toMemAddr mem addr = addr - memStart mem
+
+-- Returns true of the given addresses overlap in the given range.
+addrOverlap :: Address -> Address -> Address -> Bool
+addrOverlap addr1 addr2 range =
+  addr1 < (endAddr addr2) && (endAddr addr1) > addr2
+  where
+    endAddr :: Address -> Address
+    endAddr a = a + range
 
 -- | Returns the size of the memory in bytes.
 memSize :: (MArray t a IO) => Memory t a -> IO Size

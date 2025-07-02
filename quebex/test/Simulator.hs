@@ -495,7 +495,42 @@ blockTests =
               \ret 4\n\
               \}"
 
-          res @?= Just (D.VWord 4)
+          res @?= Just (D.VWord 4),
+      testCase "Blit instruction w/o overlaps" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              [D.VWord 0xdeadbeef]
+              "function w $main(w %word) {\n\
+              \@start\n\
+              \%src =l alloc4 4\n\
+              \%dst =l alloc4 4\n\
+              \storew %word, %src\n\
+              \blit %src, %dst, 4\n\
+              \%ret =w loadw %dst\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VWord 0xdeadbeef),
+      testCase "Blit instruction with no bytes to copy" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              [D.VWord 0xdeadbeef]
+              "function w $main(w %word) {\n\
+              \@start\n\
+              \%src =l alloc4 4\n\
+              \%dst =l alloc4 4\n\
+              \storew %word, %src\n\
+              \storew 42, %dst\n\
+              \blit %src, %dst, 0\n\
+              \%ret =w loadw %dst\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VWord 42)
     ]
 
 simTests :: TestTree

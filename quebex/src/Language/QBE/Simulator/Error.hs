@@ -5,6 +5,7 @@
 module Language.QBE.Simulator.Error where
 
 import Control.Exception (Exception)
+import Language.QBE.Simulator.Memory (Address)
 import Language.QBE.Types qualified as QBE
 
 data EvalError
@@ -21,6 +22,7 @@ data EvalError
   | AssignedVoidReturnValue
   | InvaldSubWordExtension
   | InvalidAddressType
+  | OverlappingBlit Address Address
   | FuncArgsMismatch QBE.GlobalIdent
   deriving (Eq)
 
@@ -39,5 +41,6 @@ instance Show EvalError where
   show InvaldSubWordExtension = "InvaldSubWordExtension"
   show InvalidAddressType = "InvalidAddressType"
   show (FuncArgsMismatch ident) = "FuncArgsMismatch: '" ++ show ident ++ "'"
+  show (OverlappingBlit a1 a2) = "Addresses for Blit instruction overlap: " ++ show a1 ++ " and " ++ show a2
 
 instance Exception EvalError
