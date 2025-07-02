@@ -212,6 +212,20 @@ loadToExtType (LBase Long) = Base Long
 loadToExtType (LBase Single) = Base Single
 loadToExtType (LBase Double) = Base Double
 
+-- TODO: Distinict types for floating point comparison?
+data CmpOp
+  = CEq
+  | CNe
+  | CSle
+  | CSlt
+  | CSge
+  | CSgt
+  | CUle
+  | CUlt
+  | CUge
+  | CUgt
+  deriving (Show, Eq)
+
 data Instr
   = Add Value Value
   | Sub Value Value
@@ -219,6 +233,7 @@ data Instr
     Mul Value Value
   | Alloc AllocSize Word64
   | Load LoadType Value
+  | Compare BaseType CmpOp Value Value
   deriving (Show, Eq)
 
 data VolatileInstr

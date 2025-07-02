@@ -786,7 +786,8 @@ instr =
       try $ binaryInstr Q.Sub "sub",
       try $ binaryInstr Q.Mul "mul",
       try $ loadInstr,
-      try $ allocInstr
+      try $ allocInstr,
+      try $ compareInstr
     ]
 \end{code}
 
@@ -926,7 +927,38 @@ address of a variable.
 
 \subsection{Comparisons}
 
-To-Do.
+Comparison instructions return an integer value (either a word or a long), and
+compare values of arbitrary types. The returned value is 1 if the two operands
+satisfy the comparison relation, or 0 otherwise. The names of comparisons
+respect a standard naming scheme in three parts.
+
+\begin{code}
+compareInstr :: Parser Q.Instr
+compareInstr = do
+  _ <- char 'c'
+  op <- compareOp
+  ty <- ws1 baseType
+  lhs <- ws val <* ws (char ',')
+  rhs <- ws val
+  pure $ Q.Compare ty op lhs rhs
+\end{code}
+
+\begin{code}
+compareOp :: Parser Q.CmpOp
+compareOp = choice
+  [ bind "eq" Q.CEq
+  , bind "ne" Q.CNe
+  , try $ bind "sle" Q.CSle
+  , try $ bind "slt" Q.CSlt
+  , try $ bind "sge" Q.CSge
+  , try $ bind "sgt" Q.CSgt
+  , try $ bind "ule" Q.CUle
+  , try $ bind "ult" Q.CUlt
+  , try $ bind "uge" Q.CUge
+  , try $ bind "ugt" Q.CUgt ]
+\end{code}
+
+For example, \texttt{cod} (\texttt{I(dd,dd)}) compares two double-precision floating point numbers and returns 1 if the two floating points are not NaNs, or 0 otherwise. The \texttt{csltw} (\texttt{I(ww,ww)}) instruction compares two words representing signed numbers and returns 1 when the first argument is smaller than the second one.
 
 \subsection{Conversions}
 
