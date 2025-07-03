@@ -38,6 +38,10 @@ class ValueRepr v where
 
   eq :: v -> v -> Maybe v
   ne :: v -> v -> Maybe v
+  sle :: v -> v -> Maybe v
+  slt :: v -> v -> Maybe v
+  sge :: v -> v -> Maybe v
+  sgt :: v -> v -> Maybe v
   ule :: v -> v -> Maybe v
   ult :: v -> v -> Maybe v
   uge :: v -> v -> Maybe v
@@ -50,6 +54,10 @@ boolToValue False = fromLit QBE.Long 0
 compareExpr :: (ValueRepr v) => QBE.CmpOp -> (v -> v -> Maybe v)
 compareExpr QBE.CEq = eq
 compareExpr QBE.CNe = ne
+compareExpr QBE.CSle = sle
+compareExpr QBE.CSlt = slt
+compareExpr QBE.CSge = sge
+compareExpr QBE.CSgt = sgt
 compareExpr QBE.CUle = ule
 compareExpr QBE.CUlt = ult
 compareExpr QBE.CUge = uge

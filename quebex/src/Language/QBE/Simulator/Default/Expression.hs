@@ -10,7 +10,7 @@ module Language.QBE.Simulator.Default.Expression where
 import Control.Monad (foldM)
 import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
 import Data.Functor ((<&>))
-import Data.Int (Int16, Int64, Int8)
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
 import Language.QBE.Simulator.Default.Generator (generateOperators)
@@ -126,8 +126,13 @@ instance ValueRepr RegVal where
   sub = sub'
   mul = mul'
 
+  -- TODO: Provide default implementations
   eq = eq'
   ne = ne'
+  sle = sle'
+  slt = slt'
+  sge = sge'
+  sgt = sgt'
   ule = ule'
   ult = ult'
   uge = uge'

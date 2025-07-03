@@ -51,6 +51,7 @@ test-suite quebex-test
     other-modules:
       Analysis,
       Simulator,
+      Expression,
       Memory
 
     build-depends:

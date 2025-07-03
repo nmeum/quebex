@@ -88,6 +88,19 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
   | qtype lhs == qtype rhs = Just $ lhs {sexpr = slhs `op` srhs}
   | otherwise = Nothing
 
+binaryBoolOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
+binaryBoolOp op lhs rhs = do
+  bv <- binaryOp op lhs rhs
+  -- TODO: Can we get rid of the ITE somehow?
+  return $ fromSExpr QBE.Long (SMT.ite (toSExpr bv) trueValue falseValue)
+  where
+    -- TODO: Declare these as constants.
+    trueValue :: SMT.SExpr
+    trueValue = toSExpr $ E.fromLit QBE.Long 1
+
+    falseValue :: SMT.SExpr
+    falseValue = toSExpr $ E.fromLit QBE.Long 0
+
 -- TODO: If we Change E.ValueRepr to operate in 'Exec' then we can do IO stuff here.
 instance E.ValueRepr BitVector where
   fromLit ty n =
@@ -136,3 +149,14 @@ instance E.ValueRepr BitVector where
   add = binaryOp SMT.bvAdd
   sub = binaryOp SMT.bvSub
   mul = binaryOp SMT.bvMul
+
+  eq = binaryBoolOp SMT.eq
+  ne = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.eq lhs rhs)
+  sle = binaryBoolOp SMT.bvSLeq
+  slt = binaryBoolOp SMT.bvSLt
+  sge = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvSLt lhs rhs)
+  sgt = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvSLeq lhs rhs)
+  ule = binaryBoolOp SMT.bvULeq
+  ult = binaryBoolOp SMT.bvULt
+  uge = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvULt lhs rhs)
+  ugt = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvULeq lhs rhs)

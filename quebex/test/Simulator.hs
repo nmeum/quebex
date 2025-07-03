@@ -530,7 +530,42 @@ blockTests =
               \ret %ret\n\
               \}"
 
-          res @?= Just (D.VWord 42)
+          res @?= Just (D.VWord 42),
+      testCase "Comparision instruction" $
+        do
+          let prog =
+                "function w $main(w %lhs, w %rhs) {\n\
+                \@start\n\
+                \%r =w csltw %lhs, %rhs\n\
+                \ret %r\n\
+                \}"
+
+          resLarger <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              [D.VWord 0, D.VWord 1]
+              prog
+          resLarger @?= Just (D.VWord 1)
+
+          resSmaller <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              [D.VWord 1, D.VWord 0]
+              prog
+          resSmaller @?= Just (D.VWord 0),
+      testCase "Compare with subtyping" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              [D.VWord 1, D.VLong 0]
+              "function w $main(w %lhs, l %rhs) {\n\
+              \@start\n\
+              \%r =w csltw %lhs, %rhs\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 0)
     ]
 
 simTests :: TestTree
