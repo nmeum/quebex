@@ -787,7 +787,8 @@ instr =
       try $ binaryInstr Q.Mul "mul",
       try $ loadInstr,
       try $ allocInstr,
-      try $ compareInstr
+      try $ compareInstr,
+      try $ extInstr
     ]
 \end{code}
 
@@ -962,7 +963,23 @@ For example, \texttt{cod} (\texttt{I(dd,dd)}) compares two double-precision floa
 
 \subsection{Conversions}
 
-To-Do.
+\begin{code}
+subLongType :: Parser Q.SubLongType
+subLongType = try (Q.SLSubWord <$> subWordType)
+  <|> bind "sw" Q.SLSignedWord
+  <|> bind "uw" Q.SLUnsignedWord
+
+extInstr :: Parser Q.Instr
+extInstr = do
+  _ <- string "ext"
+  ty <- ws1 subLongType
+  ws val <&> Q.Ext ty
+\end{code}
+
+Conversion operations change the representation of a value, possibly modifying
+it if the target type cannot hold the value of the source type. Conversions can
+extend the precision of a temporary (e.g., from signed 8-bit to 32-bit), or
+convert a floating point into an integer and vice versa.
 
 \subsection{Cast and Copy}
 

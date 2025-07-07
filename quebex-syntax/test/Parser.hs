@@ -131,7 +131,12 @@ funcTests =
         let c = Compare Word CSlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
-         in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f
+         in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,
+      testCase "Function definition with extend instruction" $
+        let c = Ext SLSignedWord (VConst (Const (Number 42)))
+            b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
+            f = FuncDef [] (GlobalIdent "f") Nothing [] b
+         in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

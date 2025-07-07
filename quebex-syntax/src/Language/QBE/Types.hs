@@ -212,6 +212,12 @@ loadToExtType (LBase Long) = Base Long
 loadToExtType (LBase Single) = Base Single
 loadToExtType (LBase Double) = Base Double
 
+data SubLongType
+  = SLSubWord SubWordType
+  | SLSignedWord
+  | SLUnsignedWord
+  deriving (Show, Eq)
+
 -- TODO: Distinict types for floating point comparison?
 data CmpOp
   = CEq
@@ -234,6 +240,7 @@ data Instr
   | Alloc AllocSize Word64
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
+  | Ext SubLongType Value
   deriving (Show, Eq)
 
 data VolatileInstr
