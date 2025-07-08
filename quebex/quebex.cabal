@@ -41,6 +41,22 @@ library
       Language.QBE.Simulator.Default.Expression,
       Language.QBE.Simulator.Default.Generator,
 
+benchmark quebex-benchmarks
+    import:           warnings
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   bench
+    main-is:          Main.hs
+
+    other-modules:
+      Exec
+
+    build-depends:
+      base ^>=4.19.1.0,
+      criterion ^>= 1.6.4.0,
+      quebex,
+      quebex-syntax
+
 test-suite quebex-test
     import:           warnings
     default-language: GHC2021

@@ -13,3 +13,9 @@ SPDX-License-Identifier = "GPL-3.0-only"
 path = "quebex-syntax/test/golden/*"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
 SPDX-License-Identifier = "GPL-3.0-only"
+
+# Machine-generated files as obtained by `cproc -emit-qbe`.
+[[annotations]]
+path = "quebex/bench/data/*.qbe"
+SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
+SPDX-License-Identifier = "Unlicense"
