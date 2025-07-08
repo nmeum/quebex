@@ -113,5 +113,6 @@ instance E.ValueRepr Concolic where
   uge = binaryOp E.uge E.uge
   ugt = binaryOp E.ugt E.ugt
 
-  extend ty = unaryOp (E.extend ty) (E.extend ty)
+  swToLong ty = unaryOp (E.swToLong ty) (E.swToLong ty)
+  wordToLong ty = unaryOp (E.wordToLong ty) (E.wordToLong ty)
   subType ty = unaryOp (E.subType ty) (E.subType ty)

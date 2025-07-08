@@ -101,11 +101,19 @@ instance ValueRepr RegVal where
   toAddress (VLong v) = Just v
   toAddress _ = Nothing
 
-  extend QBE.SignedByte (VByte b) = Just $ VLong (fromIntegral (fromIntegral (fromIntegral b :: Int8) :: Int64))
-  extend QBE.UnsignedByte (VByte b) = Just $ VLong (fromIntegral b)
-  extend QBE.SignedHalf (VHalf h) = Just $ VLong (fromIntegral (fromIntegral (fromIntegral h :: Int16) :: Int64))
-  extend QBE.UnsignedHalf (VHalf h) = Just $ VLong (fromIntegral h)
-  extend _ _ = Nothing
+  swToLong QBE.SignedByte (VByte b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
+  swToLong QBE.UnsignedByte (VByte b) = Just $ VLong (fromIntegral b)
+  swToLong QBE.SignedHalf (VHalf h) = Just $ VLong (fromIntegral (fromIntegral h :: Int16))
+  swToLong QBE.UnsignedHalf (VHalf h) = Just $ VLong (fromIntegral h)
+  swToLong _ _ = Nothing
+
+  wordToLong (QBE.SLSubWord QBE.SignedByte) (VWord b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
+  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (VWord b) = Just $ VLong (fromIntegral b)
+  wordToLong (QBE.SLSubWord QBE.SignedHalf) (VWord h) = Just $ VLong (fromIntegral (fromIntegral h :: Int16))
+  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (VWord h) = Just $ VLong (fromIntegral h)
+  wordToLong QBE.SLSignedWord (VWord w) = Just $ VLong (fromIntegral (fromIntegral w :: Int32))
+  wordToLong QBE.SLUnsignedWord (VWord w) = Just $ VLong (fromIntegral w)
+  wordToLong _ _ = Nothing
 
   subType QBE.Word v@(VWord _) = Just v
   subType QBE.Word (VLong l) = Just $ VWord (fromIntegral $ l .&. 0xffffffff)

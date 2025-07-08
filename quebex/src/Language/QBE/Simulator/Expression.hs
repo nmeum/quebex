@@ -27,8 +27,9 @@ class ValueRepr v where
   fromAddress :: MEM.Address -> v
   toAddress :: v -> Maybe MEM.Address
 
-  -- TODO: rename extend to extend to extendToLong
-  extend :: QBE.SubWordType -> v -> Maybe v
+  -- TODO: Resolve code duplication between swToLong and wordToLong
+  swToLong :: QBE.SubWordType -> v -> Maybe v
+  wordToLong :: QBE.SubLongType -> v -> Maybe v
   subType :: QBE.BaseType -> v -> Maybe v
   isZero :: v -> Bool
 

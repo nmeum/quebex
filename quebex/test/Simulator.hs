@@ -565,7 +565,33 @@ blockTests =
               \ret %r\n\
               \}"
 
-          res @?= Just (D.VWord 0)
+          res @?= Just (D.VWord 0),
+      testCase "Sign extend subword" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "ext")
+              [D.VWord 128]
+              "function w $ext(w %word) {\n\
+              \@start\n\
+              \%r =w extsb %word\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 0xffffff80),
+      testCase "Zero extend subword" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "ext")
+              [D.VWord 128]
+              "function w $ext(w %word) {\n\
+              \@start\n\
+              \%r =w extub %word\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 0x00000080)
     ]
 
 simTests :: TestTree

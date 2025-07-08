@@ -31,9 +31,15 @@ subTypeE ty v =
     Nothing -> throwError TypingError
     Just rt -> pure rt
 
-extendE :: (E.ValueRepr v) => QBE.SubWordType -> v -> Exec v t v
-extendE ty v =
-  case E.extend ty v of
+swToLongE :: (E.ValueRepr v) => QBE.SubWordType -> v -> Exec v t v
+swToLongE ty v =
+  case E.swToLong ty v of
+    Nothing -> throwError TypingError
+    Just rt -> pure rt
+
+wordToLongE :: (E.ValueRepr v) => QBE.SubLongType -> v -> Exec v t v
+wordToLongE ty v =
+  case E.wordToLong ty v of
     Nothing -> throwError InvaldSubWordExtension
     Just rt -> pure rt
 

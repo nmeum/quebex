@@ -92,11 +92,11 @@ valueReprTests =
           let bytes = (E.toBytes (E.fromLit QBE.Word 0xacacacac :: SE.BitVector) :: [SE.BitVector])
           let byte = head bytes
 
-          let sext = fromJust $ E.extend QBE.SignedByte byte
+          let sext = fromJust $ E.swToLong QBE.SignedByte byte
           sextVal <- SMT.getExpr s (SE.toSExpr sext)
           sextVal @?= SMT.Bits 64 0xffffffffffffffac
 
-          let zext = fromJust $ E.extend QBE.UnsignedByte byte
+          let zext = fromJust $ E.swToLong QBE.UnsignedByte byte
           zextVal <- SMT.getExpr s (SE.toSExpr zext)
           zextVal @?= SMT.Bits 64 0xac
     ]

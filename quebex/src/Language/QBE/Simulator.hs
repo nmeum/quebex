@@ -85,7 +85,7 @@ execInstr retTy (QBE.Load ty addr) = do
 
   val <- toAddressE addrVal >>= readMemory ty
   ret <- case ty of
-    QBE.LSubWord t -> extendE t val
+    QBE.LSubWord t -> swToLongE t val
     QBE.LBase _ -> pure val
   subTypeE retTy ret
 execInstr QBE.Long (QBE.Alloc size align) =
@@ -97,6 +97,9 @@ execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
 
   let exprOp = E.compareExpr cmpOp
   runBinary retTy exprOp v1 v2
+execInstr retTy (QBE.Ext subLongTy value) = do
+  v <- lookupValue QBE.Word value
+  wordToLongE subLongTy v >>= subTypeE retTy
 
 execStmt :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v t ()
 execStmt (QBE.Assign name ty inst) = do

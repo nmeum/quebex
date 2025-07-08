@@ -121,16 +121,24 @@ instance E.ValueRepr BitVector where
   fromAddress addr = fromReg (E.fromLit QBE.Long addr)
 
   -- TODO: Don't hardcode bitsizes here
-  -- TODO: refactor (just need to select sign/zero extend)
-  extend QBE.SignedByte (BitVector {sexpr = s, qtype = QBE.Byte}) =
+  -- TODO: refactor (just need to select sign/zero wordToLong)
+  swToLong QBE.SignedByte (BitVector {sexpr = s, qtype = QBE.Byte}) =
     Just $ BitVector (SMT.signExtend 56 s) (QBE.Base QBE.Long)
-  extend QBE.UnsignedByte (BitVector {sexpr = s, qtype = QBE.Byte}) =
+  swToLong QBE.UnsignedByte (BitVector {sexpr = s, qtype = QBE.Byte}) =
     Just $ BitVector (SMT.zeroExtend 56 s) (QBE.Base QBE.Long)
-  extend QBE.SignedHalf (BitVector {sexpr = s, qtype = QBE.HalfWord}) =
+  swToLong QBE.SignedHalf (BitVector {sexpr = s, qtype = QBE.HalfWord}) =
     Just $ BitVector (SMT.signExtend 48 s) (QBE.Base QBE.Long)
-  extend QBE.UnsignedHalf (BitVector {sexpr = s, qtype = QBE.HalfWord}) =
+  swToLong QBE.UnsignedHalf (BitVector {sexpr = s, qtype = QBE.HalfWord}) =
     Just $ BitVector (SMT.zeroExtend 48 s) (QBE.Base QBE.Long)
-  extend _ _ = Nothing
+  swToLong _ _ = Nothing
+
+  wordToLong (QBE.SLSubWord swTy) v@(BitVector {qtype = QBE.Base QBE.Word}) =
+    E.swToLong swTy v
+  wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
+    Just $ BitVector (SMT.signExtend 32 s) (QBE.Base QBE.Long)
+  wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
+    Just $ BitVector (SMT.zeroExtend 32 s) (QBE.Base QBE.Long)
+  wordToLong _ _ = Nothing
 
   subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
   subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
