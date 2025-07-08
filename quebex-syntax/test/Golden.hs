@@ -69,5 +69,6 @@ goldenTests =
       runTest "function-definition",
       runTest "call-instruction",
       runTest "load-instructions",
-      runTest "value-global"
+      runTest "value-global",
+      runTest "bubble-sort"
     ]
