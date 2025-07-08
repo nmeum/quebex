@@ -56,7 +56,7 @@ runTest testName =
     (\_ -> pure ())
   where
     fullPath :: FilePath
-    fullPath = "test" </> "golden" </> (testName ++ ".ssa")
+    fullPath = "test" </> "golden" </> (testName ++ ".qbe")
 
 ------------------------------------------------------------------------
 
