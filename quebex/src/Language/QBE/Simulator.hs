@@ -185,5 +185,5 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
 
 runExec :: (T.Tracer t v, E.ValueRepr v) => Program -> Exec v t a -> t -> IO (Either EvalError a)
 runExec prog env tracer = do
-  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 128 tracer
+  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 (1024 * 1024 * 10) tracer
   runExceptT (runStateT env emptyEnv) <&> fmap fst
