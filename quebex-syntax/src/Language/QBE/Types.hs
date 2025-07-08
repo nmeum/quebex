@@ -237,7 +237,7 @@ data Instr
   | Sub Value Value
   | -- | Div Value Value
     Mul Value Value
-  | Alloc AllocSize Word64
+  | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
   | Ext SubLongType Value

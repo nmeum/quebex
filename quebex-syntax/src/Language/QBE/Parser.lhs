@@ -914,7 +914,7 @@ frontends generate calls to a supporting \texttt{memcpy} function.
 allocInstr :: Parser Q.Instr
 allocInstr = do
   siz <- (ws $ string "alloc") >> (ws1 allocSize)
-  decNumber <&> Q.Alloc siz
+  val <&> Q.Alloc siz
 \end{code}
 
 These instructions allocate a chunk of memory on the stack. The number ending

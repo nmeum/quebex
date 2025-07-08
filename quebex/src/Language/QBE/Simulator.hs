@@ -88,7 +88,8 @@ execInstr retTy (QBE.Load ty addr) = do
     QBE.LSubWord t -> swToLongE t val
     QBE.LBase _ -> pure val
   subTypeE retTy ret
-execInstr QBE.Long (QBE.Alloc align size) =
+execInstr QBE.Long (QBE.Alloc align sizeValue) = do
+  size <- lookupValue QBE.Long sizeValue >>= toAddressE
   stackAlloc size (fromIntegral $ QBE.getSize align)
 execInstr _ QBE.Alloc {} = throwError InvalidAddressType
 execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
