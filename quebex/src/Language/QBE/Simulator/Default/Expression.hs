@@ -7,9 +7,7 @@
 
 module Language.QBE.Simulator.Default.Expression where
 
-import Control.Monad (foldM)
 import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
-import Data.Functor ((<&>))
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
@@ -20,32 +18,26 @@ import Language.QBE.Types qualified as QBE
 -- TODO: Can we just wrap base type here?
 -- TODO: Do not export the constructors
 data RegVal
-  = VByte Word8
-  | VHalf Word16
-  | VWord Word32
+  = VWord Word32
   | VLong Word64
   | VSingle Float
   | VDouble Double
   deriving (Show, Eq)
 
 fromBits :: Int -> Integer -> Maybe RegVal
-fromBits 8 = Just . VByte . fromIntegral
-fromBits 16 = Just . VHalf . fromIntegral
 fromBits 32 = Just . VWord . fromIntegral
 fromBits 64 = Just . VLong . fromIntegral
 fromBits _ = const Nothing
 
 ------------------------------------------------------------------------
 
-regToBytes :: RegVal -> [RegVal]
+regToBytes :: RegVal -> [Word8]
 regToBytes val =
   let f w =
         map
-          (\off -> VByte (fromIntegral $ shiftR w off .&. 0xff))
+          (\off -> fromIntegral $ shiftR w off .&. 0xff)
           (take (bytesize w) $ iterate (+ 8) 0)
    in case val of
-        b@(VByte _) -> [b]
-        (VHalf v) -> f v
         (VWord v) -> f v
         (VLong v) -> f v
         (VSingle v) -> toBytes (VWord $ castFloatToWord32 v)
@@ -54,32 +46,27 @@ regToBytes val =
     bytesize :: (FiniteBits a) => a -> Int
     bytesize v = finiteBitSize v `div` 8
 
-regFromBytes :: QBE.ExtType -> [RegVal] -> Maybe RegVal
+regFromBytes :: QBE.LoadType -> [Word8] -> Maybe RegVal
 regFromBytes ty lst =
   let f a =
-        foldM
-          ( \x (r, i) -> do
-              byte <- getByte r
-              pure $ (fromIntegral byte `shift` (i * 8)) .|. x
-          )
+        foldl
+          (\acc (byte, idx) -> (fromIntegral byte `shift` (idx * 8)) .|. acc)
           0
           $ zip a [0 ..]
    in case (ty, lst) of
-        (QBE.Byte, [byte]) -> Just byte
-        (QBE.HalfWord, bytes@[_, _]) -> f bytes <&> VHalf
-        (QBE.Base QBE.Word, bytes@[_, _, _, _]) -> f bytes <&> VWord
-        (QBE.Base QBE.Long, bytes@[_, _, _, _, _, _, _, _]) -> f bytes <&> VLong
-        (QBE.Base QBE.Single, bytes@[_, _, _, _]) ->
-          f bytes <&> VSingle . castWord32ToFloat
-        (QBE.Base QBE.Double, bytes@[_, _, _, _, _, _, _, _]) ->
-          f bytes <&> VDouble . castWord64ToDouble
+        (QBE.LSubWord QBE.UnsignedByte, [byte]) -> Just $ (VWord (fromIntegral byte))
+        (QBE.LSubWord QBE.SignedByte, [byte]) -> Just $ (VWord $ fromIntegral (fromIntegral byte :: Int8))
+        (QBE.LSubWord QBE.SignedHalf, bytes@[_, _]) -> Just $ (VWord $ fromIntegral (f bytes :: Int16))
+        (QBE.LSubWord QBE.UnsignedHalf, bytes@[_, _]) -> Just $ (VWord $ fromIntegral (f bytes :: Word16))
+        (QBE.LBase QBE.Word, bytes@[_, _, _, _]) -> Just $ (VWord $ f bytes)
+        (QBE.LBase QBE.Long, bytes@[_, _, _, _, _, _, _, _]) -> Just $ (VLong $ f bytes)
+        (QBE.LBase QBE.Single, bytes@[_, _, _, _]) ->
+          Just (VSingle $ castWord32ToFloat (f bytes))
+        (QBE.LBase QBE.Double, bytes@[_, _, _, _, _, _, _, _]) ->
+          Just (VDouble $ castWord64ToDouble (f bytes))
         _ -> Nothing
-  where
-    getByte :: RegVal -> Maybe Word8
-    getByte (VByte byte) = Just byte
-    getByte _ = Nothing
 
-instance Storable RegVal where
+instance Storable RegVal Word8 where
   toBytes = regToBytes
   fromBytes = regFromBytes
 
@@ -101,12 +88,6 @@ instance ValueRepr RegVal where
   toAddress (VLong v) = Just v
   toAddress _ = Nothing
 
-  swToLong QBE.SignedByte (VByte b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
-  swToLong QBE.UnsignedByte (VByte b) = Just $ VLong (fromIntegral b)
-  swToLong QBE.SignedHalf (VHalf h) = Just $ VLong (fromIntegral (fromIntegral h :: Int16))
-  swToLong QBE.UnsignedHalf (VHalf h) = Just $ VLong (fromIntegral h)
-  swToLong _ _ = Nothing
-
   wordToLong (QBE.SLSubWord QBE.SignedByte) (VWord b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
   wordToLong (QBE.SLSubWord QBE.UnsignedByte) (VWord b) = Just $ VLong (fromIntegral b)
   wordToLong (QBE.SLSubWord QBE.SignedHalf) (VWord h) = Just $ VLong (fromIntegral (fromIntegral h :: Int16))
@@ -122,8 +103,6 @@ instance ValueRepr RegVal where
   subType QBE.Double v@(VDouble _) = Just v
   subType _ _ = Nothing
 
-  isZero (VByte 0) = True
-  isZero (VHalf 0) = True
   isZero (VWord 0) = True
   isZero (VLong 0) = True
   isZero (VSingle 0) = True

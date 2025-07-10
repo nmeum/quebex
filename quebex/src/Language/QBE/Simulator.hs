@@ -36,7 +36,7 @@ type BlockResult v = (Either (Maybe v) QBE.Block)
 
 ------------------------------------------------------------------------
 
-execVolatile :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.VolatileInstr -> Exec v t ()
+execVolatile :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.VolatileInstr -> Exec v b t ()
 execVolatile (QBE.Store valTy valReg addrReg) = do
   -- Since byte and half are not first-class types in the IL, they are
   -- stored as words and have to be looked up as such.
@@ -67,7 +67,7 @@ execVolatile (QBE.Blit src dst toCopy) = do
       )
       [0 .. toCopy - 1]
 
-execInstr :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v t v
+execInstr :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v b t v
 execInstr retTy (QBE.Add lhs rhs) = do
   v1 <- lookupValue retTy lhs
   v2 <- lookupValue retTy rhs
@@ -84,10 +84,7 @@ execInstr retTy (QBE.Load ty addr) = do
   addrVal <- lookupValue QBE.Long addr
 
   val <- toAddressE addrVal >>= readMemory ty
-  ret <- case ty of
-    QBE.LSubWord t -> swToLongE t val
-    QBE.LBase _ -> pure val
-  subTypeE retTy ret
+  subTypeE retTy val
 execInstr QBE.Long (QBE.Alloc align sizeValue) = do
   size <- lookupValue QBE.Long sizeValue >>= toAddressE
   stackAlloc size (fromIntegral $ QBE.getSize align)
@@ -102,7 +99,7 @@ execInstr retTy (QBE.Ext subLongTy value) = do
   v <- lookupValue QBE.Word value
   wordToLongE subLongTy v >>= subTypeE retTy
 
-execStmt :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Statement -> Exec v t ()
+execStmt :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.Statement -> Exec v b t ()
 execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
   modifyFrame (storeLocal name newVal)
@@ -127,7 +124,7 @@ execStmt (QBE.Call ret toCall params) = do
           subTyped <- subTypeE baseTy retVal
           modifyFrame (storeLocal ident subTyped)
 
-execJump :: (T.Tracer t v, E.ValueRepr v) => QBE.JumpInstr -> Exec v t (BlockResult v)
+execJump :: (T.Tracer t v, E.ValueRepr v) => QBE.JumpInstr -> Exec v b t (BlockResult v)
 execJump QBE.Halt = throwError EncounteredHalt
 execJump (QBE.Jump ident) = do
   blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
@@ -154,12 +151,12 @@ execJump (QBE.Return v) = do
         then pure (Left Nothing)
         else throwError InvalidReturnValue
 
-execBlock :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.Block -> Exec v t (BlockResult v)
+execBlock :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.Block -> Exec v b t (BlockResult v)
 execBlock block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 
-execFunc :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v t (Maybe v)
+execFunc :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.FuncDef -> [v] -> Exec v b t (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
   when (length params /= length args) $
@@ -174,7 +171,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     Right _block -> throwError MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (T.Tracer t v, E.Storable v, E.ValueRepr v) => BlockResult v -> Exec v t (BlockResult v)
+    go :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => BlockResult v -> Exec v b t (BlockResult v)
     go retValue@(Left _) = pure retValue
     go (Right nextBlock) = execBlock nextBlock >>= go
 
@@ -183,7 +180,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName (QBE.Env n) = n
     paramName QBE.Variadic = error "variadic parameters not supported"
 
-runExec :: (T.Tracer t v, E.ValueRepr v) => Program -> Exec v t a -> t -> IO (Either EvalError a)
+runExec :: (E.Storable v b, T.Tracer t v, E.ValueRepr v) => Program -> Exec v b t a -> t -> IO (Either EvalError a)
 runExec prog env tracer = do
   emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 (1024 * 1024 * 10) tracer
   runExceptT (runStateT env emptyEnv) <&> fmap fst

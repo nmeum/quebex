@@ -7,17 +7,13 @@ module Language.QBE.Simulator.Default.Generator (generateOperators) where
 import Language.Haskell.TH
 
 data ValueCons
-  = VByte
-  | VHalf
-  | VWord
+  = VWord
   | VLong
   | VSingle
   | VDouble
   deriving (Show)
 
 toSigned :: ValueCons -> Maybe String
-toSigned VByte = Just "Int8"
-toSigned VHalf = Just "Int16"
 toSigned VWord = Just "Int32"
 toSigned VLong = Just "Int64"
 toSigned VSingle = Nothing
@@ -85,9 +81,7 @@ operators =
 -- TODO: Could also implement Ord on ValueCons and use a range.
 cons :: [ValueCons]
 cons =
-  [ VByte,
-    VHalf,
-    VWord,
+  [ VWord,
     VLong,
     VSingle,
     VDouble
