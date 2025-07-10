@@ -179,6 +179,12 @@ data FuncParam
   | Variadic
   deriving (Show, Eq)
 
+data FuncArg
+  = ArgReg Abity Value
+  | ArgEnv Value
+  | ArgVar
+  deriving (Show, Eq)
+
 data JumpInstr
   = Jump BlockIdent
   | Jnz Value BlockIdent BlockIdent
@@ -250,7 +256,7 @@ data VolatileInstr
 
 data Statement
   = Assign LocalIdent BaseType Instr
-  | Call (Maybe (LocalIdent, Abity)) Value [FuncParam]
+  | Call (Maybe (LocalIdent, Abity)) Value [FuncArg]
   | Volatile VolatileInstr
   deriving (Show, Eq)
 

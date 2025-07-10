@@ -136,7 +136,12 @@ funcTests =
         let c = Ext SLSignedWord (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
-         in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f
+         in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f,
+      testCase "Call instruction with integer literal value" $
+        let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
+            b = [Block {label = BlockIdent "s", stmt = [c], term = Return Nothing}]
+            f = FuncDef [] (GlobalIdent "f") Nothing [] b
+         in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

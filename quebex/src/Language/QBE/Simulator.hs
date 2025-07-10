@@ -110,7 +110,7 @@ execStmt (QBE.Volatile v) = execVolatile v
 execStmt (QBE.Call ret toCall params) = do
   funcDef <- lookupFunc toCall
   -- TODO: Check if provided args match FuncDef
-  funcArgs <- lookupParams params
+  funcArgs <- lookupArgs params
 
   mayRetVal <- execFunc funcDef funcArgs
   case mayRetVal of

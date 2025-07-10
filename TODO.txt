@@ -1,5 +1,4 @@
 * quebex-syntax:
-	* Allow call instructions with literate values
 	* Don't require jumps at the ends of basic blocks
 	* Complete the literate Haskell specification
 * quebex:

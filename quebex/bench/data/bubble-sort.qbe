@@ -199,7 +199,6 @@ function w $main() {
 @start.28
 	jmp @body.29
 @body.29
-	%max =w add 0, 1000
-	%.1 =w call $entry(w %max)
+	%.1 =w call $entry(w 1000)
 	ret 0
 }

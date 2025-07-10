@@ -136,6 +136,11 @@ bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
 quoted :: Parser a -> Parser a
 quoted = let q = char '"' in between q q
 
+parenLst :: Parser a -> Parser [a]
+parenLst p = between (ws $ char '(') (char ')') inner
+  where
+    inner = sepBy (ws p) (ws $ char ',')
+
 binaryInstr :: (Q.Value -> Q.Value -> Q.Instr) -> String -> Parser Q.Instr
 binaryInstr conc keyword = do
   _ <- ws (string keyword)
@@ -638,9 +643,7 @@ param = (Q.Env <$> (ws1 (string "env") >> local))
           Q.Regular ty <$> local
 
 params :: Parser [Q.FuncParam]
-params = between (ws $ char '(') (char ')') params'
-  where
-    params' = sepBy (ws param) (ws $ char ',')
+params = parenLst param
 \end{code}
 
 The parameter list is a comma separated list of temporary names prefixed
@@ -989,6 +992,17 @@ To-Do.
 \label{sec:call}
 
 \begin{code}
+-- TODO: Code duplication with 'param'.
+callArg :: Parser Q.FuncArg
+callArg = (Q.ArgEnv <$> (ws1 (string "env") >> val))
+    <|> (string "..." >> pure Q.ArgVar)
+    <|> do
+          ty <- ws1 abity
+          Q.ArgReg ty <$> val
+
+callArgs :: Parser [Q.FuncArg]
+callArgs = parenLst callArg
+
 callInstr :: Parser Q.Statement
 callInstr = do
   retValue <- optionMaybe $ do
@@ -996,7 +1010,7 @@ callInstr = do
     a <- ws1 abity
     return (i, a)
   toCall <- ws1 (string "call") >> ws val
-  fnArgs <- params
+  fnArgs <- callArgs
   return $ Q.Call retValue toCall fnArgs
 \end{code}
 

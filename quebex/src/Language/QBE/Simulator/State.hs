@@ -182,14 +182,14 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
     Nothing -> throwError (UnknownFunction name)
 lookupFunc _ = error "non-global functions not supported"
 
-lookupParam :: (E.ValueRepr v) => QBE.FuncParam -> Exec v t v
-lookupParam (QBE.Regular abity ident) = do
-  lookupValue (QBE.abityToBase abity) (QBE.VLocal ident)
-lookupParam (QBE.Env _) = error "env function parameters not supported"
-lookupParam QBE.Variadic = error "variadic functions not supported"
+lookupArg :: (E.ValueRepr v) => QBE.FuncArg -> Exec v t v
+lookupArg (QBE.ArgReg abity value) = do
+  lookupValue (QBE.abityToBase abity) value
+lookupArg (QBE.ArgEnv _) = error "env function parameters not supported"
+lookupArg QBE.ArgVar = error "variadic functions not supported"
 
-lookupParams :: (E.ValueRepr v) => [QBE.FuncParam] -> Exec v t [v]
-lookupParams = mapM lookupParam
+lookupArgs :: (E.ValueRepr v) => [QBE.FuncArg] -> Exec v t [v]
+lookupArgs = mapM lookupArg
 
 ------------------------------------------------------------------------
 
