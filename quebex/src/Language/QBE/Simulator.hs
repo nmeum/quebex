@@ -14,8 +14,9 @@ module Language.QBE.Simulator
   )
 where
 
+import Control.Exception (throwIO)
 import Control.Monad (when)
-import Control.Monad.Except (runExceptT, throwError)
+import Control.Monad.Cont (runContT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (runStateT)
 import Data.Functor ((<&>))
@@ -55,8 +56,9 @@ execVolatile (QBE.Blit src dst toCopy) = do
   -- destination spans are required to be either non-overlapping, or fully
   -- overlapping (source address identical to the destination address).
   when (srcAddr /= dstAddr && addrOverlap srcAddr dstAddr toCopy) $
-    throwError $
-      OverlappingBlit srcAddr dstAddr
+    liftIO $
+      throwIO $
+        OverlappingBlit srcAddr dstAddr
 
   -- Somehow allow specialization of memory copies, e.g. for quebex-symex.
   when (toCopy > 0) $
@@ -88,7 +90,7 @@ execInstr retTy (QBE.Load ty addr) = do
 execInstr QBE.Long (QBE.Alloc align sizeValue) = do
   size <- lookupValue QBE.Long sizeValue >>= toAddressE
   stackAlloc size (fromIntegral $ QBE.getSize align)
-execInstr _ QBE.Alloc {} = throwError InvalidAddressType
+execInstr _ QBE.Alloc {} = liftIO $ throwIO InvalidAddressType
 execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
   v1 <- lookupValue cmpTy lhs
   v2 <- lookupValue cmpTy rhs
@@ -115,22 +117,22 @@ execStmt (QBE.Call ret toCall params) = do
       -- XXX: Could also check funcDef for the return value.
       if isNothing ret
         then pure ()
-        else throwError FunctionReturnIgnored
+        else liftIO $ throwIO FunctionReturnIgnored
     Just retVal ->
       case ret of
-        Nothing -> throwError AssignedVoidReturnValue
+        Nothing -> liftIO $ throwIO AssignedVoidReturnValue
         Just (ident, abity) -> do
           let baseTy = QBE.abityToBase abity
           subTyped <- subTypeE baseTy retVal
           modifyFrame (storeLocal ident subTyped)
 
 execJump :: (T.Tracer t v, E.ValueRepr v) => QBE.JumpInstr -> Exec v b t (BlockResult v)
-execJump QBE.Halt = throwError EncounteredHalt
+execJump QBE.Halt = liftIO $ throwIO EncounteredHalt
 execJump (QBE.Jump ident) = do
   blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
   case find (\x -> QBE.label x == ident) blocks of
     Just bl -> pure $ Right bl
-    Nothing -> throwError (UnknownBlock ident)
+    Nothing -> liftIO $ throwIO (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
   condValue <- lookupValue QBE.Word cond
   let condResult = not $ E.isZero condValue
@@ -143,13 +145,13 @@ execJump (QBE.Return v) = do
     Just abity -> do
       retVal <-
         case v of
-          Nothing -> throwError InvalidReturnValue
+          Nothing -> liftIO $ throwIO InvalidReturnValue
           Just x -> pure x
       lookupValue (QBE.abityToBase abity) retVal <&> (Left . Just)
     Nothing ->
       if isNothing v
         then pure (Left Nothing)
-        else throwError InvalidReturnValue
+        else liftIO $ throwIO InvalidReturnValue
 
 execBlock :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.Block -> Exec v b t (BlockResult v)
 execBlock block = do
@@ -160,7 +162,8 @@ execFunc :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.FuncDef -> [v] 
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
   when (length params /= length args) $
-    throwError (FuncArgsMismatch $ QBE.fName func)
+    liftIO $
+      throwIO (FuncArgsMismatch $ QBE.fName func)
   pushStackFrame func
 
   let vars = Map.fromList $ zip (map paramName params) args
@@ -168,7 +171,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
 
   blockResult <- (execBlock block >>= go) <* popStackFrame
   case blockResult of
-    Right _block -> throwError MissingFunctionReturn
+    Right _block -> liftIO $ throwIO MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
     go :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => BlockResult v -> Exec v b t (BlockResult v)
@@ -180,7 +183,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName (QBE.Env n) = n
     paramName QBE.Variadic = error "variadic parameters not supported"
 
-runExec :: (E.Storable v b, T.Tracer t v, E.ValueRepr v) => Program -> Exec v b t a -> t -> IO (Either EvalError a)
+runExec :: (E.Storable v b, T.Tracer t v, E.ValueRepr v) => Program -> Exec v b t a -> t -> IO (Env v t b)
 runExec prog env tracer = do
   emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 (1024 * 1024 * 10) tracer
-  runExceptT (runStateT env emptyEnv) <&> fmap fst
+  runStateT (runContT env (\_ -> return ())) emptyEnv >>= (\(_, e) -> pure e)

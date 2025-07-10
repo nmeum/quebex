@@ -4,7 +4,8 @@
 
 module Language.QBE.Simulator.State where
 
-import Control.Monad.Except (ExceptT, throwError)
+import Control.Exception (throwIO)
+import Control.Monad.Cont (ContT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, get, gets, modify)
 import Data.Array.IO (IOArray)
@@ -15,26 +16,26 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 
-type Exec val byteTy tracer ret = StateT (Env val tracer byteTy) (ExceptT EvalError IO) ret
+type Exec val byteTy tracer ret = ContT () (StateT (Env val tracer byteTy) IO) ret
 
 -- TODO: Move this elsewhere or just provide a Maybe -> Exec lifter
 
 toAddressE :: (E.ValueRepr v) => v -> Exec v b t MEM.Address
 toAddressE addr =
   case E.toAddress addr of
-    Nothing -> throwError InvalidAddressType
+    Nothing -> liftIO $ throwIO InvalidAddressType
     Just rt -> pure rt
 
 subTypeE :: (E.ValueRepr v) => QBE.BaseType -> v -> Exec v b t v
 subTypeE ty v =
   case E.subType ty v of
-    Nothing -> throwError TypingError
+    Nothing -> liftIO $ throwIO TypingError
     Just rt -> pure rt
 
 wordToLongE :: (E.ValueRepr v) => QBE.SubLongType -> v -> Exec v b t v
 wordToLongE ty v =
   case E.wordToLong ty v of
-    Nothing -> throwError InvaldSubWordExtension
+    Nothing -> liftIO $ throwIO InvaldSubWordExtension
     Just rt -> pure rt
 
 runBinary :: (E.ValueRepr v) => QBE.BaseType -> (v -> v -> Maybe v) -> v -> v -> Exec v b t v
@@ -42,7 +43,7 @@ runBinary ty op lhs rhs = do
   lhs' <- subTypeE ty lhs
   rhs' <- subTypeE ty rhs
   case op lhs' rhs' of
-    Nothing -> throwError TypingError
+    Nothing -> liftIO $ throwIO TypingError
     Just rt -> pure rt
 
 ------------------------------------------------------------------------
@@ -91,14 +92,14 @@ activeFrame = do
   env <- get
   case env of
     Env {envStk = x : _} -> pure x
-    _ -> throwError EmptyStack
+    _ -> liftIO $ throwIO EmptyStack
 
 modifyFrame :: (StackFrame v -> StackFrame v) -> Exec v b t ()
 modifyFrame func = do
   stack <- gets envStk
   case stack of
     (x : xs) -> modify (\s -> s {envStk = func x : xs})
-    _ -> throwError EmptyStack
+    _ -> liftIO $ throwIO EmptyStack
 
 pushStackFrame :: QBE.FuncDef -> Exec v b t ()
 pushStackFrame f = do
@@ -145,11 +146,11 @@ readMemory ty addr = do
 
   case E.fromBytes ty bytes of
     Just x -> pure x
-    Nothing -> throwError InvalidMemoryLoad
+    Nothing -> liftIO $ throwIO InvalidMemoryLoad
 
 maybeLookup :: String -> Maybe v -> Exec v b t v
 maybeLookup _ (Just x) = pure x
-maybeLookup name Nothing = throwError $ UnknownVariable name
+maybeLookup name Nothing = liftIO $ throwIO $ UnknownVariable name
 
 lookupValue :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> Exec v b t v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
@@ -173,7 +174,7 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   funcs <- gets envFuncs
   case Map.lookup name funcs of
     Just def -> pure def
-    Nothing -> throwError (UnknownFunction name)
+    Nothing -> liftIO $ throwIO (UnknownFunction name)
 lookupFunc _ = error "non-global functions not supported"
 
 lookupArg :: (E.ValueRepr v) => QBE.FuncArg -> Exec v b t v

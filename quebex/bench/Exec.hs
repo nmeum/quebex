@@ -29,13 +29,5 @@ exec params input = do
     Just x -> pure x
     Nothing -> fail $ "unknown function: " ++ show entryFunc
 
-  result <- runExec program (execFunc func params :: Exec D.RegVal Word8 T.NoOp (Maybe D.RegVal)) T.NoOp
-  returnValue <- case result of
-    Left err -> fail $ "evaluation error: " ++ show err
-    Right v -> pure v
-
-  case returnValue of
-    Just x ->
-      unless (E.isZero x) $
-        fail "non-zero exit status"
-    Nothing -> fail $ show entryFunc ++ " must return a value"
+  _ <- runExec program (execFunc func params :: Exec D.RegVal Word8 T.NoOp (Maybe D.RegVal)) T.NoOp
+  pure ()
