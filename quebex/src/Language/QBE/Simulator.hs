@@ -2,23 +2,13 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator
-  ( Env (envMem, envStkPtr),
-    BlockResult,
-    execInstr,
-    execVolatile,
-    execStmt,
-    execBlock,
-    execFunc,
-    runExec,
-  )
-where
+module Language.QBE.Simulator where
 
 import Control.Exception (throwIO)
 import Control.Monad (when)
-import Control.Monad.Cont (runContT)
+import Control.Monad.Cont (runContT, ContT(ContT))
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (runStateT)
+import Control.Monad.State (runStateT, StateT, lift)
 import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Map qualified as Map
@@ -68,6 +58,49 @@ execVolatile (QBE.Blit src dst toCopy) = do
           writeMemory (dstAddr + off) QBE.Byte srcByte
       )
       [0 .. toCopy - 1]
+
+-- testFunc :: (E.Storable t b, T.Tracer t v, Show v) => v -> ContT v (StateT (Env v t b) IO) (Hole v)
+-- testFunc addr = ContT $ \k -> do
+--   v <- k (ReadMemory 42)
+--   liftIO $ putStrLn (show v)
+--   pure v
+
+-- we can transform this to a smaller whole erstwhere
+--
+-- this requires a `k` which transforms a `Hole v` to a `BlockResult v`.
+execJump' :: (E.ValueRepr v) => QBE.JumpInstr -> Exec' v (BlockResult v) (CFHole v)
+execJump' QBE.Halt = ContT $ \k -> k Halt
+execJump' (QBE.Jump ident) = ContT $ \k -> do
+  k (JumpTo ident)
+execJump' (QBE.Jnz cond ifT ifF) = ContT $ \k -> do
+  condValue <- lookupValue' QBE.Word cond
+  k (TakeBranch condValue ifT ifF)
+execJump' (QBE.Return v) = ContT $ \k -> do
+  func <- activeFrame' <&> stkFunc
+  case QBE.fAbity func of
+    Just abity -> do
+      retVal <-
+        case v of
+          Nothing -> liftIO $ throwIO InvalidReturnValue
+          Just x -> pure x
+      v <- lookupValue' (QBE.abityToBase abity) retVal
+      k (ReturnValue $ Just v)
+    Nothing ->
+      if isNothing v
+        then k (ReturnValue Nothing)
+        else liftIO $ throwIO InvalidReturnValue
+
+concJump :: (E.ValueRepr v) => CFHole v -> Exec' v (BlockResult v) (BlockResult v)
+concJump (ReturnValue v) = pure $ Left v
+concJump (JumpTo ident) = do
+  b <- lift $ findBlock ident
+  pure $ Right b
+concJump Halt = liftIO $ throwIO EncounteredHalt
+concJump (TakeBranch cond ifT ifF) = do
+  let condResult = not $ E.isZero cond
+  if condResult
+    then Right <$> lift (findBlock ifT)
+    else Right <$> lift (findBlock ifF)
 
 execInstr :: (T.Tracer t v, E.Storable v b, E.ValueRepr v) => QBE.BaseType -> QBE.Instr -> Exec v b t v
 execInstr retTy (QBE.Add lhs rhs) = do
@@ -187,3 +220,8 @@ runExec :: (E.Storable v b, T.Tracer t v, E.ValueRepr v) => Program -> Exec v b 
 runExec prog env tracer = do
   emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 (1024 * 1024 * 10) tracer
   runStateT (runContT env (\_ -> return ())) emptyEnv >>= (\(_, e) -> pure e)
+
+runExec' :: (E.ValueRepr v) => Program -> Exec' v a a -> IO a
+runExec' prog c = do
+  emptyEnv <- liftIO $ mkEnv' (globalFuncs prog)
+  runStateT (runContT c return) emptyEnv >>= (\(r, _) -> pure r)

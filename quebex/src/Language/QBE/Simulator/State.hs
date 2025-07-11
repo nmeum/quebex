@@ -4,6 +4,8 @@
 
 module Language.QBE.Simulator.State where
 
+import Data.Functor ((<&>))
+import Data.List (find)
 import Control.Exception (throwIO)
 import Control.Monad.Cont (ContT)
 import Control.Monad.IO.Class (liftIO)
@@ -16,7 +18,17 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 
+-- control flow hole
+data CFHole v = ReturnValue (Maybe v)
+            | JumpTo QBE.BlockIdent
+            | TakeBranch v QBE.BlockIdent QBE.BlockIdent
+            | Halt
+
 type Exec val byteTy tracer ret = ContT () (StateT (Env val tracer byteTy) IO) ret
+
+type State v = StateT (Env' v) IO
+
+type Exec' v r a = ContT r (State v) a
 
 -- TODO: Move this elsewhere or just provide a Maybe -> Exec lifter
 
@@ -28,6 +40,12 @@ toAddressE addr =
 
 subTypeE :: (E.ValueRepr v) => QBE.BaseType -> v -> Exec v b t v
 subTypeE ty v =
+  case E.subType ty v of
+    Nothing -> liftIO $ throwIO TypingError
+    Just rt -> pure rt
+
+subTypeE' :: (E.ValueRepr v) => QBE.BaseType -> v -> State v v
+subTypeE' ty v =
   case E.subType ty v of
     Nothing -> liftIO $ throwIO TypingError
     Just rt -> pure rt
@@ -86,6 +104,28 @@ mkEnv funcs a s t = do
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
+
+data Env' v
+  = Env'
+  { envGlobals' :: Map.Map QBE.GlobalIdent v,
+    envFuncs' :: Map.Map QBE.GlobalIdent QBE.FuncDef,
+    envStk' :: [StackFrame v],
+    envStkPtr' :: MEM.Address
+  }
+
+mkEnv' :: (E.ValueRepr v) => [QBE.FuncDef] -> IO (Env' v)
+mkEnv' funcs = do
+  return $ Env' Map.empty (makeFuncs funcs) [] 0
+  where
+    makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
+    makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
+
+activeFrame' :: State v (StackFrame v)
+activeFrame' = do
+  env <- get
+  case env of
+    Env' {envStk' = x : _} -> pure x
+    _ -> liftIO $ throwIO EmptyStack
 
 activeFrame :: Exec v b t (StackFrame v)
 activeFrame = do
@@ -148,9 +188,37 @@ readMemory ty addr = do
     Just x -> pure x
     Nothing -> liftIO $ throwIO InvalidMemoryLoad
 
+findBlock :: (E.ValueRepr v) => QBE.BlockIdent -> State v QBE.Block
+findBlock ident = do
+  blocks <- QBE.fBlock <$> (activeFrame' <&> stkFunc)
+  case find (\x -> QBE.label x == ident) blocks of
+    Just bl -> pure bl
+    Nothing -> liftIO $ throwIO (UnknownBlock ident)
+
+maybeLookup' :: String -> Maybe v -> State v v
+maybeLookup' _ (Just x) = pure x
+maybeLookup' name Nothing = liftIO $ throwIO $ UnknownVariable name
+
 maybeLookup :: String -> Maybe v -> Exec v b t v
 maybeLookup _ (Just x) = pure x
 maybeLookup name Nothing = liftIO $ throwIO $ UnknownVariable name
+
+lookupValue' :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> State v v
+lookupValue' ty (QBE.VConst (QBE.Const (QBE.Number v))) =
+  pure $ E.fromLit ty v
+lookupValue' ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
+  subTypeE' ty (E.fromFloat v)
+lookupValue' ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
+  subTypeE' ty (E.fromDouble v)
+lookupValue' ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
+  v <- gets envGlobals' >>= maybeLookup' (show k) . Map.lookup k
+  subTypeE' ty v
+lookupValue' ty (QBE.VConst (QBE.Thread k)) = do
+  v <- gets envGlobals' >>= maybeLookup' (show k) . Map.lookup k
+  subTypeE' ty v
+lookupValue' ty (QBE.VLocal k) = do
+  v <- activeFrame' >>= maybeLookup' (show k) . flip lookupLocal k
+  subTypeE' ty v
 
 lookupValue :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> Exec v b t v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
