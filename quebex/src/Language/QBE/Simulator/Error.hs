@@ -4,7 +4,7 @@
 
 module Language.QBE.Simulator.Error where
 
-import Control.Exception (Exception)
+import Control.Monad.Catch (Exception)
 import Language.QBE.Simulator.Memory (Address)
 import Language.QBE.Types qualified as QBE
 

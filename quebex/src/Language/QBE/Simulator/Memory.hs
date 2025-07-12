@@ -13,6 +13,7 @@ module Language.QBE.Simulator.Memory
     memSize,
     loadBytes,
     storeBytes,
+    Storable (toBytes, fromBytes),
   )
 where
 
@@ -24,13 +25,14 @@ import Data.Array.IO
     writeArray,
   )
 import Data.Word (Word64)
+import Language.QBE.Simulator.Expression (Address)
+import Language.QBE.Types qualified as QBE
 
--- | Type used to represent an address in memory.
---
--- TODO: Make 'Memory' polymorph over the adddress type.
-type Address = Word64
+class Storable valTy byteTy where
+  toBytes :: valTy -> [byteTy]
+  fromBytes :: QBE.LoadType -> [byteTy] -> Maybe valTy
 
--- | Type used to represen the memory's size.
+-- | Type used to represent the memory's size.
 type Size = Word64
 
 -- | Memory parameterized over the Array type (e.g. 'IOUArray') and a byte
@@ -54,7 +56,7 @@ toMemAddr mem addr = addr - memStart mem
 -- Returns true of the given addresses overlap in the given range.
 addrOverlap :: Address -> Address -> Address -> Bool
 addrOverlap addr1 addr2 range =
-  addr1 < (endAddr addr2) && (endAddr addr1) > addr2
+  addr1 < endAddr addr2 && endAddr addr1 > addr2
   where
     endAddr :: Address -> Address
     endAddr a = a + range
@@ -70,6 +72,7 @@ storeBytes mem addr bytes =
   where
     storeByte :: (MArray t a IO) => Memory t a -> Address -> a -> IO ()
     storeByte m a = writeArray (memBytes m) $ toMemAddr mem a
+{-# INLINEABLE storeBytes #-}
 
 loadBytes :: (MArray t a IO) => Memory t a -> Address -> Size -> IO [a]
 loadBytes mem addr byteSize =
@@ -77,3 +80,4 @@ loadBytes mem addr byteSize =
   where
     loadByte :: (MArray t a IO) => Memory t a -> Address -> IO a
     loadByte m = readArray (memBytes m) . toMemAddr m
+{-# INLINEABLE loadBytes #-}
