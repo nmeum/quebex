@@ -13,6 +13,7 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
 import Language.QBE.Simulator.Default.Generator (generateOperators)
 import Language.QBE.Simulator.Expression as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
 -- TODO: Can we just wrap base type here?
@@ -40,8 +41,8 @@ regToBytes val =
    in case val of
         (VWord v) -> f v
         (VLong v) -> f v
-        (VSingle v) -> toBytes (VWord $ castFloatToWord32 v)
-        (VDouble v) -> toBytes (VLong $ castDoubleToWord64 v)
+        (VSingle v) -> MEM.toBytes (VWord $ castFloatToWord32 v)
+        (VDouble v) -> MEM.toBytes (VLong $ castDoubleToWord64 v)
   where
     bytesize :: (FiniteBits a) => a -> Int
     bytesize v = finiteBitSize v `div` 8
@@ -54,19 +55,19 @@ regFromBytes ty lst =
           0
           $ zip a [0 ..]
    in case (ty, lst) of
-        (QBE.LSubWord QBE.UnsignedByte, [byte]) -> Just $ (VWord (fromIntegral byte))
-        (QBE.LSubWord QBE.SignedByte, [byte]) -> Just $ (VWord $ fromIntegral (fromIntegral byte :: Int8))
-        (QBE.LSubWord QBE.SignedHalf, bytes@[_, _]) -> Just $ (VWord $ fromIntegral (f bytes :: Int16))
-        (QBE.LSubWord QBE.UnsignedHalf, bytes@[_, _]) -> Just $ (VWord $ fromIntegral (f bytes :: Word16))
-        (QBE.LBase QBE.Word, bytes@[_, _, _, _]) -> Just $ (VWord $ f bytes)
-        (QBE.LBase QBE.Long, bytes@[_, _, _, _, _, _, _, _]) -> Just $ (VLong $ f bytes)
+        (QBE.LSubWord QBE.UnsignedByte, [byte]) -> Just (VWord (fromIntegral byte))
+        (QBE.LSubWord QBE.SignedByte, [byte]) -> Just (VWord $ fromIntegral (fromIntegral byte :: Int8))
+        (QBE.LSubWord QBE.SignedHalf, bytes@[_, _]) -> Just (VWord $ fromIntegral (f bytes :: Int16))
+        (QBE.LSubWord QBE.UnsignedHalf, bytes@[_, _]) -> Just (VWord $ fromIntegral (f bytes :: Word16))
+        (QBE.LBase QBE.Word, bytes@[_, _, _, _]) -> Just (VWord $ f bytes)
+        (QBE.LBase QBE.Long, bytes@[_, _, _, _, _, _, _, _]) -> Just (VLong $ f bytes)
         (QBE.LBase QBE.Single, bytes@[_, _, _, _]) ->
           Just (VSingle $ castWord32ToFloat (f bytes))
         (QBE.LBase QBE.Double, bytes@[_, _, _, _, _, _, _, _]) ->
           Just (VDouble $ castWord64ToDouble (f bytes))
         _ -> Nothing
 
-instance Storable RegVal Word8 where
+instance MEM.Storable RegVal Word8 where
   toBytes = regToBytes
   fromBytes = regFromBytes
 

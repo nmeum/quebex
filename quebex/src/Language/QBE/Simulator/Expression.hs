@@ -5,12 +5,12 @@
 module Language.QBE.Simulator.Expression where
 
 import Data.Word (Word64)
-import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
-class Storable valTy byteTy where
-  toBytes :: valTy -> [byteTy]
-  fromBytes :: QBE.LoadType -> [byteTy] -> Maybe valTy
+-- | Type used to represent a memory address.
+--
+-- TODO: Consider making this a type parameter too.
+type Address = Word64
 
 class ValueRepr v where
   -- TODO: Change this to fromWord64 and rely on long subtyping
@@ -18,8 +18,8 @@ class ValueRepr v where
   fromFloat :: Float -> v
   fromDouble :: Double -> v
 
-  fromAddress :: MEM.Address -> v
-  toAddress :: v -> Maybe MEM.Address
+  fromAddress :: Address -> v
+  toAddress :: v -> Maybe Address
 
   wordToLong :: QBE.SubLongType -> v -> Maybe v
   subType :: QBE.BaseType -> v -> Maybe v
@@ -55,3 +55,4 @@ compareExpr QBE.CUle = ule
 compareExpr QBE.CUlt = ult
 compareExpr QBE.CUge = uge
 compareExpr QBE.CUgt = ugt
+{-# INLINE compareExpr #-}

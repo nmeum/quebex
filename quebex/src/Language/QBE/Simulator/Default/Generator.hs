@@ -24,13 +24,13 @@ toSignedExp vCons expr =
   case toSigned vCons of
     Nothing -> expr
     Just st ->
-      let cast = (AppE (VarE $ mkName "fromIntegral") expr)
-       in (SigE cast (ConT $ mkName st))
+      let cast = AppE (VarE $ mkName "fromIntegral") expr
+       in SigE cast (ConT $ mkName st)
 
 ------------------------------------------------------------------------
 
 thBinaryFunc :: Exp -> Exp -> Exp -> Exp
-thBinaryFunc func lhs rhs = AppE (AppE func lhs) rhs
+thBinaryFunc func lhs = AppE (AppE func lhs)
 
 thBinaryOp :: Exp -> Exp -> Exp -> Exp
 thBinaryOp op = thBinaryFunc (ParensE op)

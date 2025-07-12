@@ -4,14 +4,14 @@
 
 module Simulator (simTests) where
 
+import Control.Monad.Catch (try)
 import Data.List (find)
 import Data.Word (Word8)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
+import Language.QBE.Simulator.Default.State (SimState, run)
 import Language.QBE.Simulator.Error
-import Language.QBE.Simulator.State (Exec)
-import Language.QBE.Simulator.Tracer as T
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -26,7 +26,7 @@ parseAndExec' funcName params input = do
     Just x -> pure x
     Nothing -> fail $ "Unknown function: " ++ show funcName
 
-  runExec prog (execFunc func params :: Exec D.RegVal Word8 T.NoOp (Maybe D.RegVal)) T.NoOp
+  try $ run prog (execFunc func params :: SimState D.RegVal Word8 (Maybe D.RegVal))
 
 parseAndExec :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Maybe D.RegVal)
 parseAndExec funcName params input = do
