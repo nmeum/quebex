@@ -100,7 +100,7 @@ exploreTests =
           branches @?= [[False], [True]]
 
           let assign = fromJust $ findAssign eTraces [False]
-          Map.lookup "input" assign @?= (Just $ DE.VWord 0),
+          Map.lookup "input" assign @?= Just (DE.VWord 0),
       testCase "Store symbolic value and memory, load it and pass it to function" $
         do
           prog <-
@@ -152,7 +152,7 @@ exploreTests =
 
           branchPoints eTraces @?= [[False], [True]]
           let assign = fromJust $ findAssign eTraces [False]
-          Map.lookup "y" assign @?= (Just $ DE.VLong 42),
+          Map.lookup "y" assign @?= Just (DE.VLong 42),
       testCase "Branching with subtyping" $
         do
           prog <-
