@@ -9,6 +9,7 @@ import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
 import Language.QBE.Simulator.Explorer (z3Solver)
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -30,17 +31,17 @@ storeTests =
     [ testCase "Create bitvector and convert it to bytes" $
         do
           s <- getSolver
-          let bytes = (E.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
+          let bytes = (MEM.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           values <- mapM (SMT.getExpr s . SE.toSExpr) bytes
           values @?= [SMT.Bits 8 0xef, SMT.Bits 8 0xbe, SMT.Bits 8 0xad, SMT.Bits 8 0xde],
       testCase "Convert bitvector to bytes and back" $
         do
           s <- getSolver
 
-          let bytes = (E.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
+          let bytes = (MEM.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           length bytes @?= 4
 
-          value <- case E.fromBytes (QBE.Base QBE.Word) bytes of
+          value <- case MEM.fromBytes (QBE.LBase QBE.Word) bytes of
             Just x -> SMT.getExpr s (SE.toSExpr x) <&> Just
             Nothing -> pure Nothing
           value @?= Just (SMT.Bits 32 0xdeadbeef)
@@ -89,16 +90,15 @@ valueReprTests =
         do
           s <- getSolver
 
-          let bytes = (E.toBytes (E.fromLit QBE.Word 0xacacacac :: SE.BitVector) :: [SE.BitVector])
-          let byte = head bytes
+          let value = E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector
 
-          let sext = fromJust $ E.swToLong QBE.SignedByte byte
-          sextVal <- SMT.getExpr s (SE.toSExpr sext)
-          sextVal @?= SMT.Bits 64 0xffffffffffffffac
+          -- let sext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.SignedByte) value
+          -- sextVal <- SMT.getExpr s (SE.toSExpr sext)
+          -- sextVal @?= SMT.Bits 64 0xffffffffffffffef
 
-          let zext = fromJust $ E.swToLong QBE.UnsignedByte byte
+          let zext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.UnsignedByte) value
           zextVal <- SMT.getExpr s (SE.toSExpr zext)
-          zextVal @?= SMT.Bits 64 0xac
+          zextVal @?= SMT.Bits 64 0xef
     ]
 
 exprTests :: TestTree

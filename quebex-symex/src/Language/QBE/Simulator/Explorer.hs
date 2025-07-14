@@ -3,16 +3,14 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 module Language.QBE.Simulator.Explorer (explore, z3Solver) where
 
-import Control.Exception (throwIO)
-import Control.Monad.State (gets)
 import Language.QBE (Program)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Simulator (execFunc, runExec)
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Error (EvalError)
-import Language.QBE.Simulator.State (envTracer)
+import Language.QBE.Simulator.Concolic.State (run)
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
@@ -53,9 +51,8 @@ findNext e@(Engine {expStore = store}) eTrace = do
 
 ------------------------------------------------------------------------
 
-traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic] -> IO (Either EvalError T.ExecTrace)
-traceFunc prog func params =
-  runExec prog (execFunc func params >> gets envTracer) T.newExecTrace
+traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic DE.RegVal] -> IO T.ExecTrace
+traceFunc prog func params = run prog (execFunc func params)
 
 explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore prog entryPoint entryParams = newEngine >>= explore'
@@ -64,7 +61,7 @@ explore prog entryPoint entryParams = newEngine >>= explore'
     explore' engine@Engine {expSolver = solver, expStore = store} = do
       varAssign <- ST.assign store
       values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
-      eTrace <- traceFunc prog entryPoint values >>= either throwIO pure
+      eTrace <- traceFunc prog entryPoint values
 
       (model, nEngine) <- findNext engine eTrace
       case model of

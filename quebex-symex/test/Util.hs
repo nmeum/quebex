@@ -4,14 +4,14 @@
 
 module Util where
 
-import Control.Monad.State (gets)
 import Data.List (find)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
-import Language.QBE.Simulator (execFunc, runExec)
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
+import Language.QBE.Simulator.Concolic.State (run)
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.State (envTracer)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Simulator.Symbolic.Tracer qualified as ST
 import Language.QBE.Types qualified as QBE
@@ -30,17 +30,13 @@ findFunc prog funcName =
     Nothing -> error $ "Unknown function: " ++ show funcName
 
 -- TODO: Code duplication with quebex/test/Simulator.hs
-parseAndExec :: QBE.GlobalIdent -> [CE.Concolic] -> String -> IO ST.ExecTrace
+parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO ST.ExecTrace
 parseAndExec funcName params input = do
   prog <- parseProg input
   let func = findFunc prog funcName
+  run prog (execFunc func params)
 
-  sTrace <- runExec prog (execFunc func params >> gets envTracer) ST.newExecTrace
-  case sTrace of
-    Left e -> fail $ "Unexpected evaluation error: " ++ show e
-    Right r -> pure r
-
-unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO CE.Concolic
+unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
   let concrete = E.fromLit ty initCon
   symbolic <- SE.symbolic solver name ty

@@ -47,7 +47,7 @@ empty = do
 -- | Obtain symbolic values as a list of 'SimpleSMT' expressions.
 sexprs :: Store -> IO [SMT.SExpr]
 sexprs Store {sValues = m} =
-  map SE.toSExpr <$> (Map.elems <$> readIORef m)
+  map SE.toSExpr . Map.elems <$> readIORef m
 
 -- | Obtain a list of concrete variable assignments.
 assign :: Store -> IO Assign
@@ -61,7 +61,7 @@ setModel store model = do
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
-getConcolic :: SMT.Solver -> Store -> String -> QBE.BaseType -> IO CE.Concolic
+getConcolic :: SMT.Solver -> Store -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 getConcolic solver store@Store {cValues = con, sValues = sym} name ty = do
   concreteMap <- readIORef con
   concrete <-
