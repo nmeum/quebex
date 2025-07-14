@@ -60,4 +60,6 @@ goldenTests :: TestTree
 goldenTests =
   testGroup
     "goldenTests"
-    [runTest "three-branches" 3 [("a", QBE.Word), ("b", QBE.Word)]]
+    [ runTest "three-branches" 3 [("a", QBE.Word), ("b", QBE.Word)],
+      runTest "prime-numbers" 15 [("a", QBE.Word)]
+    ]
