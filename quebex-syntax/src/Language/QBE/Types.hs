@@ -71,6 +71,12 @@ data SubWordType
   | UnsignedHalf
   deriving (Show, Eq)
 
+subWordByteSize :: SubWordType -> Int
+subWordByteSize UnsignedByte = 1
+subWordByteSize SignedByte = 1
+subWordByteSize SignedHalf = 2
+subWordByteSize UnsignedHalf = 2
+
 data Abity
   = ABase BaseType
   | ASubWordType SubWordType
@@ -199,10 +205,7 @@ data LoadType
 
 -- TODO: Could/Should define this on ExtType instead.
 loadByteSize :: LoadType -> Word64
-loadByteSize (LSubWord UnsignedByte) = 1
-loadByteSize (LSubWord SignedByte) = 1
-loadByteSize (LSubWord SignedHalf) = 2
-loadByteSize (LSubWord UnsignedHalf) = 2
+loadByteSize (LSubWord sw) = fromIntegral $ subWordByteSize sw
 loadByteSize (LBase Word) = 4
 loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
@@ -213,6 +216,17 @@ data SubLongType
   | SLSignedWord
   | SLUnsignedWord
   deriving (Show, Eq)
+
+subLongByteSize :: SubLongType -> Int
+subLongByteSize (SLSubWord sw) = subWordByteSize sw
+subLongByteSize SLSignedWord = 1
+subLongByteSize SLUnsignedWord = 1
+
+subLongBitSize :: SubLongType -> Int
+subLongBitSize ty = subLongByteSize ty * 8
+
+subLongSigned :: SubLongType -> Bool
+subLongSigned _ = False
 
 -- TODO: Distinict types for floating point comparison?
 data CmpOp

@@ -33,6 +33,12 @@ data BitVector
   }
   deriving (Show, Eq)
 
+bvBitSize :: BitVector -> Int
+bvBitSize BitVector { sexpr = s } =
+  case SMT.sexprToVal s of
+    SMT.Bits width _ -> width
+    _ -> error "unreachable"
+
 fromByte :: Word8 -> BitVector
 fromByte byte = BitVector (SMT.bvBin 8 $ fromIntegral byte) QBE.Byte
 
@@ -149,19 +155,11 @@ instance E.ValueRepr BitVector where
       _ -> Nothing
   fromAddress addr = fromReg (E.fromLit QBE.Long addr)
 
-  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
-  wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 32 s) (QBE.Base QBE.Long)
-  wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 32 s) (QBE.Base QBE.Long)
-  wordToLong _ _ = Nothing
+  wordToLong ty value =
+    let tyBitSize   = fromIntegral $ QBE.subLongBitSize ty
+        bvExtracted = SMT.extract (sexpr value) (tyBitSize - 1) 0
+        bvExtend    = if QBE.subLongSigned ty then SMT.signExtend else SMT.zeroExtend
+      in Just $ BitVector (bvExtend (64 - tyBitSize) bvExtracted) (QBE.Base QBE.Long)
 
   subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
   subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
