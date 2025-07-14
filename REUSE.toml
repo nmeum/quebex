@@ -10,9 +10,15 @@ SPDX-License-Identifier = "GPL-3.0-only"
 
 # We don't want to force comment headers for test files.
 [[annotations]]
-path = "quebex-syntax/test/golden/*"
+path = "quebex-syntax/test/golden/*.qbe"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
-SPDX-License-Identifier = "GPL-3.0-only"
+SPDX-License-Identifier = "Unlicense"
+
+# We don't want to force comment headers for test files.
+[[annotations]]
+path = "quebex-symex/test/golden/*.qbe"
+SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
+SPDX-License-Identifier = "Unlicense"
 
 # Machine-generated files as obtained by `cproc -emit-qbe`.
 [[annotations]]
