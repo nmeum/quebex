@@ -7,6 +7,7 @@ module Main (main) where
 import Backend (backendTests)
 import Concolic qualified as CE
 import Explorer (exploreTests)
+import Golden (goldenTests)
 import Symbolic qualified as SE
 import Test.Tasty
 
@@ -20,5 +21,6 @@ tests =
     [ SE.exprTests,
       CE.exprTests,
       backendTests,
-      exploreTests
+      exploreTests,
+      goldenTests
     ]
