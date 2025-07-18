@@ -2,16 +2,15 @@
 	* Don't require jumps at the ends of basic blocks
 	* Complete the literate Haskell specification
 * quebex:
-	* Refactor expression language to only require the base types
-	* Remove swToLong in favor of wordToLong (see To-Do regarding base types)
-	* Revise Memory implementation to allow specification of byte type
+	* Expand support for arithmetic operations
 	* Include 2-3 additional benchmark programs
-	* Refactor the modular interpreter using ConT with two goals in mind:
-		1. Get rid of the Tracer monad:
-			* Allow symbolic address concretization to update constraints
-			* Allow implementation of makeSymbolic via an intercepted function call
-		2. Improve the performance of the interpreter by reducing nesting (see benchmarks)
+	* Allow interception of function calls (see `make_symbolic` To-Do below)
 * quebex-symex:
+	* Cleanup the symbolic expression language implementation
+	* Expand golden tests based on additional arithmetic operations (see above)
+	* Consider a closer integration of the Store/Explorer and the Simulator
+	* Implement address concretization using the abstract monad
+	* Intercept function calls to allow the application to make memory symbolic through `make_symbolic`
 	* Implement a custom memory based on the theory of arrays (how do other engines do this?!)
 	* Ideally make the store pure by creating unconstrained symbolic values from Atoms later
 	* Revise handling of state in: Store, ExecTree, Tracer, Explorer (maybe use a State Monad or smth.)
