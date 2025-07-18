@@ -1,68 +1,26 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Language.QBE.Simulator.State where
 
-import Control.Monad.Except (ExceptT, throwError)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, get, gets, modify)
-import Data.Array.IO (IOArray)
+import Control.Monad.Catch (Exception, MonadThrow, throwM)
+import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
-import Language.QBE.Simulator.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
-
-type Exec val tracer ret = StateT (Env val tracer) (ExceptT EvalError IO) ret
-
--- TODO: Move this elsewhere or just provide a Maybe -> Exec lifter
-
-toAddressE :: (E.ValueRepr v) => v -> Exec v t MEM.Address
-toAddressE addr =
-  case E.toAddress addr of
-    Nothing -> throwError InvalidAddressType
-    Just rt -> pure rt
-
-subTypeE :: (E.ValueRepr v) => QBE.BaseType -> v -> Exec v t v
-subTypeE ty v =
-  case E.subType ty v of
-    Nothing -> throwError TypingError
-    Just rt -> pure rt
-
-swToLongE :: (E.ValueRepr v) => QBE.SubWordType -> v -> Exec v t v
-swToLongE ty v =
-  case E.swToLong ty v of
-    Nothing -> throwError TypingError
-    Just rt -> pure rt
-
-wordToLongE :: (E.ValueRepr v) => QBE.SubLongType -> v -> Exec v t v
-wordToLongE ty v =
-  case E.wordToLong ty v of
-    Nothing -> throwError InvaldSubWordExtension
-    Just rt -> pure rt
-
-runBinary :: (E.ValueRepr v) => QBE.BaseType -> (v -> v -> Maybe v) -> v -> v -> Exec v t v
-runBinary ty op lhs rhs = do
-  lhs' <- subTypeE ty lhs
-  rhs' <- subTypeE ty rhs
-  case op lhs' rhs' of
-    Nothing -> throwError TypingError
-    Just rt -> pure rt
-
-------------------------------------------------------------------------
-
-type RegMap v = Map.Map QBE.LocalIdent v
 
 data StackFrame v
   = StackFrame
   { stkFunc :: QBE.FuncDef,
-    stkVars :: RegMap v,
-    stkFp :: MEM.Address
+    stkVars :: Map.Map QBE.LocalIdent v,
+    stkFp :: E.Address
   }
 
-mkStackFrame :: QBE.FuncDef -> MEM.Address -> StackFrame v
+mkStackFrame :: QBE.FuncDef -> E.Address -> StackFrame v
 mkStackFrame func = StackFrame func Map.empty
 
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
@@ -71,93 +29,94 @@ storeLocal ident value frame@(StackFrame {stkVars = v}) =
 
 lookupLocal :: StackFrame v -> QBE.LocalIdent -> Maybe v
 lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
+{-# INLINEABLE lookupLocal #-}
 
 ------------------------------------------------------------------------
 
-data Env val tracer
-  = Env
-  { envGlobals :: Map.Map QBE.GlobalIdent val,
-    envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
-    envMem :: MEM.Memory IOArray val,
-    envStk :: [StackFrame val],
-    envStkPtr :: MEM.Address,
-    envTracer :: tracer
-  }
+-- This is an “abstract monad” representing the Simulator and allowing
+-- interaction with an encapsulated Simulator state 'm'. The module
+-- 'Language.QBE.Simulator.Default.State' provides an implementation of
+-- a polymorphic Simulator state implement over a State monad.
+--
+-- The idea is inspired by Bourgeat et al. https://doi.org/10.1145/3607833
+class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
+  condBranch :: v -> Bool -> m ()
 
-mkEnv :: (T.Tracer t v) => [QBE.FuncDef] -> MEM.Address -> MEM.Size -> t -> IO (Env v t)
-mkEnv funcs a s t = do
-  mem <- MEM.mkMemory a s
-  return $ Env Map.empty (makeFuncs funcs) mem [] (s - 1) t
-  where
-    makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
-    makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
+  lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
+  findFunc :: QBE.GlobalIdent -> m (Maybe QBE.FuncDef)
 
-activeFrame :: Exec v t (StackFrame v)
-activeFrame = do
-  env <- get
-  case env of
-    Env {envStk = x : _} -> pure x
-    _ -> throwError EmptyStack
+  activeFrame :: m (StackFrame v)
+  pushStackFrame :: StackFrame v -> m ()
+  popStackFrame :: m (StackFrame v)
+  getSP :: m E.Address
+  setSP :: E.Address -> m ()
 
-modifyFrame :: (StackFrame v -> StackFrame v) -> Exec v t ()
+  writeMemory :: E.Address -> QBE.ExtType -> v -> m () -- TODO: LoadType?
+  readMemory :: QBE.LoadType -> E.Address -> m v
+
+liftMaybe :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
+liftMaybe e Nothing = throwM e
+liftMaybe _ (Just r) = pure r
+{-# INLINE liftMaybe #-}
+
+toAddressE :: (Simulator m v) => v -> m E.Address
+toAddressE = liftMaybe InvalidAddressType . E.toAddress
+{-# INLINEABLE toAddressE #-}
+
+subTypeE :: (Simulator m v) => QBE.BaseType -> v -> m v
+subTypeE ty v = liftMaybe TypingError $ E.subType ty v
+{-# INLINEABLE subTypeE #-}
+
+wordToLongE :: (Simulator m v) => QBE.SubLongType -> v -> m v
+wordToLongE ty v = liftMaybe InvaldSubWordExtension $ E.wordToLong ty v
+{-# INLINEABLE wordToLongE #-}
+
+runBinary ::
+  (Simulator m v) =>
+  QBE.BaseType ->
+  (v -> v -> Maybe v) ->
+  v ->
+  v ->
+  m v
+runBinary ty op lhs rhs = do
+  lhs' <- subTypeE ty lhs
+  rhs' <- subTypeE ty rhs
+  liftMaybe TypingError (op lhs' rhs')
+{-# INLINEABLE runBinary #-}
+
+modifyFrame :: (Simulator m v) => (StackFrame v -> StackFrame v) -> m ()
 modifyFrame func = do
-  stack <- gets envStk
-  case stack of
-    (x : xs) -> modify (\s -> s {envStk = func x : xs})
-    _ -> throwError EmptyStack
+  frame <- popStackFrame
+  pushStackFrame (func frame)
+{-# INLINEABLE modifyFrame #-}
 
-pushStackFrame :: QBE.FuncDef -> Exec v t ()
-pushStackFrame f = do
-  stkPtr <- gets envStkPtr
-  modify (\s -> s {envStk = mkStackFrame f stkPtr : envStk s})
-
-popStackFrame :: Exec v t ()
-popStackFrame = do
-  stk <- gets envStk
-  case stk of
-    [] -> pure ()
-    ((StackFrame {stkFp = fp}) : xs) ->
-      modify (\s -> s {envStk = xs, envStkPtr = fp})
-
-stackAlloc :: (E.ValueRepr v) => MEM.Size -> MEM.Address -> Exec v t v
+stackAlloc :: (Simulator m v) => MEM.Size -> E.Address -> m v
 stackAlloc size align = do
-  stkPtr <- gets envStkPtr
+  stkPtr <- getSP
   let newStkPtr = alignAddr (stkPtr - size) align
-  modify (\s -> s {envStkPtr = newStkPtr})
+  setSP newStkPtr
+
   return $ E.fromAddress newStkPtr
   where
-    alignAddr :: MEM.Address -> MEM.Address -> MEM.Address
+    alignAddr :: E.Address -> E.Address -> E.Address
     alignAddr addr alignment = addr - (addr `mod` alignment)
+{-# INLINEABLE stackAlloc #-}
 
-writeMemory :: (E.Storable v) => MEM.Address -> QBE.ExtType -> v -> Exec v t ()
-writeMemory addr extType regVal = do
-  mem <- gets envMem
+newStackFrame :: (Simulator m v) => QBE.FuncDef -> m (StackFrame v)
+newStackFrame f = do
+  frame <- getSP <&> mkStackFrame f
+  pushStackFrame frame >> pure frame
+{-# INLINEABLE newStackFrame #-}
 
-  -- Since halfwords and bytes are not first class in the IL, storeh and storeb
-  -- take a word as argument. Only the first 16 or 8 bits of this word will be
-  -- stored in memory at the address specified in the second argument.
-  let bytes = E.toBytes regVal
-  liftIO $
-    MEM.storeBytes mem addr $
-      case extType of
-        QBE.Byte -> take 1 bytes
-        QBE.HalfWord -> take 2 bytes
-        QBE.Base _ -> bytes
+returnFromFunc :: (Simulator m v) => m ()
+returnFromFunc = popStackFrame >>= setSP . stkFp
+{-# INLINE returnFromFunc #-}
 
-readMemory :: (E.Storable v) => QBE.LoadType -> MEM.Address -> Exec v t v
-readMemory ty addr = do
-  mem <- gets envMem
-  bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)
+maybeLookup :: (Simulator m v) => String -> Maybe v -> m v
+maybeLookup name = liftMaybe (UnknownVariable name)
+{-# INLINE maybeLookup #-}
 
-  case E.fromBytes (QBE.loadToExtType ty) bytes of
-    Just x -> pure x
-    Nothing -> throwError InvalidMemoryLoad
-
-maybeLookup :: String -> Maybe v -> Exec v t v
-maybeLookup _ (Just x) = pure x
-maybeLookup name Nothing = throwError $ UnknownVariable name
-
-lookupValue :: (E.ValueRepr v) => QBE.BaseType -> QBE.Value -> Exec v t v
+lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit ty v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
@@ -165,37 +124,32 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
   subTypeE ty (E.fromDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- gets envGlobals >>= maybeLookup (show k) . Map.lookup k
+  v <- lookupGlobal k >>= maybeLookup (show k)
   subTypeE ty v
 lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- gets envGlobals >>= maybeLookup (show k) . Map.lookup k
+  v <- lookupGlobal k >>= maybeLookup (show k)
   subTypeE ty v
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   subTypeE ty v
+{-# INLINEABLE lookupValue #-}
 
-lookupFunc :: QBE.Value -> Exec v t QBE.FuncDef
+lookupFunc :: (Simulator m v) => QBE.Value -> m QBE.FuncDef
 lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
-  funcs <- gets envFuncs
-  case Map.lookup name funcs of
+  maybeFunc <- findFunc name
+  case maybeFunc of
     Just def -> pure def
-    Nothing -> throwError (UnknownFunction name)
+    Nothing -> throwM (UnknownFunction name)
 lookupFunc _ = error "non-global functions not supported"
+{-# INLINEABLE lookupFunc #-}
 
-lookupArg :: (E.ValueRepr v) => QBE.FuncArg -> Exec v t v
+lookupArg :: (Simulator m v) => QBE.FuncArg -> m v
 lookupArg (QBE.ArgReg abity value) = do
   lookupValue (QBE.abityToBase abity) value
 lookupArg (QBE.ArgEnv _) = error "env function parameters not supported"
 lookupArg QBE.ArgVar = error "variadic functions not supported"
+{-# INLINEABLE lookupArg #-}
 
-lookupArgs :: (E.ValueRepr v) => [QBE.FuncArg] -> Exec v t [v]
+lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
 lookupArgs = mapM lookupArg
-
-------------------------------------------------------------------------
-
--- TODO: Refactor with generic lift function
-
-trackBranch :: (T.Tracer t v, E.ValueRepr v) => v -> Bool -> Exec v t ()
-trackBranch condValue condResult = do
-  let newTracer t = T.branch t condValue condResult
-  modify (\s@Env {envTracer = t} -> s {envTracer = newTracer t})
+{-# INLINE lookupArgs #-}

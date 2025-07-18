@@ -5,18 +5,12 @@
 module Language.QBE.Simulator.Expression where
 
 import Data.Word (Word64)
-import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
--- TODO: We could use 'FlexibleContexts` here (which is part of GHC 2021)
--- to require a second type parameter which corresponds to the byte representation.
--- For example, 'Word8' for 'RegVal'. However, QBE requires an internal dynamic
--- typing representation anyhow so every 'ValueRepr' needs some way to represent
--- byte values anyhow. Nonetheless, a Word8 representation would allow using an
--- IOUArray instead of an IOARray for the Memory.
-class Storable v where
-  toBytes :: v -> [v]
-  fromBytes :: QBE.ExtType -> [v] -> Maybe v
+-- | Type used to represent a memory address.
+--
+-- TODO: Consider making this a type parameter too.
+type Address = Word64
 
 class ValueRepr v where
   -- TODO: Change this to fromWord64 and rely on long subtyping
@@ -24,11 +18,9 @@ class ValueRepr v where
   fromFloat :: Float -> v
   fromDouble :: Double -> v
 
-  fromAddress :: MEM.Address -> v
-  toAddress :: v -> Maybe MEM.Address
+  fromAddress :: Address -> v
+  toAddress :: v -> Maybe Address
 
-  -- TODO: Resolve code duplication between swToLong and wordToLong
-  swToLong :: QBE.SubWordType -> v -> Maybe v
   wordToLong :: QBE.SubLongType -> v -> Maybe v
   subType :: QBE.BaseType -> v -> Maybe v
   isZero :: v -> Bool
@@ -63,3 +55,4 @@ compareExpr QBE.CUle = ule
 compareExpr QBE.CUlt = ult
 compareExpr QBE.CUge = uge
 compareExpr QBE.CUgt = ugt
+{-# INLINE compareExpr #-}

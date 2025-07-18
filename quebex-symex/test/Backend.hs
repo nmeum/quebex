@@ -44,7 +44,7 @@ traceTests =
           s <- z3Solver
           c <- unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
-          let inputs = map (SE.toSExpr . fromJust . CE.symbolic) [c]
+          let inputs = [(SE.toSExpr . fromJust . CE.symbolic) c]
 
           t <-
             parseAndExec

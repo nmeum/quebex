@@ -208,16 +208,6 @@ loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
 loadByteSize (LBase Double) = 8
 
-loadToExtType :: LoadType -> ExtType
-loadToExtType (LSubWord UnsignedByte) = Byte
-loadToExtType (LSubWord SignedByte) = Byte
-loadToExtType (LSubWord SignedHalf) = HalfWord
-loadToExtType (LSubWord UnsignedHalf) = HalfWord
-loadToExtType (LBase Word) = Base Word
-loadToExtType (LBase Long) = Base Long
-loadToExtType (LBase Single) = Base Single
-loadToExtType (LBase Double) = Base Double
-
 data SubLongType
   = SLSubWord SubWordType
   | SLSignedWord

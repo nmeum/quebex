@@ -5,8 +5,11 @@
 module Concolic (exprTests) where
 
 import Data.Maybe (fromJust)
+import Data.Word (Word8)
 import Language.QBE.Simulator.Concolic.Expression qualified as C
+import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -19,12 +22,12 @@ storeTests =
     -- TODO: Test case for partial concoilc bytes
     [ testCase "Convert concrete concolic value to bytes and back" $
         do
-          let value = E.fromLit QBE.Word 0xdeadbeef :: C.Concolic
+          let value = E.fromLit QBE.Word 0xdeadbeef :: C.Concolic D.RegVal
 
-          let bytes = E.toBytes value
+          let bytes = MEM.toBytes value :: [C.Concolic Word8]
           length bytes @?= 4
 
-          let valueFromBytes = fromJust $ E.fromBytes (QBE.Base QBE.Word) bytes
+          let valueFromBytes = fromJust $ MEM.fromBytes (QBE.LBase QBE.Word) bytes
           C.concrete value @?= C.concrete valueFromBytes
     ]
 
