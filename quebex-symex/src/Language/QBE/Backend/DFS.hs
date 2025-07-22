@@ -16,8 +16,8 @@ import Control.Exception (throwIO)
 import Language.QBE.Backend (SolverError (UnknownResult), prefixLength)
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
 import Language.QBE.Backend.Model qualified as Model
+import Language.QBE.Backend.Tracer (Branch (..), ExecTrace)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
-import Language.QBE.Simulator.Symbolic.Tracer (Branch (..), ExecTrace)
 import SimpleSMT qualified as SMT
 
 -- The 'PathSel' encapsulates data for the Dynamic Symbolic Execution (DSE)

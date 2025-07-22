@@ -3,7 +3,7 @@
 --
 -- SPDX-License-Identifier: MIT AND GPL-3.0-only
 
-module Language.QBE.Simulator.Symbolic.Tracer
+module Language.QBE.Backend.Tracer
   ( Branch (Branch),
     newBranch,
     fromBranch,

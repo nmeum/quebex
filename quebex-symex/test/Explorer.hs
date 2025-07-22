@@ -8,9 +8,9 @@ import Data.List (sort)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Language.QBE.Backend.Store qualified as ST
+import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (explore)
-import Language.QBE.Simulator.Symbolic.Tracer qualified as T
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit

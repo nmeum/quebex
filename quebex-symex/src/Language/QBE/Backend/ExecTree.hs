@@ -11,7 +11,7 @@ module Language.QBE.Backend.ExecTree
   )
 where
 
-import Language.QBE.Simulator.Symbolic.Tracer (Branch, ExecTrace, fromBranch)
+import Language.QBE.Backend.Tracer (Branch, ExecTrace, fromBranch)
 
 -- A binary tree.
 data BTree a = Node a (Maybe (BTree a)) (Maybe (BTree a)) | Leaf

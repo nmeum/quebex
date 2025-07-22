@@ -8,11 +8,11 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Word (Word8)
 import Language.QBE (Program, globalFuncs)
+import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.State
-import Language.QBE.Simulator.Symbolic.Tracer qualified as T
 
 data Env
   = Env
