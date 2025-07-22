@@ -52,6 +52,10 @@ A githook for this purpose is available which can be enabled using:
 
 	$ git config --local core.hooksPath .githooks
 
+Further, a [Guix] environment for development purposes can be obtained using:
+
+	$ guix shell -L .guix/modules/ -m .guix/manifest.scm
+
 ### License
 
 This project uses the [REUSE Specification] to indicated used software license.
@@ -71,3 +75,4 @@ This project uses the [REUSE Specification] to indicated used software license.
 [libriscv]: https://github.com/agra-uni-bremen/libriscv
 [ormolu github]: https://github.com/tweag/ormolu
 [REUSE Specification]: https://reuse.software/spec-3.3/
+[Guix]: https://guix.gnu.org
