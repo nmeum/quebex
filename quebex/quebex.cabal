@@ -27,7 +27,7 @@ library
     default-language: GHC2021
 
     build-depends:
-      base ^>=4.19.1.0,
+      base,
       array,
       template-haskell,
       quebex-syntax,
@@ -57,7 +57,7 @@ benchmark quebex-benchmarks
       Exec
 
     build-depends:
-      base ^>=4.19.1.0,
+      base,
       criterion ^>= 1.6.4.0,
       quebex,
       quebex-syntax
@@ -76,7 +76,7 @@ test-suite quebex-test
       Memory
 
     build-depends:
-        base ^>=4.19.1.0,
+        base,
         array,
         parsec,
         quebex,

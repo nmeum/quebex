@@ -23,7 +23,7 @@ library
     default-language: GHC2021
 
     build-depends:
-      base ^>=4.19.1.0,
+      base,
       mtl,
       containers,
       random,
@@ -59,7 +59,7 @@ test-suite quebex-symex-test
       Concolic,
 
     build-depends:
-        base ^>=4.19.1.0,
+        base,
         filepath,
         containers,
         quebex,
