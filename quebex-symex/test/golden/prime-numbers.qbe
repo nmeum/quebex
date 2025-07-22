@@ -1,0 +1,73 @@
+function w $first_divisor(w %.1) {
+@start.1
+	%.2 =l alloc4 4
+	storew %.1, %.2
+	%.3 =l alloc4 4
+	jmp @body.2
+@body.2
+	storew 2, %.3
+	jmp @for_cond.3
+@for_cond.3
+	%.4 =w loadw %.3
+	%.5 =w loadw %.2
+	%.6 =w cultw %.4, %.5
+	jnz %.6, @for_body.4, @for_join.6
+@for_body.4
+	%.7 =w loadw %.2
+	%.8 =w loadw %.3
+	%.9 =w urem %.7, %.8
+	%.10 =w ceqw %.9, 0
+	jnz %.10, @if_true.7, @if_false.8
+@if_true.7
+	%.11 =w loadw %.3
+	ret %.11
+@if_false.8
+	jmp @for_cont.5
+@for_cont.5
+	%.12 =w loadw %.3
+	%.13 =w add %.12, 1
+	storew %.13, %.3
+	jmp @for_cond.3
+@for_join.6
+	%.14 =w loadw %.2
+	ret %.14
+}
+export
+function w $entry(w %.1) {
+@start.9
+	%.2 =l alloc4 4
+	storew %.1, %.2
+	%.5 =l alloc4 4
+	%.9 =l alloc4 4
+	jmp @body.10
+@body.10
+	%.3 =w loadw %.2
+	%.4 =w culew %.3, 50
+	jnz %.4, @if_true.11, @if_false.12
+@if_true.11
+	%.6 =w loadw %.2
+	storew %.6, %.5
+	%.7 =w loadw %.5
+	%.8 =w culew %.7, 1
+	jnz %.8, @if_true.13, @if_false.14
+@if_true.13
+	ret 0
+@if_false.14
+	%.10 =w loadw %.5
+	storew %.10, %.9
+	%.11 =w loadw %.9
+	%.12 =w call $first_divisor(w %.11)
+	%.13 =w loadw %.9
+	%.14 =w ceqw %.12, %.13
+	jnz %.14, @if_true.16, @if_false.17
+@if_true.16
+	ret 1
+@if_false.17
+	ret 0
+@if_join.18
+	jmp @if_join.15
+@if_join.15
+	jmp @if_false.12
+@if_false.12
+	ret 0
+}

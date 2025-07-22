@@ -788,6 +788,7 @@ instr =
     [ try $ binaryInstr Q.Add "add",
       try $ binaryInstr Q.Sub "sub",
       try $ binaryInstr Q.Mul "mul",
+      try $ binaryInstr Q.URem "urem",
       try $ loadInstr,
       try $ allocInstr,
       try $ compareInstr,
