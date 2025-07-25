@@ -183,6 +183,8 @@ instance E.ValueRepr BitVector where
   sub = binaryOp SMT.bvSub
   mul = binaryOp SMT.bvMul
   urem = binaryOp SMT.bvURem
+  srem = binaryOp SMT.bvSRem
+  udiv = binaryOp SMT.bvUDiv
 
   eq = binaryBoolOp SMT.eq
   ne = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.eq lhs rhs)
