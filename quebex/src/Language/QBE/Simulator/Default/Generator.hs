@@ -78,14 +78,17 @@ operators =
     (mkName "ugt'", applyBoolOp (mkName ">"))
   ]
 
--- TODO: Could also implement Ord on ValueCons and use a range.
+decOperators :: [(Name, Transformer)]
+decOperators =
+  [ (mkName "urem'", applyOp (mkName "rem")) ]
+
+------------------------------------------------------------------------
+
+decCons :: [ValueCons]
+decCons = [VWord, VLong]
+
 cons :: [ValueCons]
-cons =
-  [ VWord,
-    VLong,
-    VSingle,
-    VDouble
-  ]
+cons = decCons ++ [VSingle, VDouble]
 
 makeClause :: Transformer -> ValueCons -> Q Clause
 makeClause trans vCon = do
@@ -111,10 +114,15 @@ typingErrorClause =
     (NormalB (ConE $ mkName "Nothing"))
     []
 
-generateOperator :: (Name, Transformer) -> Q Dec
-generateOperator (name, trans) = do
-  valDefs <- mapM (makeClause trans) cons
+------------------------------------------------------------------------
+
+genOp :: [ValueCons] -> (Name, Transformer) -> Q Dec
+genOp opLst (name, trans) = do
+  valDefs <- mapM (makeClause trans) opLst
   return $ FunD name (valDefs ++ [typingErrorClause])
 
 generateOperators :: Q [Dec]
-generateOperators = mapM generateOperator operators
+generateOperators = do
+  o1 <- mapM (genOp cons) operators
+  o2 <- mapM (genOp decCons) decOperators
+  pure $ o1 ++ o2

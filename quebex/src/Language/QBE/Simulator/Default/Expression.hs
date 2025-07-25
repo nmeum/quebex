@@ -113,11 +113,7 @@ instance ValueRepr RegVal where
   add = add'
   sub = sub'
   mul = mul'
-
-  -- TODO: Write a generator for operations not supported on floating points.
-  urem (VWord lhs) (VWord rhs) = Just $ VWord (lhs `rem` rhs)
-  urem (VLong lhs) (VLong rhs) = Just $ VLong (lhs `rem` rhs)
-  urem _ _ = Nothing
+  urem = urem'
 
   -- TODO: Provide default implementations
   eq = eq'
