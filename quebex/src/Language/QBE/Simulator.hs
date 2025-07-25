@@ -65,23 +65,23 @@ execVolatile (QBE.Blit src dst toCopy) = do
       [0 .. toCopy - 1]
 {-# INLINEABLE execVolatile #-}
 
+execBinary ::
+  (Simulator m v) =>
+  QBE.BaseType ->
+  (v -> v -> Maybe v) ->
+  QBE.Value ->
+  QBE.Value ->
+  m v
+execBinary retTy op lhs rhs = do
+  v1 <- lookupValue retTy lhs
+  v2 <- lookupValue retTy rhs
+  runBinary retTy op v1 v2
+
 execInstr :: (Simulator m v) => QBE.BaseType -> QBE.Instr -> m v
-execInstr retTy (QBE.Add lhs rhs) = do
-  v1 <- lookupValue retTy lhs
-  v2 <- lookupValue retTy rhs
-  runBinary retTy E.add v1 v2
-execInstr retTy (QBE.Sub lhs rhs) = do
-  v1 <- lookupValue retTy lhs
-  v2 <- lookupValue retTy rhs
-  runBinary retTy E.sub v1 v2
-execInstr retTy (QBE.Mul lhs rhs) = do
-  v1 <- lookupValue retTy lhs
-  v2 <- lookupValue retTy rhs
-  runBinary retTy E.mul v1 v2
-execInstr retTy (QBE.URem lhs rhs) = do
-  v1 <- lookupValue retTy lhs
-  v2 <- lookupValue retTy rhs
-  runBinary retTy E.urem v1 v2
+execInstr retTy (QBE.Add lhs rhs) = execBinary retTy E.add lhs rhs
+execInstr retTy (QBE.Sub lhs rhs) = execBinary retTy E.sub lhs rhs
+execInstr retTy (QBE.Mul lhs rhs) = execBinary retTy E.mul lhs rhs
+execInstr retTy (QBE.URem lhs rhs) = execBinary retTy E.urem lhs rhs
 execInstr retTy (QBE.Load ty addr) = do
   addrVal <- lookupValue QBE.Long addr
 
