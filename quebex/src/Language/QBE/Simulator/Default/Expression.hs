@@ -7,7 +7,7 @@
 
 module Language.QBE.Simulator.Default.Expression where
 
-import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.))
+import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.), xor)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
@@ -116,6 +116,9 @@ instance ValueRepr RegVal where
   urem = urem'
   srem = srem'
   udiv = udiv'
+  or = or'
+  xor = xor'
+  and = and'
 
   -- TODO: Provide default implementations
   eq = eq'
