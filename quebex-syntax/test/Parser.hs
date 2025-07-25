@@ -137,6 +137,11 @@ funcTests =
             b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f,
+      testCase "Function definition with fallthrough block" $
+        let b1 = Block {label = BlockIdent "b1", stmt = [], term = Jump (BlockIdent "b2")}
+            b2 = Block {label = BlockIdent "b2", stmt = [], term = Return Nothing}
+            f = FuncDef [] (GlobalIdent "f") Nothing [] [b1, b2]
+         in parse "function $f() {\n@b1\n@b2\nret\n}" @?= Right f,
       testCase "Call instruction with integer literal value" $
         let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
             b = [Block {label = BlockIdent "s", stmt = [c], term = Return Nothing}]

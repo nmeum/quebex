@@ -4,6 +4,7 @@
 
 module Language.QBE.Types where
 
+import Control.Monad (foldM)
 import Data.Word (Word64)
 
 -- TODO: Prefix all constructors
@@ -255,6 +256,33 @@ data Statement
   | Call (Maybe (LocalIdent, Abity)) Value [FuncArg]
   | Volatile VolatileInstr
   deriving (Show, Eq)
+
+data Block'
+  = Block'
+  { label' :: BlockIdent,
+    -- TODO: phi
+    stmt' :: [Statement],
+    term' :: Maybe JumpInstr
+  }
+  deriving (Show, Eq)
+
+insertJumps :: [Block'] -> Maybe [Block]
+insertJumps xs = foldM go [] $ zipWithNext xs
+  where
+    zipWithNext :: [a] -> [(a, Maybe a)]
+    zipWithNext [] = []
+    zipWithNext lst@(_ : t) = zip lst $ map Just t ++ [Nothing]
+
+    fromBlock' :: Block' -> JumpInstr -> Block
+    fromBlock' (Block' l s _) = Block l s
+
+    go :: [Block] -> (Block', Maybe Block') -> Maybe [Block]
+    go acc (x@Block' {term' = Just ji}, _) =
+      Just (acc ++ [fromBlock' x ji])
+    go acc (x@Block' {term' = Nothing}, Just nxt) =
+      Just (acc ++ [fromBlock' x (Jump $ label' nxt)])
+    go _ (Block' {term' = Nothing}, Nothing) =
+      Nothing
 
 data Block
   = Block
