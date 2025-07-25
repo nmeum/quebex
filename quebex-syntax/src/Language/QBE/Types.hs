@@ -234,6 +234,8 @@ data Instr
   | -- | Div Value Value
     Mul Value Value
   | URem Value Value
+  | Rem Value Value
+  | UDiv Value Value
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
