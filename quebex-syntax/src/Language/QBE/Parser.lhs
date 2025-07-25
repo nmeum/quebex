@@ -608,7 +608,10 @@ funcDef = do
   name <- ws global
   args <- wsNL params
   body <- between (wsNL1 $ char '{') (wsNL $ char '}') $ many1 block
-  return $ Q.FuncDef link name retTy args body
+
+  case (Q.insertJumps body) of
+    Nothing -> fail $ "invalid fallthrough in " ++ show name
+    Just bl -> return $ Q.FuncDef link name retTy args bl
 \end{code}
 
 Function definitions contain the actual code to emit in the compiled
@@ -728,11 +731,11 @@ straight-line code which are connected using jump instructions.
 \label{sec:blocks}
 
 \begin{code}
-block :: Parser Q.Block
+block :: Parser Q.Block'
 block = do
   l <- wsNL1 label
   s <- many (wsNL1 statement)
-  Q.Block l s <$> (wsNL1 jumpInstr)
+  Q.Block' l s <$> (optionMaybe $ wsNL1 jumpInstr)
 \end{code}
 
 All blocks have a name that is specified by a label at their beginning.

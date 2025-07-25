@@ -1,5 +1,4 @@
 * quebex-syntax:
-	* Don't require jumps at the ends of basic blocks
 	* Complete the literate Haskell specification
 * quebex:
 	* Expand support for arithmetic operations
