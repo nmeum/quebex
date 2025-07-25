@@ -29,6 +29,8 @@ class ValueRepr v where
   sub :: v -> v -> Maybe v
   mul :: v -> v -> Maybe v
   urem :: v -> v -> Maybe v
+  srem :: v -> v -> Maybe v
+  udiv :: v -> v -> Maybe v
 
   eq :: v -> v -> Maybe v
   ne :: v -> v -> Maybe v

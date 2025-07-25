@@ -48,6 +48,14 @@ applyOp :: Name -> ValueCons -> Exp -> Exp -> Exp
 applyOp opName =
   applyFunc (ParensE (VarE opName))
 
+applySignedOp :: Name -> ValueCons -> Exp -> Exp -> Exp
+applySignedOp opName vCon lhs rhs =
+  let lhs' = (toSignedExp vCon lhs)
+      rhs' = (toSignedExp vCon rhs)
+      cast = AppE (VarE $ mkName "fromIntegral")
+   in -- TODO: Code duplication with applyFunc
+      AppE (ConE $ mkName (show vCon)) (cast $ thBinaryFunc (VarE opName) lhs' rhs')
+
 applyBoolOp :: Name -> ValueCons -> Exp -> Exp -> Exp
 applyBoolOp opName _vCons lhs rhs =
   let res = thBinaryOp (VarE opName) lhs rhs
@@ -80,7 +88,10 @@ operators =
 
 decOperators :: [(Name, Transformer)]
 decOperators =
-  [ (mkName "urem'", applyOp (mkName "rem")) ]
+  [ (mkName "srem'", applySignedOp (mkName "rem")),
+    (mkName "urem'", applyOp (mkName "rem")),
+    (mkName "udiv'", applyOp (mkName "div"))
+  ]
 
 ------------------------------------------------------------------------
 

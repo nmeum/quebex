@@ -114,6 +114,8 @@ instance ValueRepr RegVal where
   sub = sub'
   mul = mul'
   urem = urem'
+  srem = srem'
+  udiv = udiv'
 
   -- TODO: Provide default implementations
   eq = eq'
