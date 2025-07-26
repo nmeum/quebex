@@ -125,6 +125,21 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 2),
+      testCase "Evalute basic blocks with fallthrough jump" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "unconditionalJump")
+              []
+              "function w $unconditionalJump() {\n\
+              \@start\n\
+              \%val =w add 0, 1\n\
+              \@next\n\
+              \%val =w add %val, 1\n\
+              \ret %val\n\
+              \}"
+
+          res @?= Just (D.VWord 2),
       testCase "Conditional jump with zero value" $
         do
           res <-
