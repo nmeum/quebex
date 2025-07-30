@@ -13,14 +13,14 @@ A work-in-progress software analysis framework built around the [QBE] intermedia
 Existing analysis frameworks are predominantly built around [LLVM].
 Unfortunately, LLVM is a fast moving target with constant changes and updates to its intermediate language.
 Therefore, tooling built around LLVM (e.g., [KLEE]) often requires dated LLVM versions.[^1]
-Obtaining such ancient LLVM versions can be cumbersome and often hinders employment of these tools.
+Obtaining these LLVM versions can be cumbersome and often hinders employment of these tools.
 To overcome these issues, maintainers of analysis tooling need to constantly invest time to catch-up with LLVM releases, instead of focusing on improving their analysis framework.
 
 In order to reduce maintenance burden, this project attempts to investigate utilization of another intermediate language for software analysis: [QBE].
 QBE is a much [smaller scale project][QBE vs LLVM] than LLVM and thereby offers a higher degree of stability.
 Further, QBE is much simpler than LLVM (e.g., providing fewer operations) and thereby also eases the implementation of certain analysis techniques.
 Nonetheless, there are sophisticated compiler frontends that can emit a representation in the QBE intermediate language (which can then be analyzed using quebex!).
-For example, [SCC], [cproc] or the [Hare compiler][Hare].
+For example, [SCC], [cproc], or the [Hare compiler][Hare].
 
 ### Status
 
@@ -35,20 +35,11 @@ Further, the project should require minimal long-term maintenance and should als
 Therefore, it uses the [GHC2021] language standard and avoids usage of additional language extensions.
 Further, whenever possible, dependencies on external libraries that are [not bundled by GHC][GHC libraries] must be avoided.
 
-### Planned Components
-
-* `quebex`: Basic analysis library, which should provide
-	* A modular interpreter for dynamic analysis based on monad transformers *[in progress]*
-	* Basic framework for static analysis (CFG, call graphs, …) *[planned]*
-* `quebex-syntax`: Parser for the QBE IL written in literate Haskell *[in progress]*
-* `quebex-symex`: Symbolic execution based on the provided modular interpreter *[planned]*
-
-Long term, it is also of interest to build lifters which generate QBE from binaries (e.g. with [libriscv]).
-
 ### Development
 
 Code should be formatted using [ormolu][ormolu github].
-A githook for this purpose is available which can be enabled using:
+Git hooks performing several sanity checks, including ensuring the proper code formatting, are available.
+These hooks can be enabled using:
 
 	$ git config --local core.hooksPath .githooks
 
