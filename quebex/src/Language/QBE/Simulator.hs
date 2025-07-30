@@ -161,8 +161,19 @@ execJump (QBE.Return v) = do
         else throwM InvalidReturnValue
 {-# INLINEABLE execJump #-}
 
-execBlock :: (Simulator m v) => QBE.Block -> m (BlockResult v)
-execBlock block = do
+execPhi :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Phi -> m ()
+execPhi Nothing _ = pure ()
+execPhi (Just prevIdent) (QBE.Phi name ty labels) =
+  case Map.lookup prevIdent labels of
+    Nothing -> pure ()
+    Just v -> do
+      retVal <- lookupValue ty v
+      modifyFrame (storeLocal name retVal)
+{-# INLINEABLE execPhi #-}
+
+execBlock :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Block -> m (BlockResult v)
+execBlock prevIdent block = do
+  mapM_ (execPhi prevIdent) (QBE.phi block)
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 {-# INLINEABLE execBlock #-}
@@ -177,14 +188,15 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
   let vars = Map.fromList $ zip (map paramName params) args
   modifyFrame (\s -> s {stkVars = vars})
 
-  blockResult <- (execBlock block >>= go) <* returnFromFunc
+  blockResult <- (execBlock Nothing block >>= go Nothing) <* returnFromFunc
   case blockResult of
     Right _block -> throwM MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (Simulator m v) => BlockResult v -> m (BlockResult v)
-    go retValue@(Left _) = pure retValue
-    go (Right nextBlock) = execBlock nextBlock >>= go
+    go :: (Simulator m v) => Maybe QBE.BlockIdent -> BlockResult v -> m (BlockResult v)
+    go _ retValue@(Left _) = pure retValue
+    go prevIdent (Right nextBlock) =
+      execBlock prevIdent nextBlock >>= go (Just $ QBE.label nextBlock)
 
     paramName :: QBE.FuncParam -> QBE.LocalIdent
     paramName (QBE.Regular _ n) = n

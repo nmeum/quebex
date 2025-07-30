@@ -583,6 +583,25 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0),
+      testCase "Phi instruction" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "f")
+              []
+              "function w $f() {\n\
+              \@begin\n\
+              \jmp @start2\n\
+              \@start1\n\
+              \jmp @phi\n\
+              \@start2\n\
+              \jmp @phi\n\
+              \@phi\n\
+              \%v =w phi @start1 23, @start2 42\n\
+              \ret %v\n\
+              \}"
+
+          res @?= Just (D.VWord 42),
       testCase "Sign extend subword" $
         do
           res <-
