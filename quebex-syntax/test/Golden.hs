@@ -70,5 +70,6 @@ goldenTests =
       runTest "call-instruction",
       runTest "load-instructions",
       runTest "value-global",
-      runTest "bubble-sort"
+      runTest "bubble-sort",
+      runTest "phi-instructions"
     ]

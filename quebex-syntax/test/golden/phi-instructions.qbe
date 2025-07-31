@@ -1,0 +1,105 @@
+function w $getcode(w %.1) {
+@start.57
+	%.2 =l alloc4 1
+	storeb %.1, %.2
+@body.58
+	%.3 =w loadsb %.2
+	%.4 =w extsb %.3
+	%.5 =w ceqw %.4, 47
+	jnz %.5, @if_true.59, @if_false.60
+@if_true.59
+	ret 63
+@if_false.60
+	%.6 =w loadsb %.2
+	%.7 =w extsb %.6
+	%.8 =w ceqw %.7, 95
+	jnz %.8, @if_true.61, @if_false.62
+@if_true.61
+	ret 63
+@if_false.62
+	%.9 =w loadsb %.2
+	%.10 =w extsb %.9
+	%.11 =w ceqw %.10, 43
+	jnz %.11, @if_true.63, @if_false.64
+@if_true.63
+	ret 62
+@if_false.64
+	%.12 =w loadsb %.2
+	%.13 =w extsb %.12
+	%.14 =w ceqw %.13, 45
+	jnz %.14, @if_true.65, @if_false.66
+@if_true.65
+	ret 62
+@if_false.66
+	%.15 =w loadsb %.2
+	%.16 =w extsb %.15
+	%.17 =w ceqw %.16, 61
+	jnz %.17, @if_true.67, @if_false.68
+@if_true.67
+	ret 254
+@if_false.68
+	%.18 =w loadsb %.2
+	%.19 =w extsb %.18
+	%.20 =w csltw %.19, 48
+	jnz %.20, @if_true.69, @if_false.70
+@if_true.69
+	ret 255
+@if_false.70
+	%.21 =w loadsb %.2
+	%.22 =w extsb %.21
+	%.23 =w cslew %.22, 57
+	jnz %.23, @logic_right.71, @logic_join.72
+@logic_right.71
+	%.24 =w loadsb %.2
+	%.25 =w extsb %.24
+	%.26 =w csgew %.25, 48
+	%.27 =w cnew %.26, 0
+@logic_join.72
+	%.28 =w phi   @if_false.70    0, @logic_right.71 %.27
+	jnz %.28, @if_true.73, @if_false.74
+@if_true.73
+	%.29 =w loadsb %.2
+	%.30 =w extsb %.29
+	%.31 =w sub 61, 57
+	%.32 =w add %.30, %.31
+	ret %.32
+@if_false.74
+	%.33 =w loadsb %.2
+	%.34 =w extsb %.33
+	%.35 =w cslew %.34, 90
+	jnz %.35, @logic_right.75, @logic_join.76
+@logic_right.75
+	%.36 =w loadsb %.2
+	%.37 =w extsb %.36
+	%.38 =w csgew %.37, 65
+	%.39 =w cnew %.38, 0
+@logic_join.76
+	%.40   =w   phi    @if_false.74 0,    @logic_right.75 %.39
+	jnz %.40, @if_true.77, @if_false.78
+@if_true.77
+	%.41 =w loadsb %.2
+	%.42 =w extsb %.41
+	%.43 =w sub %.42, 65
+	ret %.43
+@if_false.78
+	%.44 =w loadsb %.2
+	%.45 =w extsb %.44
+	%.46 =w cslew %.45, 122
+	jnz %.46, @logic_right.79, @logic_join.80
+@logic_right.79
+	%.47 =w loadsb %.2
+	%.48 =w extsb %.47
+	%.49 =w csgew %.48, 97
+	%.50 =w cnew %.49, 0
+@logic_join.80
+	%.51 =w phi @if_false.78 0 ,    @logic_right.79 %.50
+	jnz %.51, @if_true.81, @if_false.82
+@if_true.81
+	%.52 =w loadsb %.2
+	%.53 =w extsb %.52
+	%.54 =w sub 51, 122
+	%.55 =w add %.53, %.54
+	ret %.55
+@if_false.82
+	ret 255
+}
