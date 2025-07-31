@@ -162,7 +162,7 @@ execJump (QBE.Return v) = do
 {-# INLINEABLE execJump #-}
 
 execPhi :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Phi -> m ()
-execPhi Nothing _ = pure ()
+execPhi Nothing _ = throwM InvalidPhiPosition
 execPhi (Just prevIdent) (QBE.Phi name ty labels) =
   case Map.lookup prevIdent labels of
     Nothing -> throwM (UnknownPhiLabel prevIdent)
