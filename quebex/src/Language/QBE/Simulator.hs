@@ -165,7 +165,7 @@ execPhi :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Phi -> m ()
 execPhi Nothing _ = pure ()
 execPhi (Just prevIdent) (QBE.Phi name ty labels) =
   case Map.lookup prevIdent labels of
-    Nothing -> pure ()
+    Nothing -> throwM (UnknownPhiLabel prevIdent)
     Just v -> do
       retVal <- lookupValue ty v
       modifyFrame (storeLocal name retVal)
