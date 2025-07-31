@@ -24,7 +24,6 @@ data EvalError
   | InvalidAddressType
   | OverlappingBlit Address Address
   | FuncArgsMismatch QBE.GlobalIdent
-  | UnknownPhiLabel QBE.BlockIdent
   | InvalidPhiPosition
   deriving (Eq)
 
@@ -44,7 +43,6 @@ instance Show EvalError where
   show InvalidAddressType = "InvalidAddressType"
   show (OverlappingBlit a1 a2) = "Addresses for Blit instruction overlap: " ++ show a1 ++ " and " ++ show a2
   show (FuncArgsMismatch ident) = "FuncArgsMismatch: '" ++ show ident ++ "'"
-  show (UnknownPhiLabel ident) = "UnknownPhiLabel: '" ++ show ident ++ "'"
   show InvalidPhiPosition = "InvalidPhiPosition"
 
 instance Exception EvalError
