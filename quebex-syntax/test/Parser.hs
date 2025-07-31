@@ -4,6 +4,7 @@
 
 module Parser where
 
+import qualified Data.Map as Map
 import Language.QBE.Parser (dataDef, funcDef, typeDef)
 import Language.QBE.Types
 import Test.Tasty
@@ -100,51 +101,60 @@ funcTests =
     "Function Definition"
     [ testCase "Minimal function definition" $
         let p = [Regular (ABase Word) (LocalIdent "argc")]
-            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "main") Nothing p b
          in parse "function $main(w %argc) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with load instruction" $
         let s = [Assign (LocalIdent "v") Word (Load (LBase Word) (VLocal $ LocalIdent "addr"))]
-            b = [Block {label = BlockIdent "begin", stmt = s, term = Return Nothing}]
+            b = [Block {label = BlockIdent "begin", phi = [], stmt = s, term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "main") Nothing [] b
          in parse "function $main() {\n@begin\n%v =w loadw %addr\nret\n}" @?= Right f,
       testCase "Function definition with linkage and return type" $
         let p = [Regular (ABase Long) (LocalIdent "v")]
-            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [], term = Return Nothing}]
             f = FuncDef [LExport, LThread] (GlobalIdent "example") (Just (ABase Word)) p b
          in parse "export\nthread function w $example(l %v) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with section linkage" $
         let p = [Regular (ABase Long) (LocalIdent "v")]
-            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [], term = Return Nothing}]
             f = FuncDef [LSection "foo" Nothing] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\"\nfunction w $bla(l %v) {\n@start\nret\n}" @?= Right f,
       testCase "Function definition with subword return type" $
-        let b = [Block {label = BlockIdent "here", stmt = [], term = Halt}]
+        let b = [Block {label = BlockIdent "here", phi = [], stmt = [], term = Halt}]
             f = FuncDef [] (GlobalIdent "f") (Just (ASubWordType SignedHalf)) [] b
          in parse "function sh $f() {\n@here\nhlt\n}" @?= Right f,
       testCase "Function definition with comments" $
         let p = [Regular (ABase Long) (LocalIdent "v")]
-            b = [Block {label = BlockIdent "start", stmt = [], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [], term = Return Nothing}]
             f = FuncDef [LSection "foo" (Just "bar")] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\" \"bar\"\n#test\nfunction w $bla(l %v) {\n#foo\n@start\n# bar \nret\n#bllubbb\n#bllaaa\n}" @?= Right f,
       testCase "Function definition with comparison instruction" $
         let c = Compare Word CSlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
-            b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,
       testCase "Function definition with extend instruction" $
         let c = Ext SLSignedWord (VConst (Const (Number 42)))
-            b = [Block {label = BlockIdent "start", stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
+            b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f,
       testCase "Function definition with fallthrough block" $
-        let b1 = Block {label = BlockIdent "b1", stmt = [], term = Jump (BlockIdent "b2")}
-            b2 = Block {label = BlockIdent "b2", stmt = [], term = Return Nothing}
+        let b1 = Block {label = BlockIdent "b1", phi = [], stmt = [], term = Jump (BlockIdent "b2")}
+            b2 = Block {label = BlockIdent "b2", phi = [], stmt = [], term = Return Nothing}
             f = FuncDef [] (GlobalIdent "f") Nothing [] [b1, b2]
          in parse "function $f() {\n@b1\n@b2\nret\n}" @?= Right f,
+      testCase "Block with phi instrunction" $
+        let v1 = VConst (Const (Number 1))
+            v2 = VConst (Const (Number 2))
+            p1 = Phi (LocalIdent "v") Word $ Map.fromList [(BlockIdent "b1", v1), (BlockIdent "b2", v2)]
+            b1 = Block {label = BlockIdent "b1", phi = [], stmt = [], term = Jump (BlockIdent "b2")}
+            b2 = Block {label = BlockIdent "b2", phi = [], stmt = [], term = Jump (BlockIdent "b3")}
+            b3 = Block {label = BlockIdent "b3", phi = [p1], stmt = [], term = Return Nothing}
+            fn = FuncDef [] (GlobalIdent "f") Nothing [] [b1, b2, b3]
+         in parse "function $f() {\n@b1\njmp @b2\n@b2\njmp @b3\n@b3\n%v =w phi @b1 1, @b2 2\nret\n}" @?= Right fn,
       testCase "Call instruction with integer literal value" $
         let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
-            b = [Block {label = BlockIdent "s", stmt = [c], term = Return Nothing}]
+            b = [Block {label = BlockIdent "s", phi = [], stmt = [c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f
     ]

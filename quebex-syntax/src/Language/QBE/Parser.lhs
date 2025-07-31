@@ -37,6 +37,7 @@ module Language.QBE.Parser (dataDef, typeDef, funcDef) where
 
 import Data.Functor ((<&>))
 import Data.List (singleton)
+import Data.Map qualified as Map
 import qualified Language.QBE.Types as Q
 import Language.QBE.Util (bind, decNumber, float)
 import Text.ParserCombinators.Parsec
@@ -734,8 +735,9 @@ straight-line code which are connected using jump instructions.
 block :: Parser Q.Block'
 block = do
   l <- wsNL1 label
+  p <- many (wsNL1 $ try phiInstr)
   s <- many (wsNL1 statement)
-  Q.Block' l s <$> (optionMaybe $ wsNL1 jumpInstr)
+  Q.Block' l p s <$> (optionMaybe $ wsNL1 jumpInstr)
 \end{code}
 
 All blocks have a name that is specified by a label at their beginning.
@@ -1031,6 +1033,25 @@ To-Do.
 To-Do.
 
 \subsection{Phi}
+
+\begin{code}
+phiBranch :: Parser (Q.BlockIdent, Q.Value)
+phiBranch = do
+  n <- ws1 label
+  v <- val
+  pure (n, v)
+
+phiInstr :: Parser Q.Phi
+phiInstr = do
+  -- TODO: code duplication with 'assign'
+  n <- ws local
+  t <- ws (char '=') >> ws1 baseType
+
+  _ <- ws1 (string "phi")
+  -- TODO: combinator for sepBy
+  p <- Map.fromList <$> sepBy1 (ws phiBranch) (ws $ char ',')
+  return $ Q.Phi n t p
+\end{code}
 
 To-Do.
 

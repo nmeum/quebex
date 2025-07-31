@@ -33,7 +33,8 @@ library
 
     build-depends:
       base,
-      parsec
+      parsec,
+      containers
 
 test-suite quebex-syntax-test
     import:           warnings
@@ -52,6 +53,7 @@ test-suite quebex-syntax-test
         parsec,
         process,
         filepath,
+        containers,
         tasty        >=1.4.3,
         tasty-hunit  >=0.10,
         tasty-golden >=2.3.5,
