@@ -41,6 +41,8 @@ trackTrace (PathSel tree t) trace =
 -- If such an assignment does not exist, then 'Nothing' is returned.
 --
 -- Throws a 'SolverError' on an unknown solver result (e.g., on timeout).
+--
+-- TODO: Remove dependency on 'PathSel' and move this elsewhere.
 solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model.Model)
 solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
   -- Determine the common prefix of the current trace and the old trace
@@ -49,6 +51,7 @@ solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
   -- incremental solving capabilities.
   let prefix = prefixLength newTrace oldTrace
   let toDrop = length oldTrace - prefix
+  -- TODO: Don't pop if toDrop is zero.
   SMT.popMany solver $ fromIntegral toDrop
 
   -- Only enforce new constraints, i.e. those beyond the common prefix.
@@ -65,6 +68,7 @@ solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
     assertTrace :: ExecTrace -> IO ()
     assertTrace [] = pure ()
     assertTrace t = do
+      -- TODO: use pushMany
       let conds = map (\(b, Branch _ c) -> SE.toCond b c) t
       mapM_ (\c -> SMT.push solver >> SMT.assert solver c) conds
 
