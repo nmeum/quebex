@@ -1028,7 +1028,33 @@ callInstr = do
   return $ Q.Call retValue toCall fnArgs
 \end{code}
 
-To-Do.
+The call instruction is special in several ways. It is not a three-address
+instruction and requires the type of all its arguments to be given. Also, the
+return type can be either a base type or an aggregate type. These specifics are
+required to compile calls with C compatibility (i.e., to respect the ABI).
+
+When an aggregate type is used as argument type or return type, the value
+respectively passed or returned needs to be a pointer to a memory location
+holding the value. This is because aggregate types are not first-class
+citizens of the IL.
+
+Sub-word types are used for arguments and return values of width less than a
+word. Details on these types are presented in the <@ Functions > section.
+Arguments with sub-word types need not be sign or zero extended according to
+their type. Calls with a sub-word return type define a temporary of base type
+\texttt{w} with its most significant bits unspecified.
+
+Unless the called function does not return a value, a return temporary must be
+specified, even if it is never used afterwards.
+
+An environment parameter can be passed as first argument using the \texttt{env}
+keyword. The passed value must be a 64-bit integer. If the called function does
+not expect an environment parameter, it will be safely discarded. See the
+\nameref{sec:functions} section for more information about environment
+parameters.
+
+When the called function is variadic, there must be a \texttt{...} marker
+separating the named and variadic arguments.
 
 \subsection{Variadic}
 \label{sec:variadic}
@@ -1113,7 +1139,7 @@ form is to insert a phi instruction.
 \end{verbatim}
 
 Phi instructions return one of their arguments depending on where the control
-came from.  In the example, \texttt{%y} is set to 1 if the \texttt{@ift} branch
+came from. In the example, \texttt{%y} is set to 1 if the \texttt{@ift} branch
 is taken, or it is set to 2 otherwise.
 
 An important remark about phi instructions is that QBE assumes that if a
