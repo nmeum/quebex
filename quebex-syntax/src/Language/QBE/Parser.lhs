@@ -856,6 +856,9 @@ made explicit by the instruction suffix.
 To-Do.
 
 \subsection{Memory}
+\label{sec:memory}
+
+To-Do.
 
 \subsubsection{Store instructions}
 
@@ -1053,6 +1056,68 @@ phiInstr = do
   return $ Q.Phi n t p
 \end{code}
 
-To-Do.
+First and foremost, phi instructions are NOT necessary when writing a frontend
+to QBE. One solution to avoid having to deal with SSA form is to use stack
+allocated variables for all source program variables and perform assignments
+and lookups using \nameref{sec:memory} operations. This is what LLVM users
+typically do.
 
+Another solution is to simply emit code that is not in SSA form! Contrary to
+LLVM, QBE is able to fixup programs not in SSA form without requiring the
+boilerplate of loading and storing in memory. For example, the following
+program will be correctly compiled by QBE.
+
+\begin{verbatim}
+@start
+    %x =w copy 100
+    %s =w copy 0
+@loop
+    %s =w add %s, %x
+    %x =w sub %x, 1
+    jnz %x, @loop, @end
+@end
+    ret %s
+\end{verbatim}
+
+Now, if you want to know what phi instructions are and how to use them in QBE,
+you can read the following.
+
+Phi instructions are specific to SSA form. In SSA form values can only be
+assigned once, without phi instructions, this requirement is too strong to
+represent many programs. For example consider the following C program.
+
+\begin{verbatim}
+int f(int x) {
+    int y;
+    if (x)
+        y = 1;
+    else
+        y = 2;
+    return y;
+}
+\end{verbatim}
+
+The variable \texttt{y} is assigned twice, the solution to translate it in SSA
+form is to insert a phi instruction.
+
+\begin{verbatim}
+@ifstmt
+    jnz %x, @ift, @iff
+@ift
+    jmp @retstmt
+@iff
+    jmp @retstmt
+@retstmt
+    %y =w phi @ift 1, @iff 2
+    ret %y
+\end{verbatim}
+
+Phi instructions return one of their arguments depending on where the control
+came from.  In the example, \texttt{%y} is set to 1 if the \texttt{@ift} branch
+is taken, or it is set to 2 otherwise.
+
+An important remark about phi instructions is that QBE assumes that if a
+variable is defined by a phi it respects all the SSA invariants. So it is
+critical to not use phi instructions unless you know exactly what you are
+doing.
 \end{document}
