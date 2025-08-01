@@ -19,7 +19,7 @@ main =
   defaultMain
     [ bgroup
         "bubble-sort"
-        [ bench "10" $ bubbleSort 10,
+        [ bench "10" $ bubbleSort 25,
           bench "50" $ bubbleSort 50,
           bench "100" $ bubbleSort 100
         ]
