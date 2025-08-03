@@ -12,7 +12,7 @@ A work-in-progress software analysis framework built around the [QBE] intermedia
 
 Existing analysis frameworks are predominantly built around [LLVM].
 Unfortunately, LLVM is a fast moving target with constant changes and updates to its intermediate language.
-Therefore, tooling built around LLVM (e.g., [KLEE]) often requires dated LLVM versions.[^1]
+Therefore, tooling built around LLVM (e.g., [KLEE]) often requires dated LLVM versions.
 Obtaining these LLVM versions can be cumbersome and often hinders employment of these tools.
 To overcome these issues, maintainers of analysis tooling need to constantly invest time to catch-up with LLVM releases, instead of focusing on improving their analysis framework.
 
@@ -51,7 +51,6 @@ Further, a [Guix] environment for development purposes can be obtained using:
 
 This project uses the [REUSE Specification] to indicated used software license.
 
-[^1]: At the time of writing, KLEE recommends LLVM 13 and the current version is LLVM 20.
 [QBE]: https://c9x.me/compile/
 [QBE vs LLVM]: https://c9x.me/compile/doc/llvm.html
 [LLVM]: https://llvm.org/
