@@ -3,6 +3,7 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 module Language.QBE.Simulator.Explorer (explore, z3Solver) where
 
+import System.IO (stderr)
 import Language.QBE (Program)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
@@ -14,11 +15,16 @@ import Language.QBE.Simulator.Concolic.State (run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
+import Language.QBE.Backend.QueryLogger qualified as QLog
 
 z3Solver :: IO SMT.Solver
 z3Solver = do
-  -- l <- SMT.newLogger 0
-  s <- SMT.newSolver "z3" ["-in", "-smt2"] Nothing
+  --l <- SMT.newLoggerWithHandle stderr 0
+  l <- QLog.makeLogger "/tmp/test-queries"
+  s <- SMT.newSolverWithConfig
+    (SMT.defaultConfig "z3" ["-in", "-smt2"]) { SMT.solverLogger = l }
+
+  SMT.setOption s ":produce-assertions" "true"
   SMT.setLogic s "QF_BV"
   return s
 
