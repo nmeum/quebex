@@ -76,7 +76,7 @@ transExpr (SMT.List ((SMT.Atom "assert") : xs)) =
   addAssertion xs
 transExpr (SMT.List [SMT.Atom "check-sat"]) = do
   asserts <- getAsserts
-  addExpr $ SMT.List (SMT.Atom "check-sat-assuming" : asserts)
+  addExpr $ SMT.List [SMT.Atom "check-sat-assuming", SMT.List asserts]
   completeQuery
 -- TODO: declare-*
 -- TODO: define-*
