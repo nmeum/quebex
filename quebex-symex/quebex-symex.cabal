@@ -41,6 +41,7 @@ library
       Language.QBE.Backend.DFS,
       Language.QBE.Backend.Tracer,
       Language.QBE.Backend.QueryLogger,
+      Language.QBE.Backend.QuerySplitter,
       Language.QBE.Simulator.Explorer,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.State,

@@ -15,14 +15,12 @@ import Language.QBE.Simulator.Concolic.State (run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
-import Language.QBE.Backend.QueryLogger qualified as QLog
 
 z3Solver :: IO SMT.Solver
 z3Solver = do
-  --l <- SMT.newLoggerWithHandle stderr 0
-  l <- QLog.makeLogger "/tmp/test-queries"
+  l <- SMT.newLoggerWithHandle stderr 0
   s <- SMT.newSolverWithConfig
-    (SMT.defaultConfig "z3" ["-in", "-smt2"]) { SMT.solverLogger = l }
+    (SMT.defaultConfig "z3" ["-in", "-smt2"]) { SMT.solverLogger = SMT.smtSolverLogger l }
 
   SMT.setOption s ":produce-assertions" "true"
   SMT.setLogic s "QF_BV"
