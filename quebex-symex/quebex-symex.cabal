@@ -57,6 +57,9 @@ benchmark quebex-symex
     build-depends:
       base,
       criterion ^>= 1.6.4.0,
+      process,
+      directory,
+      filepath,
       quebex,
       quebex-syntax,
       quebex-symex

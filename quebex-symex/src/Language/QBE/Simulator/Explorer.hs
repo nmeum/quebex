@@ -1,7 +1,13 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
-module Language.QBE.Simulator.Explorer (newEngine, explore, z3Solver) where
+module Language.QBE.Simulator.Explorer
+  ( newEngine,
+    explore,
+    z3Solver,
+    logSolver
+  )
+where
 
 import Language.QBE (Program)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
@@ -14,11 +20,17 @@ import Language.QBE.Simulator.Concolic.State (run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
-import System.IO (stderr)
+import System.IO (Handle)
 
 z3Solver :: IO SMT.Solver
 z3Solver = do
-  l <- SMT.newLoggerWithHandle stderr 0
+  s <- SMT.newSolver "z3" ["-in", "-smt2"] Nothing
+  SMT.setLogic s "QF_BV"
+  return s
+
+logSolver :: Handle -> IO SMT.Solver
+logSolver handle = do
+  l <- SMT.newLoggerWithHandle handle 0
   s <-
     SMT.newSolverWithConfig
       (SMT.defaultConfig "z3" ["-in", "-smt2"]) {SMT.solverLogger = SMT.smtSolverLogger l}
