@@ -4,9 +4,11 @@ import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator.Explorer (explore)
 import Language.QBE.Types qualified as QBE
-import System.FilePath
-import Test.Tasty
-import Test.Tasty.Golden.Advanced
+import Language.QBE.Backend.Store qualified as ST
+import Language.QBE.Backend.Tracer qualified as T
+
+entryFunc :: QBE.GlobalIdent
+entryFunc = QBE.GlobalIdent "entry"
 
 exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 exploreQBE filePath params = do
@@ -21,3 +23,6 @@ exploreQBE filePath params = do
     Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
 
   explore prog func params
+
+main :: IO ()
+main = error "not implemented"

@@ -47,6 +47,20 @@ library
       Language.QBE.Simulator.Concolic.State,
       Language.QBE.Simulator.Concolic.Expression
 
+benchmark quebex-symex
+    import:           warnings
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   bench
+    main-is:          Main.hs
+
+    build-depends:
+      base,
+      criterion ^>= 1.6.4.0,
+      quebex,
+      quebex-syntax,
+      quebex-symex
+
 test-suite quebex-symex-test
     import:           warnings
     default-language: GHC2021
