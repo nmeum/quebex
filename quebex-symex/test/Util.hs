@@ -7,11 +7,14 @@ module Util where
 import Data.List (find)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
+import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as ST
+import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Concolic.State (run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
+import Language.QBE.Simulator.Explorer (explore, newEngine, z3Solver)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
@@ -41,3 +44,8 @@ unconstrained solver initCon name ty = do
   let concrete = E.fromLit ty initCon
   symbolic <- SE.symbolic solver name ty
   pure $ CE.Concolic concrete (Just symbolic)
+
+explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
+explore' prog entry params = do
+  engine <- z3Solver >>= newEngine
+  explore engine prog entry params
