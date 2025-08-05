@@ -10,7 +10,6 @@ import Data.Maybe (fromJust)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (explore)
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -31,7 +30,7 @@ exploreTests :: TestTree
 exploreTests =
   testGroup
     "Tests for Symbolic Program Exploration"
-    [ testCase "Explore program with four execution paths" $
+    [ testCase "Explore' program with four execution paths" $
         do
           prog <-
             parseProg
@@ -51,7 +50,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "branchOnInput")
-          eTraces <- explore prog funcDef [("cond1", QBE.Word), ("cond2", QBE.Word)]
+          eTraces <- explore' prog funcDef [("cond1", QBE.Word), ("cond2", QBE.Word)]
 
           let branches = branchPoints eTraces
           branches @?= [[False, False], [False, True], [True, False], [True, True]],
@@ -75,7 +74,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "branchOnInput")
-          eTraces <- explore prog funcDef [("cond1", QBE.Word)]
+          eTraces <- explore' prog funcDef [("cond1", QBE.Word)]
 
           let branches = branchPoints eTraces
           branches @?= [[False, False], [True, True]],
@@ -94,7 +93,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "branchArithmetics")
-          eTraces <- explore prog funcDef [("input", QBE.Word)]
+          eTraces <- explore' prog funcDef [("input", QBE.Word)]
 
           let branches = branchPoints eTraces
           branches @?= [[False], [True]]
@@ -129,7 +128,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "entry")
-          eTraces <- explore prog funcDef [("x", QBE.Word)]
+          eTraces <- explore' prog funcDef [("x", QBE.Word)]
 
           let branches = branchPoints eTraces
           branches @?= [[False, False], [True, True]],
@@ -148,7 +147,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "f")
-          eTraces <- explore prog funcDef [("y", QBE.Long)]
+          eTraces <- explore' prog funcDef [("y", QBE.Long)]
 
           branchPoints eTraces @?= [[False], [True]]
           let assign = fromJust $ findAssign eTraces [False]
@@ -170,7 +169,7 @@ exploreTests =
               \}"
 
           let funcDef = findFunc prog (QBE.GlobalIdent "f")
-          eTraces <- explore prog funcDef [("y", QBE.Long), ("x", QBE.Word)]
+          eTraces <- explore' prog funcDef [("y", QBE.Long), ("x", QBE.Word)]
 
           branchPoints eTraces @?= [[False], [True, False], [True, True]]
     ]

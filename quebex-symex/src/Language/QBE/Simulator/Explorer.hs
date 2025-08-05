@@ -1,7 +1,7 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
-module Language.QBE.Simulator.Explorer (explore, z3Solver) where
+module Language.QBE.Simulator.Explorer (newEngine, explore, z3Solver) where
 
 import Language.QBE (Program)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
@@ -31,10 +31,8 @@ data Engine
     expStore :: ST.Store
   }
 
-newEngine :: IO Engine
-newEngine = do
-  solver <- z3Solver -- TODO: Make this configurable
-  Engine solver newPathSel <$> ST.empty
+newEngine :: SMT.Solver -> IO Engine
+newEngine solver = Engine solver newPathSel <$> ST.empty
 
 findNext :: Engine -> T.ExecTrace -> IO (Maybe Model, Engine)
 findNext e@(Engine {expStore = store}) eTrace = do
@@ -54,16 +52,18 @@ findNext e@(Engine {expStore = store}) eTrace = do
 traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic DE.RegVal] -> IO T.ExecTrace
 traceFunc prog func params = run prog (execFunc func params)
 
-explore :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
-explore prog entryPoint entryParams = newEngine >>= explore'
-  where
-    explore' :: Engine -> IO [(ST.Assign, T.ExecTrace)]
-    explore' engine@Engine {expSolver = solver, expStore = store} = do
-      varAssign <- ST.assign store
-      values <- mapM (uncurry (ST.getConcolic solver store)) entryParams
-      eTrace <- traceFunc prog entryPoint values
+explore ::
+  Engine ->
+  Program ->
+  QBE.FuncDef ->
+  [(String, QBE.BaseType)] ->
+  IO [(ST.Assign, T.ExecTrace)]
+explore engine@Engine {expSolver = solver, expStore = store} prog entry params = do
+  varAssign <- ST.assign store
+  values <- mapM (uncurry (ST.getConcolic solver store)) params
+  eTrace <- traceFunc prog entry values
 
-      (model, nEngine) <- findNext engine eTrace
-      case model of
-        Nothing -> pure [(varAssign, eTrace)]
-        Just _m -> (:) (varAssign, eTrace) <$> explore' nEngine
+  (model, nEngine) <- findNext engine eTrace
+  case model of
+    Nothing -> pure [(varAssign, eTrace)]
+    Just _m -> (:) (varAssign, eTrace) <$> explore nEngine prog entry params

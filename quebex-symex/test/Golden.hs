@@ -6,7 +6,7 @@ module Golden (goldenTests) where
 
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
-import Language.QBE.Simulator.Explorer (explore)
+import Language.QBE.Simulator.Explorer (explore, newEngine, z3Solver)
 import Language.QBE.Types qualified as QBE
 import System.FilePath
 import Test.Tasty
@@ -29,7 +29,8 @@ exploreQBE filePath params = do
     Just x -> pure x
     Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
 
-  traces <- explore prog func params
+  engine <- z3Solver >>= newEngine
+  traces <- explore engine prog func params
   pure $ length traces
 
 simpleCmp :: Result -> Result -> IO (Maybe String)
