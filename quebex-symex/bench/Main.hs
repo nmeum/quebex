@@ -9,7 +9,9 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
+import Numeric (showFFloat)
 import SimpleSMT qualified as SMT
+import Statistics (mean, stddev)
 import System.Directory (listDirectory)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath (takeBaseName, (</>))
@@ -21,6 +23,11 @@ logPath = "/tmp/quebex-symex-bench.smt2"
 
 entryFunc :: QBE.GlobalIdent
 entryFunc = QBE.GlobalIdent "entry"
+
+numRuns :: Int
+numRuns = 3
+
+------------------------------------------------------------------------
 
 exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 exploreQBE filePath params = do
@@ -54,7 +61,7 @@ solveQueries dirFp = do
   where
     solveQuery :: FilePath -> IO Double
     solveQuery fp = do
-      -- TODO: use createProcess and do the input redirection in Haskell.
+      -- TODO: don't use shell, do the input redirection in Haskell.
       (_, Just hout, _, p) <-
         createProcess $
           (shell ("z3 -st -in -smt2 2>/dev/null 2>&1 <" ++ fp))
@@ -78,11 +85,18 @@ solveQueries dirFp = do
 
 runBench :: FilePath -> [(String, QBE.BaseType)] -> IO ()
 runBench fp params = do
-  results <- getQueries "/tmp/queries" fp params >>= solveQueries
+  queryDir <- getQueries ("/tmp/queries-" ++ takeBaseName fp) fp params
+  totals <- mapM (\_ -> runBench' queryDir) [1 .. numRuns]
 
-  -- TODO: median, standard derivation, …
-  let total = foldl (+) 0 $ map snd results
-  putStrLn $ (takeBaseName fp) ++ "\t" ++ show total ++ "s"
+  let meanStr = showFFloat (Just 3) (mean totals) "s"
+  let devStr = showFFloat (Just 2) (stddev totals) "s"
+  putStrLn $ takeBaseName fp ++ "\t" ++ meanStr ++ " ± " ++ devStr
+  where
+    -- Returns the **total** solver time for all queries.
+    runBench' :: FilePath -> IO Double
+    runBench' queryDir = do
+      results <- solveQueries queryDir
+      pure $ foldl (+) 0 (map snd results)
 
 main :: IO ()
 main = do
