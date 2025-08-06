@@ -12,12 +12,9 @@ module Language.QBE.Backend.DFS
 where
 
 import Control.Applicative ((<|>))
-import Control.Exception (throwIO)
-import Language.QBE.Backend (SolverError (UnknownResult), prefixLength)
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
 import Language.QBE.Backend.Model qualified as Model
-import Language.QBE.Backend.Tracer (Branch (..), ExecTrace)
-import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Backend.Tracer (Branch (..), ExecTrace, solveTrace)
 import SimpleSMT qualified as SMT
 
 -- The 'PathSel' encapsulates data for the Dynamic Symbolic Execution (DSE)
@@ -36,42 +33,6 @@ trackTrace :: PathSel -> ExecTrace -> PathSel
 trackTrace (PathSel tree t) trace =
   PathSel (addTrace tree trace) t
 
--- For a given execution trace, return an assignment (represented
--- as a 'Model') which statisfies all symbolic branch conditions.
--- If such an assignment does not exist, then 'Nothing' is returned.
---
--- Throws a 'SolverError' on an unknown solver result (e.g., on timeout).
---
--- TODO: Remove dependency on 'PathSel' and move this elsewhere.
-solveTrace :: SMT.Solver -> [SMT.SExpr] -> PathSel -> ExecTrace -> IO (Maybe Model.Model)
-solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
-  -- Determine the common prefix of the current trace and the old trace
-  -- drop constraints beyond this common prefix from the current solver
-  -- context. Thereby, keeping the common prefix and making use of
-  -- incremental solving capabilities.
-  let prefix = prefixLength newTrace oldTrace
-  let toDrop = length oldTrace - prefix
-  -- TODO: Don't pop if toDrop is zero.
-  SMT.popMany solver $ fromIntegral toDrop
-
-  -- Only enforce new constraints, i.e. those beyond the common prefix.
-  assertTrace (drop prefix newTrace)
-
-  isSat <- SMT.check solver
-  case isSat of
-    SMT.Sat -> Just <$> Model.getModel solver inputVars
-    SMT.Unsat -> pure Nothing
-    SMT.Unknown -> throwIO UnknownResult
-  where
-    -- Add all conditions enforced by the given 'ExecTrace' to the solver.
-    -- Returns a list of all asserted conditions.
-    assertTrace :: ExecTrace -> IO ()
-    assertTrace [] = pure ()
-    assertTrace t = do
-      -- TODO: use pushMany
-      let conds = map (\(b, Branch _ c) -> SE.toCond b c) t
-      mapM_ (\c -> SMT.push solver >> SMT.assert solver c) conds
-
 -- Find an assignment that causes exploration of a new execution path through
 -- the tested software. This function updates the metadata in the execution
 -- tree and thus returns a new execution tree, even if no satisfiable
@@ -79,12 +40,12 @@ solveTrace solver inputVars (PathSel _ oldTrace) newTrace = do
 --
 -- TODO: Can we get by without passing 'inputVars` here again?
 findUnexplored :: SMT.Solver -> [SMT.SExpr] -> PathSel -> IO (Maybe Model.Model, PathSel)
-findUnexplored solver inputVars tracer@(PathSel tree _) = do
+findUnexplored solver inputVars tracer@(PathSel tree oldTrace) = do
   case negateBranch tree of
     Nothing -> pure (Nothing, tracer)
     Just nt -> do
       let nextTracer = PathSel (addTrace tree nt) nt
-      res <- solveTrace solver inputVars tracer nt
+      res <- solveTrace solver inputVars oldTrace nt
       case res of
         Nothing -> findUnexplored solver inputVars nextTracer
         Just m -> pure (Just m, nextTracer)
