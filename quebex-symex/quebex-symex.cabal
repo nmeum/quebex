@@ -54,9 +54,13 @@ benchmark quebex-symex
     hs-source-dirs:   bench
     main-is:          Main.hs
 
+    other-modules:
+      Statistics
+
     build-depends:
       base,
       criterion ^>= 1.6.4.0,
+      simple-smt,
       process,
       directory,
       filepath,

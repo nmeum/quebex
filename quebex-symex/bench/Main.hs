@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Control.Monad (forM_, when)
+import Control.Monad (when)
 import Data.Char (isLower)
 import Data.List (find, unsnoc)
 import Language.QBE (globalFuncs, parse)
@@ -40,10 +40,11 @@ exploreQBE filePath params = do
       engine <- logSolver handle >>= newEngine
       explore engine prog func params
 
-getQueries :: FilePath -> FilePath -> [(String, QBE.BaseType)] -> IO ()
+getQueries :: FilePath -> FilePath -> [(String, QBE.BaseType)] -> IO FilePath
 getQueries queryFp qbeFp params = do
   _ <- exploreQBE qbeFp params
   splitQueries logPath queryFp
+  pure queryFp
 
 solveQueries :: FilePath -> IO [(FilePath, Double)]
 solveQueries dirFp = do
@@ -75,11 +76,14 @@ solveQueries dirFp = do
         _ -> error "invalid statistics expression"
       pure $ read timeStr
 
+runBench :: FilePath -> [(String, QBE.BaseType)] -> IO ()
+runBench fp params = do
+  results <- getQueries "/tmp/queries" fp params >>= solveQueries
+
+  -- TODO: median, standard derivation, …
+  let total = foldl (+) 0 $ map snd results
+  putStrLn $ (takeBaseName fp) ++ "\t" ++ show total ++ "s"
+
 main :: IO ()
 main = do
-  getQueries "/tmp/queries" "/home/soeren/src/quebex/quebex-symex/test/golden/prime-numbers.qbe" [("a", QBE.Word)]
-  results <- solveQueries "/tmp/queries"
-  forM_ results (putStrLn . showResult)
-  where
-    showResult :: (FilePath, Double) -> String
-    showResult (fname, time) = takeBaseName fname ++ "\t" ++ show time
+  runBench "/home/soeren/src/quebex/quebex-symex/test/golden/prime-numbers.qbe" [("a", QBE.Word)]
