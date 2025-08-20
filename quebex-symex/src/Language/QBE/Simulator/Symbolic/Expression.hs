@@ -193,9 +193,13 @@ instance E.ValueRepr BitVector where
   ne = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.eq lhs rhs)
   sle = binaryBoolOp SMT.bvSLeq
   slt = binaryBoolOp SMT.bvSLt
-  sge = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvSLt lhs rhs)
-  sgt = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvSLeq lhs rhs)
+  -- (bvsge s t) abbreviates (bvsle t s)
+  sge = binaryBoolOp (\lhs rhs -> SMT.bvSLeq rhs lhs)
+  -- (bvsgt s t) abbreviates (bvslt t s)
+  sgt = binaryBoolOp (\lhs rhs -> SMT.bvSLt rhs lhs)
   ule = binaryBoolOp SMT.bvULeq
   ult = binaryBoolOp SMT.bvULt
-  uge = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvULt lhs rhs)
-  ugt = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.bvULeq lhs rhs)
+  -- (bvuge s t) abbreviates (or (bvult t s) (= s t))
+  uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (SMT.eq lhs rhs))
+  -- (bvugt s t) abbreviates (bvult t s)
+  ugt = binaryBoolOp (\lhs rhs -> SMT.bvULt rhs lhs)
