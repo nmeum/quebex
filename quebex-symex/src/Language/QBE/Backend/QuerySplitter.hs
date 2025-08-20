@@ -5,6 +5,7 @@
 
 module Language.QBE.Backend.QuerySplitter where
 
+import Text.Printf (printf)
 import Control.Monad (forM_)
 import Control.Monad.State (State, gets, modify, runState)
 import Data.Functor ((<&>))
@@ -108,7 +109,7 @@ getQueries exprs = queries (snd $ runTransform exprs)
 
 writeQuery :: FilePath -> Int -> [SMT.SExpr] -> IO ()
 writeQuery dfp qn q = do
-  let fp = dfp </> "query" ++ show qn ++ ".smt2"
+  let fp = dfp </> "query" ++ (printf "%05d" qn) ++ ".smt2"
   writeFile fp (serialize q)
   where
     serialize :: [SMT.SExpr] -> String
