@@ -5,13 +5,13 @@
 
 module Language.QBE.Backend.QuerySplitter where
 
-import Text.Printf (printf)
 import Control.Monad (forM_)
 import Control.Monad.State (State, gets, modify, runState)
 import Data.Functor ((<&>))
 import SimpleSMT qualified as SMT
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
+import Text.Printf (printf)
 
 data TransEnv
   = TransEnv
@@ -29,7 +29,7 @@ mkTransEnv = TransEnv [] [] [] []
 
 newAssertLevel :: State TransEnv ()
 newAssertLevel =
-  modify (\s -> s {assertStack = assertStack s ++ []})
+  modify (\s -> s {assertStack = [[]] ++ assertStack s})
 
 popAssertLevel :: State TransEnv ()
 popAssertLevel = modify go
@@ -41,8 +41,8 @@ addAssertion :: [SMT.SExpr] -> State TransEnv ()
 addAssertion assertions = do
   stk <- gets assertStack
   let newStk = case stk of
-        (x : _) -> [x ++ assertions]
-        _ -> [assertions]
+        (x : xs) -> [x ++ assertions] ++ xs
+        [] -> [assertions]
   modify (\s -> s {assertStack = newStk})
 
 addExpr :: SMT.SExpr -> State TransEnv ()
@@ -69,10 +69,10 @@ completeQuery =
 transExpr :: SMT.SExpr -> State TransEnv ()
 transExpr (SMT.List [SMT.Atom "push", SMT.Atom arg]) = do
   let num = (read arg :: Integer)
-  forM_ [0 .. num] (\_ -> newAssertLevel) -- TODO: ntimes
+  forM_ [1 .. num] (\_ -> newAssertLevel) -- TODO: ntimes
 transExpr (SMT.List [SMT.Atom "pop", SMT.Atom arg]) = do
   let num = (read arg :: Integer)
-  forM_ [0 .. num] (\_ -> popAssertLevel) -- TODO: ntimes
+  forM_ [1 .. num] (\_ -> popAssertLevel) -- TODO: ntimes
 transExpr (SMT.List ((SMT.Atom "assert") : xs)) =
   addAssertion xs
 transExpr (SMT.List [SMT.Atom "check-sat"]) = do
