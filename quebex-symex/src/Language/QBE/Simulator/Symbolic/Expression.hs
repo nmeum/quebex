@@ -21,6 +21,28 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 
+-- This expression language has more refined internal types. This are
+-- needed to emit better (i.e., less complex) SMT queries, leading to
+-- improved solver time.
+data SymType
+  = SymBool
+  | SymByte
+  | SymWord
+  | SymLong
+  deriving (Show, Eq)
+
+baseToSym :: QBE.BaseType -> SymType
+baseToSym QBE.Word = SymWord
+baseToSym QBE.Long = SymLong
+baseToSym QBE.Single = error "symbolic single not supported"
+baseToSym QBE.Double = error "symbolic double not supported"
+
+symBitSize :: SymType -> Int
+symBitSize SymBool = 1
+symBitSize SymByte = 8
+symBitSize SymWord = 32
+symBitSize SymLong = 64
+
 -- This types supports more than just the 'QBE.BaseType' to ease the
 -- implementation of the 'MEM.Storable' type class. Essentially, this
 -- data type just provides a generic BitVector abstraction on top of
@@ -28,24 +50,25 @@ import SimpleSMT qualified as SMT
 data BitVector
   = BitVector
   { sexpr :: SMT.SExpr,
-    -- TODO: For BitVectors, we can extract the type from the SExpr.
-    -- Technically, we don't need the 'ExtType' here and can just
-    -- turn this into a newtype.
-    qtype :: QBE.ExtType
+    -- NOTE: We cannot rely on the 'SMT.Value' return via 'SMT.sexprToVal'
+    -- for 'sexpr' as SimpleSMT largely relies on untyped S-Expressions for
+    -- newly constructed expressions and cannot infer their return type.
+    -- Therefore, we need our expressions constructors to track this separately.
+    qtype :: SymType
   }
   deriving (Show, Eq)
 
 fromByte :: Word8 -> BitVector
-fromByte byte = BitVector (SMT.bvBin 8 $ fromIntegral byte) QBE.Byte
+fromByte byte = BitVector (SMT.bvBin 8 $ fromIntegral byte) SymByte
 
 fromReg :: D.RegVal -> BitVector
-fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) (QBE.Base QBE.Word)
-fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) (QBE.Base QBE.Long)
+fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) SymWord
+fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) SymLong
 fromReg (D.VSingle _) = error "symbolic floats not supported"
 fromReg (D.VDouble _) = error "symbolic doubles not supported"
 
 fromSExpr :: QBE.BaseType -> SMT.SExpr -> BitVector
-fromSExpr ty sexpr = BitVector sexpr (QBE.Base ty)
+fromSExpr ty sexpr = BitVector sexpr (baseToSym ty)
 
 toSExpr :: BitVector -> SMT.SExpr
 toSExpr = sexpr
@@ -54,13 +77,13 @@ symbolic :: SMT.Solver -> String -> QBE.BaseType -> IO BitVector
 symbolic solver name ty = do
   let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
   sym <- SMT.declare solver name bits
-  return $ BitVector sym (QBE.Base ty)
+  return $ BitVector sym (baseToSym ty)
 
 -- In the QBE a condition (see `jnz`) is true if the Word value is not zero.
 toCond :: Bool -> BitVector -> SMT.SExpr
 toCond isTrue BitVector {sexpr = s, qtype = ty} =
   -- Equality is only defined for Words.
-  assert (ty == QBE.Base QBE.Word) $
+  assert (ty == SymWord) $
     let zeroSExpr = sexpr (fromReg $ E.fromLit QBE.Word 0)
      in toCond' s zeroSExpr
   where
@@ -73,10 +96,10 @@ toCond isTrue BitVector {sexpr = s, qtype = ty} =
 instance MEM.Storable BitVector BitVector where
   toBytes BitVector {sexpr = s, qtype = ty} =
     assert (size `mod` 8 == 0) $
-      map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. size `div` 8]
+      map (\n -> BitVector (nthByte s n) SymByte) [1 .. size `div` 8]
     where
       size :: Integer
-      size = fromIntegral $ QBE.extTypeBitSize ty
+      size = fromIntegral $ symBitSize ty
 
       nthByte :: SMT.SExpr -> Integer -> SMT.SExpr
       nthByte expr n = SMT.extract expr ((n * 8) - 1) ((n - 1) * 8)
@@ -87,17 +110,17 @@ instance MEM.Storable BitVector BitVector where
       then Nothing
       else case (ty, bytes) of
         (QBE.LSubWord QBE.UnsignedByte, [_]) ->
-          Just (BitVector (SMT.zeroExtend 24 concated) (QBE.Base QBE.Word))
+          Just (BitVector (SMT.zeroExtend 24 concated) SymWord)
         (QBE.LSubWord QBE.SignedByte, [_]) ->
-          Just (BitVector (SMT.signExtend 24 concated) (QBE.Base QBE.Word))
+          Just (BitVector (SMT.signExtend 24 concated) SymWord)
         (QBE.LSubWord QBE.SignedHalf, [_, _]) ->
-          Just (BitVector (SMT.signExtend 16 concated) (QBE.Base QBE.Word))
+          Just (BitVector (SMT.signExtend 16 concated) SymWord)
         (QBE.LSubWord QBE.UnsignedHalf, [_, _]) ->
-          Just (BitVector (SMT.zeroExtend 16 concated) (QBE.Base QBE.Word))
+          Just (BitVector (SMT.zeroExtend 16 concated) SymWord)
         (QBE.LBase QBE.Word, [_, _, _, _]) ->
-          Just (BitVector concated (QBE.Base QBE.Word))
+          Just (BitVector concated SymWord)
         (QBE.LBase QBE.Long, [_, _, _, _, _, _, _, _]) ->
-          Just (BitVector concated (QBE.Base QBE.Long))
+          Just (BitVector concated SymLong)
         (QBE.LBase QBE.Single, [_, _, _, _]) ->
           error "float loading not implemented"
         (QBE.LBase QBE.Double, [_, _, _, _, _, _, _, _]) ->
@@ -109,7 +132,7 @@ instance MEM.Storable BitVector BitVector where
 
       concatBV :: SMT.SExpr -> BitVector -> SMT.SExpr
       concatBV acc byte =
-        assert (qtype byte == QBE.Byte) $
+        assert (qtype byte == SymByte) $
           SMT.concat (sexpr byte) acc
 
 ------------------------------------------------------------------------
@@ -135,9 +158,9 @@ binaryBoolOp op lhs rhs = do
 -- TODO: If we Change E.ValueRepr to operate in 'Exec' then we can do IO stuff here.
 instance E.ValueRepr BitVector where
   fromLit ty n =
-    let exty = QBE.Base ty
-        size = fromIntegral $ QBE.extTypeBitSize exty
-     in BitVector (SMT.bvBin size $ fromIntegral n) exty
+    let syty = baseToSym ty
+        size = fromIntegral $ symBitSize syty
+     in BitVector (SMT.bvBin size $ fromIntegral n) syty
 
   fromFloat = error "symbolic floats currently unsupported"
   fromDouble = error "symbolic doubles currently unsupported"
@@ -151,26 +174,24 @@ instance E.ValueRepr BitVector where
       _ -> Nothing
   fromAddress addr = fromReg (E.fromLit QBE.Long addr)
 
-  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
-  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
-  wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 32 s) (QBE.Base QBE.Long)
-  wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 32 s) (QBE.Base QBE.Long)
+  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 7 0)) SymLong
+  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 7 0)) SymLong
+  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 15 0)) SymLong
+  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 15 0)) SymLong
+  wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.signExtend 32 s) SymLong
+  wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = SymWord}) =
+    Just $ BitVector (SMT.zeroExtend 32 s) SymLong
   wordToLong _ _ = Nothing
 
-  subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
-  subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
-    Just $ BitVector (SMT.extract s 31 0) (QBE.Base QBE.Word)
-  subType QBE.Long v@(BitVector {qtype = QBE.Base QBE.Long}) = Just v
-  subType QBE.Single v@(BitVector {qtype = QBE.Base QBE.Single}) = Just v
-  subType QBE.Double v@(BitVector {qtype = QBE.Base QBE.Double}) = Just v
+  subType QBE.Word v@(BitVector {qtype = SymWord}) = Just v
+  subType QBE.Word (BitVector {qtype = SymLong, sexpr = s}) =
+    Just $ BitVector (SMT.extract s 31 0) SymWord
+  subType QBE.Long v@(BitVector {qtype = SymLong}) = Just v
   subType _ _ = Nothing
 
   -- XXX: This only works for constants values, but this is fine (see above).
