@@ -20,7 +20,7 @@ first_divisor(unsigned a)
 unsigned
 entry(unsigned a)
 {
-	if (a <= 35) {
+	if (a <= 200) {
 		if (a > 1 && first_divisor(a) == a) {
 			return 1;
 		} else {

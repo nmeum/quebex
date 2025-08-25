@@ -36,7 +36,7 @@ function w $entry(w %.1) {
 	storew %.1, %.2
 @body.10
 	%.3 =w loadw %.2
-	%.4 =w culew %.3, 35
+	%.4 =w culew %.3, 200
 	jnz %.4, @if_true.11, @if_false.12
 @if_true.11
 	%.5 =w loadw %.2
