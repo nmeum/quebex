@@ -43,6 +43,27 @@ library
       Language.QBE.Simulator.Concolic.State,
       Language.QBE.Simulator.Concolic.Expression
 
+benchmark quebex-symex
+    import:           warnings
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   bench
+    main-is:          Main.hs
+
+    other-modules:
+      SMTUnwind
+      Statistics
+
+    build-depends:
+      base,
+      mtl,
+      simple-smt,
+      process,
+      filepath,
+      quebex,
+      quebex-syntax,
+      quebex-symex
+
 test-suite quebex-symex-test
     import:           warnings
     default-language: GHC2021
