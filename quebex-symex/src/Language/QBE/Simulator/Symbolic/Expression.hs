@@ -81,12 +81,18 @@ symbolic solver name ty = do
 
 -- In the QBE a condition (see `jnz`) is true if the Word value is not zero.
 toCond :: Bool -> BitVector -> SMT.SExpr
+toCond isTrue BitVector {sexpr = s, qtype = SymBool} =
+  if isTrue then s else SMT.not s
 toCond isTrue BitVector {sexpr = s, qtype = ty} =
-  -- Equality is only defined for Words.
-  assert (ty == SymWord) $
-    let zeroSExpr = sexpr (fromReg $ E.fromLit QBE.Word 0)
-     in toCond' s zeroSExpr
+  -- Only its least significant 32 bits will be compared to 0.
+  case ty of
+    SymWord -> toCond' s zeroSExpr
+    SymLong -> toCond' (SMT.extract s 31 0) zeroSExpr
+    _ -> error "invalid conditional value"
   where
+    -- TODO: Define this as an SMT-LIB constant?
+    zeroSExpr = sexpr (fromReg $ E.fromLit QBE.Word 0)
+
     toCond' lhs rhs
       | isTrue = SMT.not (SMT.eq lhs rhs) -- /= 0
       | otherwise = SMT.eq lhs rhs -- == 0
@@ -145,15 +151,7 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
 binaryBoolOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 binaryBoolOp op lhs rhs = do
   bv <- binaryOp op lhs rhs
-  -- TODO: Can we get rid of the ITE somehow?
-  return $ fromSExpr QBE.Long (SMT.ite (toSExpr bv) trueValue falseValue)
-  where
-    -- TODO: Declare these as constants.
-    trueValue :: SMT.SExpr
-    trueValue = toSExpr $ E.fromLit QBE.Long 1
-
-    falseValue :: SMT.SExpr
-    falseValue = toSExpr $ E.fromLit QBE.Long 0
+  return $ bv {qtype = SymBool}
 
 -- TODO: If we Change E.ValueRepr to operate in 'Exec' then we can do IO stuff here.
 instance E.ValueRepr BitVector where
@@ -192,6 +190,10 @@ instance E.ValueRepr BitVector where
   subType QBE.Word (BitVector {qtype = SymLong, sexpr = s}) =
     Just $ BitVector (SMT.extract s 31 0) SymWord
   subType QBE.Long v@(BitVector {qtype = SymLong}) = Just v
+  subType QBE.Word v@(BitVector {qtype = SymBool}) =
+    Just $ fromSExpr QBE.Word (SMT.ite (toSExpr v) (SMT.bvBin 32 1) (SMT.bvBin 32 0))
+  subType QBE.Long v@(BitVector {qtype = SymBool}) =
+    Just $ fromSExpr QBE.Long (SMT.ite (toSExpr v) (SMT.bvBin 64 1) (SMT.bvBin 64 0))
   subType _ _ = Nothing
 
   -- XXX: This only works for constants values, but this is fine (see above).

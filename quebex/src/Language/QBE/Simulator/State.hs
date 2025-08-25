@@ -116,22 +116,26 @@ maybeLookup :: (Simulator m v) => String -> Maybe v -> m v
 maybeLookup name = liftMaybe (UnknownVariable name)
 {-# INLINE maybeLookup #-}
 
+-- | Lookup a value without specifying its type, hence unsafe.
+unsafeLookup :: (Simulator m v) => QBE.Value -> m v
+unsafeLookup (QBE.VConst (QBE.Const (QBE.Number v))) =
+  pure $ E.fromLit QBE.Long v
+unsafeLookup (QBE.VConst (QBE.Const (QBE.SFP v))) =
+  pure $ E.fromFloat v
+unsafeLookup (QBE.VConst (QBE.Const (QBE.DFP v))) =
+  pure $ E.fromDouble v
+unsafeLookup (QBE.VConst (QBE.Const (QBE.Global k))) = do
+  lookupGlobal k >>= maybeLookup (show k)
+unsafeLookup (QBE.VConst (QBE.Thread k)) = do
+  lookupGlobal k >>= maybeLookup (show k)
+unsafeLookup (QBE.VLocal k) = do
+  activeFrame >>= maybeLookup (show k) . flip lookupLocal k
+{-# INLINEABLE unsafeLookup #-}
+
 lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit ty v
-lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
-  subTypeE ty (E.fromFloat v)
-lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
-  subTypeE ty (E.fromDouble v)
-lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
-lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
-lookupValue ty (QBE.VLocal k) = do
-  v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
-  subTypeE ty v
+lookupValue ty value = unsafeLookup value >>= subTypeE ty
 {-# INLINEABLE lookupValue #-}
 
 lookupFunc :: (Simulator m v) => QBE.Value -> m QBE.FuncDef

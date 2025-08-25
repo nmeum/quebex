@@ -94,5 +94,6 @@ solveTrace solver inputVars oldTrace newTrace = do
     assertTrace :: ExecTrace -> IO ()
     assertTrace [] = pure ()
     assertTrace t = do
+      -- TODO: Consider invoking toCond in condBranch of abstract monad.
       let conds = map (\(b, Branch _ c) -> SE.toCond b c) t
       mapM_ (\c -> SMT.push solver >> SMT.assert solver c) conds

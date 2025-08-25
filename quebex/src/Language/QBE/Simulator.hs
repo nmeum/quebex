@@ -141,11 +141,10 @@ execJump (QBE.Jump ident) = do
     Just bl -> pure $ Right bl
     Nothing -> throwM (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
-  condValue <- lookupValue QBE.Word cond
-  let condResult = not $ E.isZero condValue
-
-  condBranch condValue condResult
-  execJump $ QBE.Jump (if condResult then ifT else ifF)
+  condValue <- unsafeLookup cond
+  let isFalse = E.isZero condValue
+  condBranch condValue (not isFalse)
+  execJump $ QBE.Jump (if isFalse then ifF else ifT)
 execJump (QBE.Return v) = do
   func <- activeFrame <&> stkFunc
   case QBE.fAbity func of
