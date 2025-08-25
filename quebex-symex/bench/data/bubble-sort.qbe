@@ -1,0 +1,152 @@
+export
+function $bubble_sort(l %.1) {
+@start.1
+	%.2 =l alloc8 8
+	storel %.1, %.2
+	%.3 =l alloc4 1
+	%.9 =l alloc4 4
+	%.27 =l alloc4 4
+@body.2
+	%.4 =w cnew 0, 0
+	storeb %.4, %.3
+@while_cond.3
+	%.5 =w loadub %.3
+	%.6 =w extub %.5
+	%.7 =w ceqw %.6, 0
+	jnz %.7, @while_body.4, @while_join.5
+@while_body.4
+	%.8 =w cnew 1, 0
+	storeb %.8, %.3
+	storew 0, %.9
+@for_cond.6
+	%.10 =w loadw %.9
+	%.11 =w sub 4, 1
+	%.12 =w csltw %.10, %.11
+	jnz %.12, @for_body.7, @for_join.9
+@for_body.7
+	%.13 =l loadl %.2
+	%.14 =w loadw %.9
+	%.15 =l extsw %.14
+	%.16 =l mul %.15, 4
+	%.17 =l add %.13, %.16
+	%.18 =w loadw %.17
+	%.19 =l loadl %.2
+	%.20 =w loadw %.9
+	%.21 =w add %.20, 1
+	%.22 =l extsw %.21
+	%.23 =l mul %.22, 4
+	%.24 =l add %.19, %.23
+	%.25 =w loadw %.24
+	%.26 =w csgtw %.18, %.25
+	jnz %.26, @if_true.10, @if_false.11
+@if_true.10
+	%.28 =l loadl %.2
+	%.29 =w loadw %.9
+	%.30 =l extsw %.29
+	%.31 =l mul %.30, 4
+	%.32 =l add %.28, %.31
+	%.33 =w loadw %.32
+	storew %.33, %.27
+	%.34 =l loadl %.2
+	%.35 =w loadw %.9
+	%.36 =w add %.35, 1
+	%.37 =l extsw %.36
+	%.38 =l mul %.37, 4
+	%.39 =l add %.34, %.38
+	%.40 =w loadw %.39
+	%.41 =l loadl %.2
+	%.42 =w loadw %.9
+	%.43 =l extsw %.42
+	%.44 =l mul %.43, 4
+	%.45 =l add %.41, %.44
+	storew %.40, %.45
+	%.46 =w loadw %.27
+	%.47 =l loadl %.2
+	%.48 =w loadw %.9
+	%.49 =w add %.48, 1
+	%.50 =l extsw %.49
+	%.51 =l mul %.50, 4
+	%.52 =l add %.47, %.51
+	storew %.46, %.52
+	%.53 =w cnew 0, 0
+	storeb %.53, %.3
+@if_false.11
+@for_cont.8
+	%.54 =w loadw %.9
+	%.55 =w add %.54, 1
+	storew %.55, %.9
+	jmp @for_cond.6
+@for_join.9
+	jmp @while_cond.3
+@while_join.5
+	ret
+}
+export
+function w $entry(w %.1, w %.3, w %.5, w %.7) {
+@start.12
+	%.2 =l alloc4 4
+	storew %.1, %.2
+	%.4 =l alloc4 4
+	storew %.3, %.4
+	%.6 =l alloc4 4
+	storew %.5, %.6
+	%.8 =l alloc4 4
+	storew %.7, %.8
+	%.9 =l alloc4 16
+	%.26 =l alloc4 4
+@body.13
+	%.10 =w loadw %.2
+	%.11 =l extsw 0
+	%.12 =l mul %.11, 4
+	%.13 =l add %.9, %.12
+	storew %.10, %.13
+	%.14 =w loadw %.4
+	%.15 =l extsw 1
+	%.16 =l mul %.15, 4
+	%.17 =l add %.9, %.16
+	storew %.14, %.17
+	%.18 =w loadw %.6
+	%.19 =l extsw 2
+	%.20 =l mul %.19, 4
+	%.21 =l add %.9, %.20
+	storew %.18, %.21
+	%.22 =w loadw %.8
+	%.23 =l extsw 3
+	%.24 =l mul %.23, 4
+	%.25 =l add %.9, %.24
+	storew %.22, %.25
+	call $bubble_sort(l %.9)
+	storew 0, %.26
+@for_cond.14
+	%.27 =w loadw %.26
+	%.28 =w sub 4, 1
+	%.29 =w csltw %.27, %.28
+	jnz %.29, @for_body.15, @for_join.17
+@for_body.15
+	%.30 =w loadw %.26
+	%.31 =l extsw %.30
+	%.32 =l mul %.31, 4
+	%.33 =l add %.9, %.32
+	%.34 =w loadw %.33
+	%.35 =w loadw %.26
+	%.36 =w add %.35, 1
+	%.37 =l extsw %.36
+	%.38 =l mul %.37, 4
+	%.39 =l add %.9, %.38
+	%.40 =w loadw %.39
+	%.41 =w cslew %.34, %.40
+	jnz %.41, @logic_join.19, @logic_right.18
+@logic_right.18
+	hlt
+@dead.20
+	%.42 =w cnew 0, 0
+@logic_join.19
+	%.43 =w phi @for_body.15 1, @dead.20 %.42
+@for_cont.16
+	%.44 =w loadw %.26
+	%.45 =w add %.44, 1
+	storew %.45, %.26
+	jmp @for_cond.14
+@for_join.17
+	ret 0
+}

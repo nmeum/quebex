@@ -98,4 +98,5 @@ runBench name params = do
 
 main :: IO ()
 main = do
+  runBench "bubble-sort.qbe" [("a", QBE.Word), ("b", QBE.Word), ("c", QBE.Word), ("d", QBE.Word)]
   runBench "prime-numbers.qbe" [("a", QBE.Word)]
