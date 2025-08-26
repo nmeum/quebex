@@ -1,0 +1,3 @@
+data $.Lstring.3 = align 1 { b "array[i] <= array[i+1]\000" }
+data $.Lstring.4 = align 1 { b "bubble-sort.c\000" }
+data $.L__func__.2 = { b "entry", b 0 }

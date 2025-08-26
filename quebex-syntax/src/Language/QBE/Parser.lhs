@@ -35,6 +35,7 @@
 \begin{code}
 module Language.QBE.Parser (dataDef, typeDef, funcDef) where
 
+import Data.Word (Word64)
 import Data.Functor ((<&>))
 import Data.List (singleton)
 import Data.Map qualified as Map
@@ -149,8 +150,8 @@ binaryInstr conc keyword = do
   conc vfst <$> ws val
 
 -- Can only appear in data and type definitions and hence allows newlines.
-alignSpec :: Parser Q.AllocSize
-alignSpec = (ws1 (string "align")) >> wsNL allocSize
+alignAny :: Parser Word64
+alignAny = (ws1 (string "align")) >> wsNL decNumber
 \end{code}
 }
 
@@ -467,7 +468,7 @@ typeDef = do
   _ <- wsNL1 (string "type")
   i <- wsNL1 userDef
   _ <- wsNL1 (char '=')
-  a <- optionMaybe alignSpec
+  a <- optionMaybe alignAny
   bracesNL (opaqueType <|> unionType <|> regularType) <&> Q.TypeDef i a
 \end{code}
 
@@ -535,7 +536,7 @@ dataDef = do
   link <- many linkage
   name <- wsNL1 (string "data") >> wsNL global
   _ <- wsNL (char '=')
-  alignment <- optionMaybe alignSpec
+  alignment <- optionMaybe alignAny
   bracesNL dataObjs <&> Q.DataDef link name alignment
  where
     dataObjs = sepBy dataObj (wsNL $ char ',')

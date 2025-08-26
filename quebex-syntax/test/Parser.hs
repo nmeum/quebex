@@ -16,7 +16,7 @@ typeTests =
   testGroup
     "Aggregate Type Definition"
     [ testCase "Opaque type with alignment" $
-        let v = TypeDef (UserIdent "opaque") (Just AlignLongLong) (AOpaque 32)
+        let v = TypeDef (UserIdent "opaque") (Just 16) (AOpaque 32)
          in parse "type :opaque = align 16 { 32 }" @?= Right v,
       testCase "Regular empty type" $
         let v = TypeDef (UserIdent "empty") Nothing (ARegular [])
@@ -85,10 +85,10 @@ dataTests =
             v = DataDef [] (GlobalIdent "c") Nothing o
          in parse "data $c = { l -1, l 23 }" @?= Right v,
       testCase "Data definition with specified alignment and linkage" $
-        let v = DataDef [LExport] (GlobalIdent "b") (Just AlignLong) [OZeroFill 1000]
+        let v = DataDef [LExport] (GlobalIdent "b") (Just 8) [OZeroFill 1000]
          in parse "export data $b = align 8 { z 1000 }" @?= Right v,
       testCase "Data definition with linkage section and string escape sequences" $
-        let v = DataDef [LSection "f\\oo\\\"bar" Nothing] (GlobalIdent "b") (Just AlignLong) [OZeroFill 1]
+        let v = DataDef [LSection "f\\oo\\\"bar" Nothing] (GlobalIdent "b") (Just 8) [OZeroFill 1]
          in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v
     ]
   where

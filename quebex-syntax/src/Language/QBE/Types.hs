@@ -126,7 +126,7 @@ getSize AlignLongLong = 16
 data TypeDef
   = TypeDef
   { aggName :: UserIdent,
-    aggAlign :: Maybe AllocSize,
+    aggAlign :: Maybe Word64,
     aggType :: AggType
   }
   deriving (Show, Eq)
@@ -149,7 +149,7 @@ data DataDef
   = DataDef
   { linkage :: [Linkage],
     name :: GlobalIdent,
-    align :: Maybe AllocSize,
+    align :: Maybe Word64,
     objs :: [DataObj]
   }
   deriving (Show, Eq)

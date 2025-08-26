@@ -44,7 +44,7 @@ simpleCmp (exit, out) (exit', out') =
       else Just ("Parsing mismatch: " ++ err)
   where
     err :: String
-    err = "qbe=(" ++ show exit ++ "): " ++ show out ++ " quebex=(" ++ show exit' ++ "):" ++ show out'
+    err = "qbe=(" ++ show exit ++ "): " ++ out ++ " quebex=(" ++ show exit' ++ "):" ++ out'
 
 runTest :: TestName -> TestTree
 runTest testName =
@@ -71,5 +71,6 @@ goldenTests =
       runTest "load-instructions",
       runTest "value-global",
       runTest "bubble-sort",
-      runTest "phi-instructions"
+      runTest "phi-instructions",
+      runTest "data"
     ]
