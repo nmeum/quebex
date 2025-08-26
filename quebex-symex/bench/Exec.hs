@@ -42,7 +42,7 @@ bubbleSort inputSize =
 execBench :: Benchmark
 execBench =
   bgroup
-    "bubble-sort"
+    "Concrete Execution"
     [ bench "10" $ bubbleSort 25,
       bench "50" $ bubbleSort 50,
       bench "100" $ bubbleSort 100
