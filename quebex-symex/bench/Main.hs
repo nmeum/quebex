@@ -5,22 +5,19 @@
 module Main (main) where
 
 import Control.Monad (when)
-import Data.Char (isLower)
-import Data.List (find, unsnoc)
+import Criterion.Main
+import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
-import Numeric (showFFloat)
 import SMTUnwind (unwind)
-import SimpleSMT qualified as SMT
-import Statistics (mean, stddev)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath ((</>))
-import System.IO (IOMode (WriteMode), hClose, hGetContents, hPutStrLn, withFile)
+import System.IO (IOMode (WriteMode), hClose, hPutStrLn, openFile, withFile)
 import System.Process
-  ( StdStream (CreatePipe),
+  ( StdStream (CreatePipe, UseHandle),
     createProcess,
     proc,
     std_in,
@@ -33,9 +30,6 @@ logPath = "/tmp/quebex-symex-bench.smt2"
 
 entryFunc :: QBE.GlobalIdent
 entryFunc = QBE.GlobalIdent "entry"
-
-numRuns :: Int
-numRuns = 3
 
 ------------------------------------------------------------------------
 
@@ -57,46 +51,39 @@ exploreQBE filePath params = do
       engine <- logSolver handle >>= newEngine
       explore engine prog func params
 
-getQueries :: FilePath -> [(String, QBE.BaseType)] -> IO String
-getQueries qbeFp params = do
-  _ <- exploreQBE qbeFp params
+getQueries :: String -> [(String, QBE.BaseType)] -> IO String
+getQueries name params = do
+  _ <- exploreQBE ("bench" </> "data" </> name) params
+  -- XXX: Uncomment this to benchmark incremental solving instead.
   unwind logPath
 
-solveQueries :: String -> IO Double
+solveQueries :: String -> IO ()
 solveQueries queries = do
-  (Just hin, Just hout, _, p) <-
+  devNull <- openFile "/dev/null" WriteMode
+  (Just hin, _, _, p) <-
     createProcess
-      (proc "z3" ["-smt2", "-st", "-in"])
+      (proc "z3" ["-smt2", "-in"])
         { std_in = CreatePipe,
-          std_out = CreatePipe
+          std_out = UseHandle devNull
         }
-  hPutStrLn hin queries <* hClose hin
 
-  ret <- waitForProcess p
+  hPutStrLn hin queries <* hClose hin
+  ret <- waitForProcess p <* hClose devNull
   when (ret /= ExitSuccess) $
     error "SMT solver failed"
 
-  -- transform the z3 output and extract the :total-time.
-  outLines <- lines <$> hGetContents hout
-  let stat = filter (not . all isLower) outLines
-  exprs <- case SMT.readSExpr $ unlines stat of
-    Just (SMT.List e, _) -> pure e
-    _ -> error "invalid statistics output"
-  timeStr <- case unsnoc exprs of
-    Just (_, SMT.Atom s) -> pure s
-    _ -> error "invalid statistics expression"
-  pure $ read timeStr
-
-runBench :: FilePath -> [(String, QBE.BaseType)] -> IO ()
-runBench name params = do
-  queries <- getQueries ("bench" </> "data" </> name) params
-  totals <- mapM (\_ -> solveQueries queries) [1 .. numRuns]
-
-  let meanStr = showFFloat (Just 3) (mean totals) "s"
-  let devStr = showFFloat (Just 2) (stddev totals) "s"
-  putStrLn $ name ++ "\t" ++ meanStr ++ " ± " ++ devStr
-
 main :: IO ()
 main = do
-  runBench "bubble-sort.qbe" [("a", QBE.Word), ("b", QBE.Word), ("c", QBE.Word), ("d", QBE.Word)]
-  runBench "prime-numbers.qbe" [("a", QBE.Word)]
+  defaultMain
+    [ bgroup
+        "SMT Complexity"
+        [ benchWithEnv "prime-numbers.qbe" [("a", QBE.Word)],
+          benchWithEnv "bubble-sort.qbe" [("a", QBE.Word), ("b", QBE.Word), ("c", QBE.Word), ("d", QBE.Word)]
+        ]
+    ]
+  where
+    benchSolver :: String -> String -> Benchmark
+    benchSolver name queries = bench name $ nfIO (solveQueries queries)
+
+    benchWithEnv :: String -> [(String, QBE.BaseType)] -> Benchmark
+    benchWithEnv name params = env (getQueries name params) (benchSolver name)

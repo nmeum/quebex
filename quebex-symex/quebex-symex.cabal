@@ -52,10 +52,10 @@ benchmark quebex-symex
 
     other-modules:
       SMTUnwind
-      Statistics
 
     build-depends:
       base,
+      criterion ^>= 1.6.4.0,
       mtl,
       simple-smt,
       process,

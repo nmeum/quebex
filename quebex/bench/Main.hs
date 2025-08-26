@@ -11,7 +11,7 @@ import Language.QBE.Simulator.Default.Expression qualified as D
 
 bubbleSort :: Word32 -> Benchmarkable
 bubbleSort inputSize =
-  whnfIO (readFile "bench/data/bubble-sort.qbe" >>= exec [D.VWord inputSize])
+  nfIO (readFile "bench/data/bubble-sort.qbe" >>= exec [D.VWord inputSize])
 
 -- Our benchmark harness.
 main :: IO ()
