@@ -50,9 +50,5 @@ unsigned entry(int a, int b, int c, int d)
     array[3] = d;
 
     bubble_sort(array);
-    for (int i = 0; i < MAX - 1; i++) {
-        assert(array[i] <= array[i+1]);
-    }
-
     return 0;
 }

@@ -93,7 +93,6 @@ function w $entry(w %.1, w %.3, w %.5, w %.7) {
 	%.8 =l alloc4 4
 	storew %.7, %.8
 	%.9 =l alloc4 16
-	%.26 =l alloc4 4
 @body.13
 	%.10 =w loadw %.2
 	%.11 =l extsw 0
@@ -116,37 +115,5 @@ function w $entry(w %.1, w %.3, w %.5, w %.7) {
 	%.25 =l add %.9, %.24
 	storew %.22, %.25
 	call $bubble_sort(l %.9)
-	storew 0, %.26
-@for_cond.14
-	%.27 =w loadw %.26
-	%.28 =w sub 4, 1
-	%.29 =w csltw %.27, %.28
-	jnz %.29, @for_body.15, @for_join.17
-@for_body.15
-	%.30 =w loadw %.26
-	%.31 =l extsw %.30
-	%.32 =l mul %.31, 4
-	%.33 =l add %.9, %.32
-	%.34 =w loadw %.33
-	%.35 =w loadw %.26
-	%.36 =w add %.35, 1
-	%.37 =l extsw %.36
-	%.38 =l mul %.37, 4
-	%.39 =l add %.9, %.38
-	%.40 =w loadw %.39
-	%.41 =w cslew %.34, %.40
-	jnz %.41, @logic_join.19, @logic_right.18
-@logic_right.18
-	hlt
-@dead.20
-	%.42 =w cnew 0, 0
-@logic_join.19
-	%.43 =w phi @for_body.15 1, @dead.20 %.42
-@for_cont.16
-	%.44 =w loadw %.26
-	%.45 =w add %.44, 1
-	storew %.45, %.26
-	jmp @for_cond.14
-@for_join.17
 	ret 0
 }
