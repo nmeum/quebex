@@ -46,7 +46,7 @@ library
       Language.QBE.Simulator.Default.Expression,
       Language.QBE.Simulator.Default.Generator,
 
-benchmark quebex-benchmarks
+benchmark quebex
     import:           warnings, opts
     default-language: GHC2021
     type:             exitcode-stdio-1.0
