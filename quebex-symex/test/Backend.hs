@@ -10,7 +10,7 @@ import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (z3Solver)
+import Language.QBE.Simulator.Explorer (defSolver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
@@ -41,7 +41,7 @@ traceTests =
           length t @?= 0,
       testCase "Branch tracing and solving with single symbolic branch" $
         do
-          s <- z3Solver
+          s <- defSolver
           c <- unconstrained s 0 "input" QBE.Word
           assertBool "created value is symbolic" $ CE.hasSymbolic c
           let inputs = [(SE.toSExpr . fromJust . CE.symbolic) c]
@@ -75,7 +75,7 @@ traceTests =
           nxt @?= Nothing,
       testCase "Tracing with multiple branches" $
         do
-          s <- z3Solver
+          s <- defSolver
           c1 <- unconstrained s 0 "cond1" QBE.Word
           c2 <- unconstrained s 0 "cond2" QBE.Word
 

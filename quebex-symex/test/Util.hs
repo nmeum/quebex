@@ -14,7 +14,7 @@ import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Concolic.State (run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (explore, newEngine, z3Solver)
+import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
@@ -47,5 +47,5 @@ unconstrained solver initCon name ty = do
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
-  engine <- z3Solver >>= newEngine
+  engine <- defSolver >>= newEngine
   explore engine prog entry params

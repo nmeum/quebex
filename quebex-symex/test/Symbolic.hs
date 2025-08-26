@@ -7,7 +7,7 @@ module Symbolic (exprTests) where
 
 import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
-import Language.QBE.Simulator.Explorer (z3Solver)
+import Language.QBE.Simulator.Explorer (defSolver)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
@@ -18,7 +18,7 @@ import Test.Tasty.HUnit
 
 getSolver :: IO SMT.Solver
 getSolver = do
-  s <- z3Solver
+  s <- defSolver
   SMT.check s >> pure s
 
 ------------------------------------------------------------------------

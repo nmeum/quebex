@@ -95,7 +95,7 @@
         ghc-tasty-hunit
         ghc-tasty-golden
         ghc-simple-smt
-        z3))
+        bitwuzla))
     (synopsis "Symbolic executor for the QBE intermediate language")
     (description "")
     (home-page "https://git.8pit.net/quebex")

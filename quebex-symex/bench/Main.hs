@@ -62,7 +62,7 @@ solveQueries queries = do
   devNull <- openFile "/dev/null" WriteMode
   (Just hin, _, _, p) <-
     createProcess
-      (proc "z3" ["-smt2", "-in"])
+      (proc "bitwuzla" [])
         { std_in = CreatePipe,
           std_out = UseHandle devNull
         }

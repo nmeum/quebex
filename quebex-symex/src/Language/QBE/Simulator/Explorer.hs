@@ -4,7 +4,7 @@
 module Language.QBE.Simulator.Explorer
   ( newEngine,
     explore,
-    z3Solver,
+    defSolver,
     logSolver,
   )
 where
@@ -25,10 +25,10 @@ import System.IO (Handle)
 logic :: String
 logic = "QF_BV"
 
-z3Solver :: IO SMT.Solver
-z3Solver = do
+defSolver :: IO SMT.Solver
+defSolver = do
   -- l <- SMT.newLogger 0
-  s <- SMT.newSolver "z3" ["-in", "-smt2"] Nothing
+  s <- SMT.newSolver "bitwuzla" [] Nothing
   SMT.setLogic s logic
   return s
 
@@ -37,7 +37,7 @@ logSolver handle = do
   l <- SMT.newLoggerWithHandle handle 0
   s <-
     SMT.newSolverWithConfig
-      (SMT.defaultConfig "z3" ["-in", "-smt2"])
+      (SMT.defaultConfig "bitwuzla" [])
         { SMT.solverLogger = SMT.smtSolverLogger l
         }
   SMT.setLogic s logic
