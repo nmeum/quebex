@@ -203,3 +203,4 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName (QBE.Env n) = n
     paramName QBE.Variadic = error "variadic parameters not supported"
 {-# SPECIALIZE execFunc :: QBE.FuncDef -> [DE.RegVal] -> SimState DE.RegVal Word8 (Maybe DE.RegVal) #-}
+{-# INLINABLE execFunc #-}
