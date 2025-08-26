@@ -51,7 +51,9 @@ benchmark quebex-symex
     main-is:          Main.hs
 
     other-modules:
-      SMTUnwind
+      SMTUnwind,
+      SMT,
+      Exec
 
     build-depends:
       base,

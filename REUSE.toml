@@ -28,7 +28,7 @@ SPDX-License-Identifier = "Unlicense"
 
 # Machine-generated files as obtained by `cproc -emit-qbe`.
 [[annotations]]
-path = "quebex-symex/bench/data/*.qbe"
+path = "quebex-symex/bench/data/**/*.qbe"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
 SPDX-License-Identifier = "Unlicense"
 
