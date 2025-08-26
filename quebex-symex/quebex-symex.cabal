@@ -14,10 +14,14 @@ build-type:         Simple
 -- extra-source-files:
 
 common warnings
+    -- -Wall-missed-specializations can be useful too
     ghc-options: -Wall
 
+common opts
+    ghc-options: -fspecialise-aggressively
+
 library
-    import:           warnings
+    import:           warnings, opts
     -- other-modules:
     hs-source-dirs:   src
     default-language: GHC2021
@@ -44,7 +48,7 @@ library
       Language.QBE.Simulator.Concolic.Expression
 
 benchmark quebex-symex
-    import:           warnings
+    import:           warnings, opts
     default-language: GHC2021
     type:             exitcode-stdio-1.0
     hs-source-dirs:   bench

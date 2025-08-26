@@ -5,6 +5,7 @@
 	* Include 2-3 additional benchmark programs
 	* Allow interception of function calls (see `make_symbolic` To-Do below)
 * quebex-symex:
+	* Align performance of quebex-symex execution with quebex execution
 	* Cleanup the symbolic expression language implementation
 	* Expand golden tests based on additional arithmetic operations (see above)
 	* Consider a closer integration of the Store/Explorer and the Simulator
