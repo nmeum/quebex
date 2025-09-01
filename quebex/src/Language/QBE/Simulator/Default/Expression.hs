@@ -7,7 +7,18 @@
 
 module Language.QBE.Simulator.Default.Expression where
 
-import Data.Bits (FiniteBits, finiteBitSize, shift, shiftR, (.&.), (.|.), xor)
+import Control.Exception (assert)
+import Data.Bits
+  ( FiniteBits,
+    finiteBitSize,
+    shift,
+    shiftR,
+    unsafeShiftL,
+    unsafeShiftR,
+    xor,
+    (.&.),
+    (.|.),
+  )
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
@@ -29,6 +40,46 @@ fromBits :: Int -> Integer -> Maybe RegVal
 fromBits 32 = Just . VWord . fromIntegral
 fromBits 64 = Just . VLong . fromIntegral
 fromBits _ = const Nothing
+
+------------------------------------------------------------------------
+
+shiftInstr ::
+  (RegVal -> Word32 -> Maybe RegVal) ->
+  RegVal ->
+  RegVal ->
+  Maybe RegVal
+shiftInstr shiftOp val (VWord amount) = val `shiftOp` amount
+shiftInstr _ _ _ = Nothing
+
+toShiftAmount :: Word32 -> Word32 -> Int
+toShiftAmount bitSize amount =
+  -- From the QBE specification: "The shifting amount
+  -- is taken modulo the size of the result type."
+  let s = fromIntegral $ amount `mod` bitSize
+   in assert (s > 0) s
+
+shiftSar :: RegVal -> Word32 -> Maybe RegVal
+shiftSar (VWord val) amount =
+  (Just . VWord . fromIntegral) $
+    (fromIntegral val :: Int32) `unsafeShiftR` (toShiftAmount 32 amount)
+shiftSar (VLong val) amount =
+  (Just . VLong . fromIntegral) $
+    (fromIntegral val :: Int64) `unsafeShiftR` (toShiftAmount 64 amount)
+shiftSar _ _ = Nothing
+
+shiftShr :: RegVal -> Word32 -> Maybe RegVal
+shiftShr (VWord val) amount =
+  (Just . VWord) $ val `unsafeShiftR` (toShiftAmount 32 amount)
+shiftShr (VLong val) amount =
+  (Just . VLong) $ val `unsafeShiftR` (toShiftAmount 64 amount)
+shiftShr _ _ = Nothing
+
+shiftShl :: RegVal -> Word32 -> Maybe RegVal
+shiftShl (VWord val) amount =
+  (Just . VWord) $ val `unsafeShiftL` (toShiftAmount 32 amount)
+shiftShl (VLong val) amount =
+  (Just . VLong) $ val `unsafeShiftL` (toShiftAmount 64 amount)
+shiftShl _ _ = Nothing
 
 ------------------------------------------------------------------------
 
@@ -119,6 +170,10 @@ instance ValueRepr RegVal where
   or = or'
   xor = xor'
   and = and'
+
+  sar = shiftInstr shiftSar
+  shr = shiftInstr shiftShr
+  shl = shiftInstr shiftShl
 
   -- TODO: Provide default implementations
   eq = eq'

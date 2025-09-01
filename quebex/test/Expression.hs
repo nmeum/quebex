@@ -5,6 +5,7 @@
 module Expression (exprTests) where
 
 import Data.Int (Int64)
+import Data.Maybe (fromJust)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Types qualified as Q
@@ -40,7 +41,17 @@ exprTests =
 
           lhs `E.slt` rhs @?= truthValue
           lhs `E.sle` lhs @?= truthValue
-          lhs `E.ult` rhs @?= falseValue
+          lhs `E.ult` rhs @?= falseValue,
+      testCase "sar preserves sign bit" $
+        do
+          let v = E.fromLit Q.Word (fromIntegral (-256 :: Int64)) :: DE.RegVal
+          let r = fromJust $ v `E.sar` (E.fromLit Q.Word 1)
+          r @?= E.fromLit Q.Word (fromIntegral (-128 :: Int64)),
+      testCase "shr does not preserve sign bit" $
+        do
+          let v = E.fromLit Q.Word (fromIntegral (-0x80000000 :: Int64)) :: DE.RegVal
+          let r = fromJust $ v `E.shr` (E.fromLit Q.Word 8)
+          r @?= E.fromLit Q.Word 0x800000
     ]
   where
     falseValue = Just (E.fromLit Q.Long 0 :: DE.RegVal)
