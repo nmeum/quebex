@@ -190,13 +190,13 @@ instance E.ValueRepr BitVector where
   srem = binaryOp SMT.bvSRem
   udiv = binaryOp SMT.bvUDiv
 
-  eq = binaryBoolOp SMT.eq
-  ne = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.eq lhs rhs)
+  eq = binaryBoolOp F.eqExpr
+  ne = binaryBoolOp (\lhs rhs -> F.notExpr $ F.eqExpr lhs rhs)
   sle = binaryBoolOp SMT.bvSLeq
   slt = binaryBoolOp SMT.bvSLt
   sge = binaryBoolOp (flip SMT.bvSLeq)
   sgt = binaryBoolOp (flip SMT.bvSLt)
   ule = binaryBoolOp SMT.bvULeq
   ult = binaryBoolOp SMT.bvULt
-  uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (SMT.eq lhs rhs))
+  uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (F.eqExpr lhs rhs))
   ugt = binaryBoolOp (flip SMT.bvULt)
