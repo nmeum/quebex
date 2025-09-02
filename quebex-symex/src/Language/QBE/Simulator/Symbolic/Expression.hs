@@ -18,6 +18,7 @@ import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
+import Language.QBE.Simulator.Symbolic.Folding qualified as F
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 
@@ -65,8 +66,8 @@ toCond isTrue BitVector {sexpr = s, qtype = ty} =
      in toCond' s zeroSExpr
   where
     toCond' lhs rhs
-      | isTrue = SMT.not (SMT.eq lhs rhs) -- /= 0
-      | otherwise = SMT.eq lhs rhs -- == 0
+      | isTrue = F.notExpr (F.eqExpr lhs rhs) -- /= 0
+      | otherwise = F.eqExpr lhs rhs -- == 0
 
 ------------------------------------------------------------------------
 
@@ -167,7 +168,7 @@ instance E.ValueRepr BitVector where
 
   subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
   subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
-    Just $ BitVector (SMT.extract s 31 0) (QBE.Base QBE.Word)
+    Just $ BitVector (F.extractExpr s 0 F.WordWidth) (QBE.Base QBE.Word)
   subType QBE.Long v@(BitVector {qtype = QBE.Base QBE.Long}) = Just v
   subType QBE.Single v@(BitVector {qtype = QBE.Base QBE.Single}) = Just v
   subType QBE.Double v@(BitVector {qtype = QBE.Base QBE.Double}) = Just v

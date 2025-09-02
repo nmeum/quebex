@@ -1,0 +1,86 @@
+-- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+--
+-- SPDX-License-Identifier: GPL-3.0-only
+
+module Language.QBE.Simulator.Symbolic.Folding
+  ( ValueWidth (..),
+    notExpr,
+    eqExpr,
+    extractExpr,
+  )
+where
+
+import Data.Bits (shiftR)
+import Data.Word (Word16, Word32, Word64, Word8)
+import SimpleSMT qualified as SMT
+
+data ValueWidth
+  = ByteWidth
+  | HalfWidth
+  | WordWidth
+  | LongWidth
+  deriving (Eq, Show)
+
+widthInBits :: ValueWidth -> Int
+widthInBits ByteWidth = 8
+widthInBits HalfWidth = 16
+widthInBits WordWidth = 32
+widthInBits LongWidth = 64
+
+zextOrTrunc :: Integer -> ValueWidth -> Integer
+zextOrTrunc v ByteWidth = fromIntegral (fromIntegral v :: Word8)
+zextOrTrunc v HalfWidth = fromIntegral (fromIntegral v :: Word16)
+zextOrTrunc v WordWidth = fromIntegral (fromIntegral v :: Word32)
+zextOrTrunc v LongWidth = fromIntegral (fromIntegral v :: Word64)
+
+------------------------------------------------------------------------
+
+-- Performs the following transformation: (not (not X)) → X.
+notExpr :: SMT.SExpr -> SMT.SExpr
+notExpr (SMT.List [SMT.Atom "not", cond]) = cond
+notExpr expr = SMT.not expr
+
+-- Eliminates ITE expressions when comparing with constants values, this is
+-- useful in the QBE context to eliminate comparisons with truth values.
+eqExpr :: SMT.SExpr -> SMT.SExpr -> SMT.SExpr
+eqExpr expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) o =
+  case (SMT.sexprToVal ifT, SMT.sexprToVal ifF, SMT.sexprToVal o) of
+    -- XXX: bit sizes must be equal, otherwise it would be invalid SMT-LIB.
+    (SMT.Bits _ tv, SMT.Bits _ fv, SMT.Bits _ ov) ->
+      if ov == tv
+        then cond
+        else
+          if ov == fv
+            then SMT.not cond
+            else SMT.eq expr o
+    _ -> SMT.eq expr o
+eqExpr expr o = SMT.eq expr o
+
+-- Alternative creation of `SMT.extract` expressions.
+extract :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extract expr off width =
+  SMT.extract expr (fromIntegral (widthInBits width) - 1) $ fromIntegral off
+
+-- Performs direct extractions of constant immediate values.
+extractConst :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractConst expr off width =
+  case SMT.sexprToVal expr of
+    SMT.Bits _ value ->
+      SMT.bvBin (widthInBits width) $
+        zextOrTrunc (value `shiftR` off) width
+    _ -> extract expr off width
+
+-- This performs constant propagation for subtyping of condition values (i.e.
+-- the conversion from long to word).
+extractITE :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractITE expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) off width =
+  case (SMT.sexprToVal ifT, SMT.sexprToVal ifF) of
+    (SMT.Bits _ _, SMT.Bits _ _) ->
+      let ex x = extractConst x off width
+       in SMT.List [SMT.Atom "ite", cond, ex ifT, ex ifF]
+    _ -> extract expr off width -- not constant, skip extractConst
+extractITE expr off width = extractConst expr off width
+
+-- Chaining of multiple extract expression folding schemes.
+extractExpr :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractExpr = extractITE
