@@ -36,7 +36,7 @@ eqExpr expr o = SMT.eq expr o
 -- Alternative creation of `SMT.extract` expressions.
 extract :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extract expr off width =
-  SMT.extract expr (fromIntegral $ width - 1) $ fromIntegral off
+  SMT.extract expr (fromIntegral $ off + width - 1) $ fromIntegral off
 
 -- Performs direct extractions of constant immediate values.
 extractConst :: SMT.SExpr -> Int -> Int -> SMT.SExpr
