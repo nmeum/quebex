@@ -74,13 +74,13 @@ toCond isTrue BitVector {sexpr = s, qtype = ty} =
 instance MEM.Storable BitVector BitVector where
   toBytes BitVector {sexpr = s, qtype = ty} =
     assert (size `mod` 8 == 0) $
-      map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. size `div` 8]
+      map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. (fromIntegral size) `div` 8]
     where
       size :: Integer
       size = fromIntegral $ QBE.extTypeBitSize ty
 
-      nthByte :: SMT.SExpr -> Integer -> SMT.SExpr
-      nthByte expr n = SMT.extract expr ((n * 8) - 1) ((n - 1) * 8)
+      nthByte :: SMT.SExpr -> Int -> SMT.SExpr
+      nthByte expr n = F.extractExpr expr ((n - 1) * 8) 8
 
   fromBytes _ [] = Nothing
   fromBytes ty bytes@(BitVector {sexpr = s} : xs) =
@@ -153,13 +153,13 @@ instance E.ValueRepr BitVector where
   fromAddress addr = fromReg (E.fromLit QBE.Long addr)
 
   wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.signExtend 56 (F.extractExpr s 0 8)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 7 0)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.zeroExtend 56 (F.extractExpr s 0 8)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.signExtend 48 (F.extractExpr s 0 16)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 15 0)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.zeroExtend 48 (F.extractExpr s 0 16)) (QBE.Base QBE.Long)
   wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
     Just $ BitVector (SMT.signExtend 32 s) (QBE.Base QBE.Long)
   wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
