@@ -55,13 +55,27 @@ extract :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extract expr off width =
   SMT.extract expr (fromIntegral $ off + width - 1) $ fromIntegral off
 
+-- Eliminate nested extract expression fo the same width.
+extractNested :: SMT.SExpr -> Int -> Int -> SMT.SExpr
+extractNested
+  expr@(SMT.List [SMT.List [SMT.Atom "_", SMT.Atom "extract", ix, iy], _])
+  off
+  width =
+    case (SMT.sexprToVal ix, SMT.sexprToVal iy) of
+      (SMT.Int ix', SMT.Int iy') ->
+        if (fromIntegral ix' == off + width - 1) && fromIntegral iy' == off
+          then expr
+          else extract expr off width
+      _ -> error "unreachable" -- invalid SMT-LIB
+extractNested expr off width = extract expr off width
+
 -- Performs direct extractions of constant immediate values.
 extractConst :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extractConst expr off width =
   case SMT.sexprToVal expr of
     SMT.Bits _ value ->
       SMT.bvBin width $ truncTo (value `shiftR` off) width
-    _ -> extract expr off width
+    _ -> extractNested expr off width
   where
     truncTo value bits = value .&. ((1 `shiftL` bits) - 1)
 
@@ -73,7 +87,7 @@ extractITE expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) off wid
     (SMT.Bits _ _, SMT.Bits _ _) ->
       let ex x = extractConst x off width
        in SMT.List [SMT.Atom "ite", cond, ex ifT, ex ifF]
-    _ -> extract expr off width -- not constant, skip extractConst
+    _ -> extractNested expr off width -- not constant, skip extractConst
 extractITE expr off width = extractConst expr off width
 
 -- Chaining of multiple extract expression folding schemes.
