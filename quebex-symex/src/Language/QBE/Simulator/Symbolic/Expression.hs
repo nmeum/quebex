@@ -111,7 +111,7 @@ instance MEM.Storable BitVector BitVector where
       concatBV :: SMT.SExpr -> BitVector -> SMT.SExpr
       concatBV acc byte =
         assert (qtype byte == QBE.Byte) $
-          SMT.concat (sexpr byte) acc
+          F.concatExpr (sexpr byte) acc
 
 ------------------------------------------------------------------------
 

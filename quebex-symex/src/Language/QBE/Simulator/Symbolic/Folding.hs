@@ -6,9 +6,11 @@ module Language.QBE.Simulator.Symbolic.Folding
   ( notExpr,
     eqExpr,
     extractExpr,
+    concatExpr,
   )
 where
 
+import Control.Exception (assert)
 import Data.Bits (shiftL, shiftR, (.&.))
 import SimpleSMT qualified as SMT
 
@@ -32,6 +34,21 @@ eqExpr expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) o =
             else SMT.eq expr o
     _ -> SMT.eq expr o
 eqExpr expr o = SMT.eq expr o
+
+-- Replaces continuous concat expressions with a single extract expression.
+concatExpr :: SMT.SExpr -> SMT.SExpr -> SMT.SExpr
+concatExpr
+  lhs@(SMT.List [SMT.List [SMT.Atom "_", SMT.Atom "extract", lx, ly], varLhs])
+  rhs@(SMT.List [SMT.List [SMT.Atom "_", SMT.Atom "extract", rx, ry], varRhs])
+    | varLhs == varRhs =
+        case (SMT.sexprToVal lx, SMT.sexprToVal ly, SMT.sexprToVal rx, SMT.sexprToVal ry) of
+          (SMT.Int lx', SMT.Int ly', SMT.Int rx', SMT.Int ry') ->
+            if (ly' == rx' + 1)
+              then extractExpr varLhs (fromIntegral ry') $ assert (lx' > ry') (fromIntegral $ lx' - ry' + 1)
+              else SMT.concat lhs rhs
+          _ -> error "unreachable" -- invalid SMT-LIB
+    | otherwise = SMT.concat lhs rhs
+concatExpr lhs rhs = SMT.concat lhs rhs
 
 -- Alternative creation of `SMT.extract` expressions.
 extract :: SMT.SExpr -> Int -> Int -> SMT.SExpr
