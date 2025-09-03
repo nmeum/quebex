@@ -168,7 +168,7 @@ instance E.ValueRepr BitVector where
 
   subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
   subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
-    Just $ BitVector (F.extractExpr s 0 F.WordWidth) (QBE.Base QBE.Word)
+    Just $ BitVector (F.extractExpr s 0 32) (QBE.Base QBE.Word)
   subType QBE.Long v@(BitVector {qtype = QBE.Base QBE.Long}) = Just v
   subType QBE.Single v@(BitVector {qtype = QBE.Base QBE.Single}) = Just v
   subType QBE.Double v@(BitVector {qtype = QBE.Base QBE.Double}) = Just v

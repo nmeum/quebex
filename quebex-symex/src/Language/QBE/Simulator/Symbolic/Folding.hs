@@ -3,37 +3,14 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 
 module Language.QBE.Simulator.Symbolic.Folding
-  ( ValueWidth (..),
-    notExpr,
+  ( notExpr,
     eqExpr,
     extractExpr,
   )
 where
 
-import Data.Bits (shiftR)
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Bits (shiftL, shiftR, (.&.))
 import SimpleSMT qualified as SMT
-
-data ValueWidth
-  = ByteWidth
-  | HalfWidth
-  | WordWidth
-  | LongWidth
-  deriving (Eq, Show)
-
-widthInBits :: ValueWidth -> Int
-widthInBits ByteWidth = 8
-widthInBits HalfWidth = 16
-widthInBits WordWidth = 32
-widthInBits LongWidth = 64
-
-zextOrTrunc :: Integer -> ValueWidth -> Integer
-zextOrTrunc v ByteWidth = fromIntegral (fromIntegral v :: Word8)
-zextOrTrunc v HalfWidth = fromIntegral (fromIntegral v :: Word16)
-zextOrTrunc v WordWidth = fromIntegral (fromIntegral v :: Word32)
-zextOrTrunc v LongWidth = fromIntegral (fromIntegral v :: Word64)
-
-------------------------------------------------------------------------
 
 -- Performs the following transformation: (not (not X)) → X.
 notExpr :: SMT.SExpr -> SMT.SExpr
@@ -57,22 +34,23 @@ eqExpr expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) o =
 eqExpr expr o = SMT.eq expr o
 
 -- Alternative creation of `SMT.extract` expressions.
-extract :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extract :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extract expr off width =
-  SMT.extract expr (fromIntegral (widthInBits width) - 1) $ fromIntegral off
+  SMT.extract expr (fromIntegral $ width - 1) $ fromIntegral off
 
 -- Performs direct extractions of constant immediate values.
-extractConst :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractConst :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extractConst expr off width =
   case SMT.sexprToVal expr of
     SMT.Bits _ value ->
-      SMT.bvBin (widthInBits width) $
-        zextOrTrunc (value `shiftR` off) width
+      SMT.bvBin width $ truncTo (value `shiftR` off) width
     _ -> extract expr off width
+  where
+    truncTo value bits = value .&. ((1 `shiftL` bits) - 1)
 
 -- This performs constant propagation for subtyping of condition values (i.e.
 -- the conversion from long to word).
-extractITE :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractITE :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extractITE expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) off width =
   case (SMT.sexprToVal ifT, SMT.sexprToVal ifF) of
     (SMT.Bits _ _, SMT.Bits _ _) ->
@@ -82,5 +60,5 @@ extractITE expr@(SMT.List [SMT.Atom "ite", cond@(SMT.List _), ifT, ifF]) off wid
 extractITE expr off width = extractConst expr off width
 
 -- Chaining of multiple extract expression folding schemes.
-extractExpr :: SMT.SExpr -> Int -> ValueWidth -> SMT.SExpr
+extractExpr :: SMT.SExpr -> Int -> Int -> SMT.SExpr
 extractExpr = extractITE
