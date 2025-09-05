@@ -14,7 +14,7 @@ module Language.QBE.Simulator.Symbolic.Expression
 where
 
 import Control.Exception (assert)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -120,6 +120,20 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
   | qtype lhs == qtype rhs = Just $ lhs {sexpr = slhs `op` srhs}
   | otherwise = Nothing
 
+-- TODO: Move this into the expression abstraction.
+toShiftAmount :: Word64 -> BitVector -> Maybe BitVector
+toShiftAmount bitSize amount = amount `E.urem` (E.fromLit QBE.Word bitSize)
+
+shiftOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
+shiftOp op value amount@BitVector {qtype = QBE.Base QBE.Word} =
+  case (qtype value) of
+    QBE.Base QBE.Word -> toShiftAmount 32 amount >>= binaryOp op value
+    QBE.Base QBE.Long -> do
+      shiftAmount <- toShiftAmount 64 amount
+      E.wordToLong QBE.SLUnsignedWord shiftAmount >>= binaryOp op value
+    _ -> Nothing
+shiftOp _ _ _ = Nothing -- Shift amount must always be a Word.
+
 binaryBoolOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 binaryBoolOp op lhs rhs = do
   bv <- binaryOp op lhs rhs
@@ -189,6 +203,10 @@ instance E.ValueRepr BitVector where
   urem = binaryOp SMT.bvURem
   srem = binaryOp SMT.bvSRem
   udiv = binaryOp SMT.bvUDiv
+
+  sar = shiftOp SMT.bvAShr
+  shr = shiftOp SMT.bvLShr
+  shl = shiftOp SMT.bvShl
 
   eq = binaryBoolOp F.eqExpr
   ne = binaryBoolOp (\lhs rhs -> F.notExpr $ F.eqExpr lhs rhs)
