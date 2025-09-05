@@ -127,6 +127,14 @@ instance MEM.Storable RegVal Word8 where
 -- TODO: Insert the generated code directly into the instance declaration.
 generateOperators
 
+-- We could also add support for unary operators to the generator. However,
+-- presently there is only one unary operator so it isn't worth it.
+neg' :: RegVal -> RegVal
+neg' (VWord v) = VWord $ negate v
+neg' (VLong v) = VLong $ negate v
+neg' (VSingle v) = VSingle $ negate v
+neg' (VDouble v) = VDouble $ negate v
+
 instance ValueRepr RegVal where
   fromLit QBE.Long n = VLong n
   fromLit QBE.Word n = VWord $ fromIntegral n
@@ -170,6 +178,8 @@ instance ValueRepr RegVal where
   or = or'
   xor = xor'
   and = and'
+
+  neg = neg'
 
   sar = shiftInstr shiftSar
   shr = shiftInstr shiftShr
