@@ -94,6 +94,7 @@ test-suite quebex-symex-test
         quebex-syntax,
         quebex-symex,
         simple-smt,
-        tasty        >=1.4.3,
-        tasty-hunit  >=0.10,
-        tasty-golden >=2.3.5
+        tasty            >=1.4.3,
+        tasty-hunit      >=0.10,
+        tasty-golden     >=2.3.5,
+        tasty-quickcheck >=0.10.2

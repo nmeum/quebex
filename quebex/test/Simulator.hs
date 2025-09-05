@@ -627,7 +627,21 @@ blockTests =
               \ret %r\n\
               \}"
 
-          res @?= Just (D.VWord 0x00000080)
+          res @?= Just (D.VWord 0x00000080),
+      testCase "Shift instructions" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "shift")
+              [D.VWord 0xdeadbeef]
+              "function w $shift(w %word) {\n\
+              \@start\n\
+              \%r =w shr 3735928559, 4\n\
+              \%r =w shl %r, 4\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 0xdeadbee0)
     ]
 
 simTests :: TestTree

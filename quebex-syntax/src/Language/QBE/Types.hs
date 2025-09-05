@@ -241,6 +241,9 @@ data Instr
   | Or Value Value
   | Xor Value Value
   | And Value Value
+  | Sar Value Value
+  | Shr Value Value
+  | Shl Value Value
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value

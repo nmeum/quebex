@@ -87,6 +87,9 @@ execInstr retTy (QBE.And lhs rhs) = execBinary retTy E.and lhs rhs
 execInstr retTy (QBE.URem lhs rhs) = execBinary retTy E.urem lhs rhs
 execInstr retTy (QBE.Rem lhs rhs) = execBinary retTy E.srem lhs rhs
 execInstr retTy (QBE.UDiv lhs rhs) = execBinary retTy E.udiv lhs rhs
+execInstr retTy (QBE.Sar lhs rhs) = execBinary retTy E.sar lhs rhs
+execInstr retTy (QBE.Shr lhs rhs) = execBinary retTy E.shr lhs rhs
+execInstr retTy (QBE.Shl lhs rhs) = execBinary retTy E.shl lhs rhs
 execInstr retTy (QBE.Load ty addr) = do
   addrVal <- lookupValue QBE.Long addr
 

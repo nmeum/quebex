@@ -7,6 +7,8 @@ module Symbolic (exprTests) where
 
 import Data.Functor ((<&>))
 import Data.Maybe (fromJust)
+import Data.Word (Word32, Word64)
+import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (defSolver)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -15,6 +17,14 @@ import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
+import Test.Tasty.QuickCheck
+  ( Arbitrary,
+    Property,
+    arbitrary,
+    elements,
+    ioProperty,
+    testProperty,
+  )
 
 getSolver :: IO SMT.Solver
 getSolver = do
@@ -23,7 +33,53 @@ getSolver = do
 
 ------------------------------------------------------------------------
 
--- TODO: QuickCheck tests against the default interpreter's implementation.
+data ShiftInput = ShiftInput QBE.BaseType Word64 Word32
+  deriving (Show)
+
+instance Arbitrary ShiftInput where
+  arbitrary = do
+    t <- elements [QBE.Word, QBE.Long]
+    v <- arbitrary
+    s <- arbitrary
+    pure $ ShiftInput t v s
+
+eqConcrete :: SE.BitVector -> DE.RegVal -> IO Bool
+eqConcrete sym con = do
+  s <- getSolver
+  symVal <- SMT.getExpr s (SE.toSExpr sym)
+  case (symVal, con) of
+    (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == (fromIntegral cv)
+    (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == (fromIntegral cv)
+    _ -> pure False
+
+shiftProp ::
+  (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
+  (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
+  ShiftInput ->
+  Property
+shiftProp opSym opCon (ShiftInput ty val amount) = ioProperty $ do
+  let symValue = E.fromLit ty val :: SE.BitVector
+  let conValue = E.fromLit ty val :: DE.RegVal
+
+  let symResult = symValue `opSym` (E.fromLit QBE.Word $ fromIntegral amount)
+  let conResult = conValue `opCon` (E.fromLit QBE.Word $ fromIntegral amount)
+
+  case (symResult, conResult) of
+    (Just s, Just c) -> eqConcrete s c
+    (Nothing, Nothing) -> pure True
+    _ -> pure False
+
+shiftEquiv :: TestTree
+shiftEquiv =
+  testGroup
+    "Concrete and symbolic shifts are equivalent"
+    [ testProperty "sar" (shiftProp E.sar E.sar),
+      testProperty "shr" (shiftProp E.shr E.shr),
+      testProperty "shl" (shiftProp E.shl E.shl)
+    ]
+
+------------------------------------------------------------------------
+
 storeTests :: TestTree
 storeTests =
   testGroup
@@ -102,4 +158,4 @@ valueReprTests =
     ]
 
 exprTests :: TestTree
-exprTests = testGroup "Expression tests" [storeTests, valueReprTests]
+exprTests = testGroup "Expression tests" [storeTests, valueReprTests, shiftEquiv]

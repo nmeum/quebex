@@ -35,6 +35,10 @@ class ValueRepr v where
   xor :: v -> v -> Maybe v
   and :: v -> v -> Maybe v
 
+  sar :: v -> v -> Maybe v
+  shr :: v -> v -> Maybe v
+  shl :: v -> v -> Maybe v
+
   eq :: v -> v -> Maybe v
   ne :: v -> v -> Maybe v
   sle :: v -> v -> Maybe v

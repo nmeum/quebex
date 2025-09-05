@@ -103,6 +103,10 @@ instance E.ValueRepr (Concolic D.RegVal) where
   srem = binaryOp E.srem E.srem
   udiv = binaryOp E.udiv E.udiv
 
+  sar = binaryOp E.sar E.sar
+  shr = binaryOp E.shr E.shr
+  shl = binaryOp E.shl E.shl
+
   eq = binaryOp E.eq E.eq
   ne = binaryOp E.ne E.ne
   sle = binaryOp E.sle E.sle
