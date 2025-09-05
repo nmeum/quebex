@@ -143,6 +143,11 @@ parenLst p = between (ws $ char '(') (char ')') inner
   where
     inner = sepBy (ws p) (ws $ char ',')
 
+unaryInstr :: (Q.Value -> Q.Instr) -> String -> Parser Q.Instr
+unaryInstr conc keyword = do
+  _ <- ws (string keyword)
+  conc <$> ws val
+
 binaryInstr :: (Q.Value -> Q.Value -> Q.Instr) -> String -> Parser Q.Instr
 binaryInstr conc keyword = do
   _ <- ws (string keyword)
@@ -803,6 +808,7 @@ instr =
       try $ binaryInstr Q.Sar "sar",
       try $ binaryInstr Q.Shr "shr",
       try $ binaryInstr Q.Shl "shl",
+      try $ unaryInstr Q.Neg "neg",
       try $ loadInstr,
       try $ allocInstr,
       try $ compareInstr,

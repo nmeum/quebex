@@ -156,7 +156,13 @@ funcTests =
         let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
             b = [Block {label = BlockIdent "s", phi = [], stmt = [c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
-         in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f
+         in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f,
+      testCase "Unary neg instruction" $
+        let i1 = Assign (LocalIdent "r") Word $ Neg (VConst (Const (Number 1)))
+            i2 = Assign (LocalIdent "r") Word $ Neg (VLocal $ LocalIdent "r")
+            b = Block {label = BlockIdent "s", phi = [], stmt = [i1, i2], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [] [b]
+         in parse "function $f() {\n@s\n%r =w neg 1\n%r =w neg %r\nhlt\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef
