@@ -204,6 +204,8 @@ instance E.ValueRepr BitVector where
   srem = binaryOp SMT.bvSRem
   udiv = binaryOp SMT.bvUDiv
 
+  neg value = value {sexpr = SMT.bvNeg $ sexpr value}
+
   sar = shiftOp SMT.bvAShr
   shr = shiftOp SMT.bvLShr
   shl = shiftOp SMT.bvShl

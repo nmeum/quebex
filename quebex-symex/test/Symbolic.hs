@@ -31,6 +31,37 @@ getSolver = do
   s <- defSolver
   SMT.check s >> pure s
 
+eqConcrete :: SE.BitVector -> DE.RegVal -> IO Bool
+eqConcrete sym con = do
+  s <- getSolver
+  symVal <- SMT.getExpr s (SE.toSExpr sym)
+  case (symVal, con) of
+    (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == (fromIntegral cv)
+    (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == (fromIntegral cv)
+    _ -> pure False
+
+------------------------------------------------------------------------
+
+data InstrInput = InstrInput QBE.BaseType Word64
+  deriving (Show)
+
+instance Arbitrary InstrInput where
+  arbitrary = do
+    t <- elements [QBE.Word, QBE.Long]
+    v <- arbitrary
+    pure $ InstrInput t v
+
+unaryProp ::
+  (SE.BitVector -> SE.BitVector) ->
+  (DE.RegVal -> DE.RegVal) ->
+  InstrInput ->
+  Property
+unaryProp opSym opCon (InstrInput ty val) = ioProperty $ do
+  eqConcrete (opSym $ E.fromLit ty val) (opCon $ E.fromLit ty val)
+
+negEquiv :: TestTree
+negEquiv = testProperty "neg" (unaryProp E.neg E.neg)
+
 ------------------------------------------------------------------------
 
 data ShiftInput = ShiftInput QBE.BaseType Word64 Word32
@@ -42,15 +73,6 @@ instance Arbitrary ShiftInput where
     v <- arbitrary
     s <- arbitrary
     pure $ ShiftInput t v s
-
-eqConcrete :: SE.BitVector -> DE.RegVal -> IO Bool
-eqConcrete sym con = do
-  s <- getSolver
-  symVal <- SMT.getExpr s (SE.toSExpr sym)
-  case (symVal, con) of
-    (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == (fromIntegral cv)
-    (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == (fromIntegral cv)
-    _ -> pure False
 
 shiftProp ::
   (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
@@ -79,6 +101,12 @@ shiftEquiv =
     ]
 
 ------------------------------------------------------------------------
+
+equivTests :: TestTree
+equivTests =
+  testGroup
+    "QuickCheck-based equivalence tests"
+    [shiftEquiv, negEquiv]
 
 storeTests :: TestTree
 storeTests =
@@ -158,4 +186,4 @@ valueReprTests =
     ]
 
 exprTests :: TestTree
-exprTests = testGroup "Expression tests" [storeTests, valueReprTests, shiftEquiv]
+exprTests = testGroup "Expression tests" [storeTests, valueReprTests, equivTests]
