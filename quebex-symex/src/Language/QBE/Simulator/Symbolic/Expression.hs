@@ -197,6 +197,7 @@ instance E.ValueRepr BitVector where
   add = binaryOp SMT.bvAdd
   sub = binaryOp SMT.bvSub
   mul = binaryOp SMT.bvMul
+  div = binaryOp SMT.bvSDiv
   or = binaryOp SMT.bvOr
   xor = binaryOp SMT.bvXOr
   and = binaryOp SMT.bvAnd

@@ -641,7 +641,46 @@ blockTests =
               \ret %r\n\
               \}"
 
-          res @?= Just (D.VWord 0xdeadbee0)
+          res @?= Just (D.VWord 0xdeadbee0),
+      testCase "Div instruction with single" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "div")
+              []
+              "function s $div() {\n\
+              \@start\n\
+              \%r =s div s_5.0, s_2.0\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VSingle 2.5),
+      testCase "Div instruction with double" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "div")
+              []
+              "function d $div() {\n\
+              \@start\n\
+              \%r =d div d_5.0, d_2.0\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VDouble 2.5),
+      testCase "Div instruction with word" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "div")
+              []
+              "function w $div() {\n\
+              \@start\n\
+              \%r =w div 5, 2\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 2)
     ]
 
 simTests :: TestTree

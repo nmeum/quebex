@@ -82,6 +82,7 @@ execInstr retTy (QBE.Neg op) = E.neg <$> lookupValue retTy op
 execInstr retTy (QBE.Add lhs rhs) = execBinary retTy E.add lhs rhs
 execInstr retTy (QBE.Sub lhs rhs) = execBinary retTy E.sub lhs rhs
 execInstr retTy (QBE.Mul lhs rhs) = execBinary retTy E.mul lhs rhs
+execInstr retTy (QBE.Div lhs rhs) = execBinary retTy E.div lhs rhs
 execInstr retTy (QBE.Or lhs rhs) = execBinary retTy E.or lhs rhs
 execInstr retTy (QBE.Xor lhs rhs) = execBinary retTy E.xor lhs rhs
 execInstr retTy (QBE.And lhs rhs) = execBinary retTy E.and lhs rhs

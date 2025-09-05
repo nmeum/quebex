@@ -23,7 +23,7 @@ import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
 import Language.QBE.Simulator.Default.Generator (generateOperators)
-import Language.QBE.Simulator.Expression as E
+import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
@@ -135,7 +135,20 @@ neg' (VLong v) = VLong $ negate v
 neg' (VSingle v) = VSingle $ negate v
 neg' (VDouble v) = VDouble $ negate v
 
-instance ValueRepr RegVal where
+-- This can't be easily auto generated because the operation differs
+-- based on the type.
+div' :: RegVal -> RegVal -> Maybe RegVal
+div' (VWord lhs) (VWord rhs) =
+  (Just . VWord . fromIntegral) $
+    (fromIntegral lhs :: Int32) `div` (fromIntegral rhs :: Int32)
+div' (VLong lhs) (VLong rhs) =
+  (Just . VLong . fromIntegral) $
+    (fromIntegral lhs :: Int64) `div` (fromIntegral rhs :: Int64)
+div' (VSingle lhs) (VSingle rhs) = (Just . VSingle) $ lhs / rhs
+div' (VDouble lhs) (VDouble rhs) = (Just . VDouble) $ lhs / rhs
+div' _ _ = Nothing
+
+instance E.ValueRepr RegVal where
   fromLit QBE.Long n = VLong n
   fromLit QBE.Word n = VWord $ fromIntegral n
   fromLit QBE.Single n = VSingle $ fromIntegral n
@@ -172,6 +185,7 @@ instance ValueRepr RegVal where
   add = add'
   sub = sub'
   mul = mul'
+  div = div'
   urem = urem'
   srem = srem'
   udiv = udiv'

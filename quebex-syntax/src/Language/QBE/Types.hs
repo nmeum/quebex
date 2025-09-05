@@ -233,8 +233,8 @@ data CmpOp
 data Instr
   = Add Value Value
   | Sub Value Value
-  | -- | Div Value Value
-    Mul Value Value
+  | Div Value Value
+  | Mul Value Value
   | Neg Value
   | URem Value Value
   | Rem Value Value

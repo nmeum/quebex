@@ -96,6 +96,7 @@ instance E.ValueRepr (Concolic D.RegVal) where
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub
   mul = binaryOp E.mul E.mul
+  div = binaryOp E.div E.div
   or = binaryOp E.or E.or
   xor = binaryOp E.xor E.xor
   and = binaryOp E.and E.and
