@@ -186,12 +186,6 @@ instance E.ValueRepr BitVector where
   subType QBE.Double v@(BitVector {qtype = QBE.Base QBE.Double}) = Just v
   subType _ _ = Nothing
 
-  -- XXX: This only works for constants values, but this is fine (see above).
-  isZero bv =
-    case SMT.sexprToVal (sexpr bv) of
-      SMT.Bits _ v -> v == 0
-      _ -> error "unreachable"
-
   add = binaryOp SMT.bvAdd
   sub = binaryOp SMT.bvSub
   mul = binaryOp SMT.bvMul

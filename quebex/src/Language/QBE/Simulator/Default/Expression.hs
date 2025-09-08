@@ -177,12 +177,6 @@ instance E.ValueRepr RegVal where
   subType QBE.Double v@(VDouble _) = Just v
   subType _ _ = Nothing
 
-  isZero (VWord 0) = True
-  isZero (VLong 0) = True
-  isZero (VSingle 0) = True
-  isZero (VDouble 0) = True
-  isZero _ = False
-
   add = add'
   sub = sub'
   mul = mul'

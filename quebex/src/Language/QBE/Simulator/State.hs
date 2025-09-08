@@ -41,7 +41,7 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 --
 -- The idea is inspired by Bourgeat et al. https://doi.org/10.1145/3607833
 class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
-  condBranch :: v -> Bool -> m ()
+  isTrue :: v -> m Bool
   toAddress :: v -> m MEM.Address
 
   lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)

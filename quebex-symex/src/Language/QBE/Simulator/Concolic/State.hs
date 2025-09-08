@@ -38,10 +38,16 @@ modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
-  condBranch CE.Concolic {CE.symbolic = Just sexpr} condResult = do
-    let branch = T.newBranch sexpr
-    modifyTracer (\t -> T.appendBranch t condResult branch)
-  condBranch _ _ = pure ()
+  isTrue value = do
+    let condResult = (E.toWord64 $ CE.concrete value) /= 0
+    case CE.symbolic value of
+      Nothing -> pure condResult
+      Just sexpr -> do
+        -- Track the taken branch in the tracer.
+        let branch = T.newBranch sexpr
+        modifyTracer (\t -> T.appendBranch t condResult branch)
+
+        pure condResult
 
   -- Implements address concretization as a memory model.
   toAddress CE.Concolic {CE.concrete = cv, CE.symbolic = svMaybe} =

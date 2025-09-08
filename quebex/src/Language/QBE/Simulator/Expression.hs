@@ -15,7 +15,6 @@ class ValueRepr v where
 
   wordToLong :: QBE.SubLongType -> v -> Maybe v
   subType :: QBE.BaseType -> v -> Maybe v
-  isZero :: v -> Bool
 
   add :: v -> v -> Maybe v
   sub :: v -> v -> Maybe v

@@ -146,9 +146,7 @@ execJump (QBE.Jump ident) = do
     Nothing -> throwM (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
   condValue <- lookupValue QBE.Word cond
-  let condResult = not $ E.isZero condValue
-
-  condBranch condValue condResult
+  condResult <- isTrue condValue
   execJump $ QBE.Jump (if condResult then ifT else ifF)
 execJump (QBE.Return v) = do
   func <- activeFrame <&> stkFunc
