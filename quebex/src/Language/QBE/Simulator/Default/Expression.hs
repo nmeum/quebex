@@ -154,12 +154,13 @@ instance E.ValueRepr RegVal where
   fromLit QBE.Single n = VSingle $ fromIntegral n
   fromLit QBE.Double n = VDouble $ fromIntegral n
 
+  toWord64 (VWord v) = fromIntegral $ v
+  toWord64 (VLong v) = v
+  toWord64 (VSingle v) = fromIntegral $ castFloatToWord32 v
+  toWord64 (VDouble v) = castDoubleToWord64 v
+
   fromFloat = VSingle
   fromDouble = VDouble
-
-  fromAddress = VLong
-  toAddress (VLong v) = Just v
-  toAddress _ = Nothing
 
   wordToLong (QBE.SLSubWord QBE.SignedByte) (VWord b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
   wordToLong (QBE.SLSubWord QBE.UnsignedByte) (VWord b) = Just $ VLong (fromIntegral b)

@@ -7,19 +7,11 @@ module Language.QBE.Simulator.Expression where
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
--- | Type used to represent a memory address.
---
--- TODO: Consider making this a type parameter too.
-type Address = Word64
-
 class ValueRepr v where
-  -- TODO: Change this to fromWord64 and rely on long subtyping
   fromLit :: QBE.BaseType -> Word64 -> v
   fromFloat :: Float -> v
   fromDouble :: Double -> v
-
-  fromAddress :: Address -> v
-  toAddress :: v -> Maybe Address
+  toWord64 :: v -> Word64
 
   wordToLong :: QBE.SubLongType -> v -> Maybe v
   subType :: QBE.BaseType -> v -> Maybe v

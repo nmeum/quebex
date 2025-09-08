@@ -8,6 +8,7 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Catch (Exception, MonadThrow, throwM)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
+import Data.Word (Word64)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -17,10 +18,10 @@ data StackFrame v
   = StackFrame
   { stkFunc :: QBE.FuncDef,
     stkVars :: Map.Map QBE.LocalIdent v,
-    stkFp :: E.Address
+    stkFp :: v
   }
 
-mkStackFrame :: QBE.FuncDef -> E.Address -> StackFrame v
+mkStackFrame :: (E.ValueRepr v) => QBE.FuncDef -> v -> StackFrame v
 mkStackFrame func = StackFrame func Map.empty
 
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
@@ -41,6 +42,7 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 -- The idea is inspired by Bourgeat et al. https://doi.org/10.1145/3607833
 class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   condBranch :: v -> Bool -> m ()
+  toAddress :: v -> m MEM.Address
 
   lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
   findFunc :: QBE.GlobalIdent -> m (Maybe QBE.FuncDef)
@@ -48,20 +50,16 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   activeFrame :: m (StackFrame v)
   pushStackFrame :: StackFrame v -> m ()
   popStackFrame :: m (StackFrame v)
-  getSP :: m E.Address
-  setSP :: E.Address -> m ()
+  getSP :: m v
+  setSP :: v -> m ()
 
-  writeMemory :: E.Address -> QBE.ExtType -> v -> m () -- TODO: LoadType?
-  readMemory :: QBE.LoadType -> E.Address -> m v
+  writeMemory :: MEM.Address -> QBE.ExtType -> v -> m () -- TODO: LoadType?
+  readMemory :: QBE.LoadType -> MEM.Address -> m v
 
 liftMaybe :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
 liftMaybe e Nothing = throwM e
 liftMaybe _ (Just r) = pure r
 {-# INLINE liftMaybe #-}
-
-toAddressE :: (Simulator m v) => v -> m E.Address
-toAddressE = liftMaybe InvalidAddressType . E.toAddress
-{-# INLINEABLE toAddressE #-}
 
 subTypeE :: (Simulator m v) => QBE.BaseType -> v -> m v
 subTypeE ty v = liftMaybe TypingError $ E.subType ty v
@@ -90,16 +88,15 @@ modifyFrame func = do
   pushStackFrame (func frame)
 {-# INLINEABLE modifyFrame #-}
 
-stackAlloc :: (Simulator m v) => MEM.Size -> E.Address -> m v
+stackAlloc :: (Simulator m v) => v -> Word64 -> m v
 stackAlloc size align = do
   stkPtr <- getSP
-  let newStkPtr = alignAddr (stkPtr - size) align
-  setSP newStkPtr
-
-  return $ E.fromAddress newStkPtr
+  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit QBE.Long align)
+  case newStkPtr of
+    Just ptr -> setSP ptr >> pure ptr
+    Nothing -> throwM InvalidAddressType
   where
-    alignAddr :: E.Address -> E.Address -> E.Address
-    alignAddr addr alignment = addr - (addr `mod` alignment)
+    alignAddr addr alignment = addr `E.urem` alignment >>= (addr `E.sub`)
 {-# INLINEABLE stackAlloc #-}
 
 newStackFrame :: (Simulator m v) => QBE.FuncDef -> m (StackFrame v)

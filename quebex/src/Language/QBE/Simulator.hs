@@ -42,15 +42,15 @@ execVolatile (QBE.Store valTy valReg addrReg) = do
     QBE.HalfWord -> lookupValue QBE.Word valReg
     (QBE.Base bt) -> lookupValue bt valReg
 
-  addrVal <- lookupValue QBE.Long addrReg
-  toAddressE addrVal >>= (\a -> writeMemory a valTy val)
+  addr <- lookupValue QBE.Long addrReg >>= toAddress
+  writeMemory addr valTy val
 execVolatile (QBE.Blit src dst toCopy) = do
-  srcAddr <- lookupValue QBE.Long src >>= toAddressE
-  dstAddr <- lookupValue QBE.Long dst >>= toAddressE
+  srcAddrVal <- lookupValue QBE.Long src
+  dstAddrVal <- lookupValue QBE.Long dst
 
-  -- The third argument is the number of bytes to copy. The source and
-  -- destination spans are required to be either non-overlapping, or fully
-  -- overlapping (source address identical to the destination address).
+  -- TODO: Check for invalid BLITs
+  srcAddr <- toAddress srcAddrVal
+  dstAddr <- toAddress dstAddrVal
   when (srcAddr /= dstAddr && addrOverlap srcAddr dstAddr toCopy) $
     throwM $
       OverlappingBlit srcAddr dstAddr
@@ -92,13 +92,12 @@ execInstr retTy (QBE.UDiv lhs rhs) = execBinary retTy E.udiv lhs rhs
 execInstr retTy (QBE.Sar lhs rhs) = execBinary retTy E.sar lhs rhs
 execInstr retTy (QBE.Shr lhs rhs) = execBinary retTy E.shr lhs rhs
 execInstr retTy (QBE.Shl lhs rhs) = execBinary retTy E.shl lhs rhs
-execInstr retTy (QBE.Load ty addr) = do
-  addrVal <- lookupValue QBE.Long addr
-
-  val <- toAddressE addrVal >>= readMemory ty
+execInstr retTy (QBE.Load ty addrVal) = do
+  addr <- lookupValue QBE.Long addrVal >>= toAddress
+  val <- readMemory ty addr
   subTypeE retTy val
 execInstr QBE.Long (QBE.Alloc align sizeValue) = do
-  size <- lookupValue QBE.Long sizeValue >>= toAddressE
+  size <- lookupValue QBE.Long sizeValue
   stackAlloc size (fromIntegral $ QBE.getSize align)
 execInstr _ QBE.Alloc {} = throwM InvalidAddressType
 execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
