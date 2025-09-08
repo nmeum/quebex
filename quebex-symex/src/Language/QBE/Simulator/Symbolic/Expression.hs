@@ -159,12 +159,10 @@ instance E.ValueRepr BitVector where
 
   -- XXX: This only works for constants values, but this is fine since we implement
   -- concolic execution and can obtain the address from the concrete value part.
-  toAddress addr =
-    case SMT.sexprToVal (sexpr addr) of
-      -- TODO: Don't hardcode address type
-      SMT.Bits 64 n -> Just $ fromIntegral n
-      _ -> Nothing
-  fromAddress addr = fromReg (E.fromLit QBE.Long addr)
+  toWord64 value =
+    case SMT.sexprToVal (sexpr value) of
+      SMT.Bits _ n -> fromIntegral n
+      _ -> error "unrechable"
 
   wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
     Just $ BitVector (SMT.signExtend 56 (F.extractExpr s 0 8)) (QBE.Base QBE.Long)
