@@ -24,18 +24,18 @@ data Env v b
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
     envMem :: MEM.Memory IOArray b,
     envStk :: [StackFrame v],
-    envStkPtr :: E.Address
+    envStkPtr :: v
   }
 
 mkEnv ::
-  (MEM.Storable v b) =>
+  (MEM.Storable v b, E.ValueRepr v) =>
   [QBE.FuncDef] ->
-  E.Address ->
+  MEM.Address ->
   MEM.Size ->
   IO (Env v b)
 mkEnv funcs a s = do
   mem <- MEM.mkMemory a s
-  return $ Env Map.empty (makeFuncs funcs) mem [] (s - 1)
+  return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit QBE.Long $ s - 1)
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
@@ -44,7 +44,8 @@ mkEnv funcs a s = do
 type SimState v b = StateT (Env v b) IO
 
 instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
-  condBranch _ _ = pure ()
+  isTrue value = pure $ (E.toWord64 value /= 0)
+  toAddress = pure . E.toWord64
 
   lookupGlobal ident = gets (Map.lookup ident . envGlobals)
   findFunc ident = gets (Map.lookup ident . envFuncs)

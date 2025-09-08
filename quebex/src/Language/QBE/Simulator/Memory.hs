@@ -25,12 +25,16 @@ import Data.Array.IO
     writeArray,
   )
 import Data.Word (Word64)
-import Language.QBE.Simulator.Expression (Address)
 import Language.QBE.Types qualified as QBE
 
 class Storable valTy byteTy where
   toBytes :: valTy -> [byteTy]
   fromBytes :: QBE.LoadType -> [byteTy] -> Maybe valTy
+
+-- | Type used to represent an address in memory.
+--
+-- TODO: Make 'Memory' polymorph over the adddress type.
+type Address = Word64
 
 -- | Type used to represent the memory's size.
 type Size = Word64

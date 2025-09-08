@@ -88,10 +88,7 @@ instance E.ValueRepr (Concolic D.RegVal) where
   fromLit ty v = Concolic (E.fromLit ty v) Nothing
   fromFloat fl = Concolic (E.fromFloat fl) Nothing
   fromDouble d = Concolic (E.fromDouble d) Nothing
-
-  fromAddress addr = Concolic (E.fromAddress addr) Nothing
-  toAddress Concolic {concrete = c} = E.toAddress c
-  isZero Concolic {concrete = c} = E.isZero c
+  toWord64 Concolic {concrete = c} = E.toWord64 c
 
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub

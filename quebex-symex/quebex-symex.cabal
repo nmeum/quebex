@@ -30,6 +30,7 @@ library
       base,
       mtl,
       containers,
+      exceptions,
       random,
       quebex,
       quebex-syntax,
