@@ -1,0 +1,74 @@
+export
+function w $entry(w %.1) {
+@start.1
+	%.2 =l alloc4 4
+	storew %.1, %.2
+	%.3 =l alloc4 20
+	%.12 =l alloc8 8
+	%.21 =l alloc4 4
+	%.22 =l alloc4 4
+@body.2
+	storew 0, %.3
+	%.4 =l add %.3, 4
+	storew 0, %.4
+	%.5 =l add %.3, 8
+	storew 0, %.5
+	%.6 =l add %.3, 12
+	storew 0, %.6
+	%.7 =l add %.3, 16
+	storew 0, %.7
+	%.8 =w loadw %.2
+	%.9 =l extuw %.8
+	%.10 =l udiv 20, 4
+	%.11 =w cultl %.9, %.10
+	jnz %.11, @if_true.3, @if_false.4
+@if_true.3
+	%.13 =l extsw 0
+	%.14 =l mul %.13, 4
+	%.15 =l add %.3, %.14
+	storel %.15, %.12
+	%.16 =l loadl %.12
+	%.17 =w loadw %.2
+	%.18 =l extuw %.17
+	%.19 =l mul %.18, 4
+	%.20 =l add %.16, %.19
+	storew 42, %.20
+	storew 0, %.21
+	storew 0, %.22
+@for_cond.5
+	%.23 =w loadw %.22
+	%.24 =l extuw %.23
+	%.25 =l udiv 20, 4
+	%.26 =w cultl %.24, %.25
+	jnz %.26, @for_body.6, @for_join.8
+@for_body.6
+	%.27 =w loadw %.22
+	%.28 =l extuw %.27
+	%.29 =l mul %.28, 4
+	%.30 =l add %.3, %.29
+	%.31 =w loadw %.30
+	jnz %.31, @if_true.9, @if_false.10
+@if_true.9
+	%.32 =w loadw %.22
+	storew %.32, %.21
+	jmp @for_join.8
+@if_false.10
+@for_cont.7
+	%.33 =w loadw %.22
+	%.34 =w add %.33, 1
+	storew %.34, %.22
+	jmp @for_cond.5
+@for_join.8
+	%.35 =w loadw %.2
+	%.36 =w loadw %.21
+	%.37 =w ceqw %.35, %.36
+	jnz %.37, @logic_join.12, @logic_right.11
+@logic_right.11
+	hlt
+@dead.13
+	%.38 =w cnew 0, 0
+@logic_join.12
+	%.39 =w phi @for_join.8 1, @dead.13 %.38
+@if_false.4
+	ret 0
+}
