@@ -50,8 +50,8 @@ applyOp opName =
 
 applySignedOp :: Name -> ValueCons -> Exp -> Exp -> Exp
 applySignedOp opName vCon lhs rhs =
-  let lhs' = (toSignedExp vCon lhs)
-      rhs' = (toSignedExp vCon rhs)
+  let lhs' = toSignedExp vCon lhs
+      rhs' = toSignedExp vCon rhs
       cast = AppE (VarE $ mkName "fromIntegral")
    in -- TODO: Code duplication with applyFunc
       AppE (ConE $ mkName (show vCon)) (cast $ thBinaryFunc (VarE opName) lhs' rhs')

@@ -44,7 +44,7 @@ mkEnv funcs a s = do
 type SimState v b = StateT (Env v b) IO
 
 instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
-  isTrue value = pure $ (E.toWord64 value /= 0)
+  isTrue value = pure (E.toWord64 value /= 0)
   toAddress = pure . E.toWord64
 
   lookupGlobal ident = gets (Map.lookup ident . envGlobals)

@@ -45,12 +45,12 @@ exprTests =
       testCase "sar preserves sign bit" $
         do
           let v = E.fromLit Q.Word (fromIntegral (-256 :: Int64)) :: DE.RegVal
-          let r = fromJust $ v `E.sar` (E.fromLit Q.Word 1)
+          let r = fromJust $ v `E.sar` E.fromLit Q.Word 1
           r @?= E.fromLit Q.Word (fromIntegral (-128 :: Int64)),
       testCase "shr does not preserve sign bit" $
         do
           let v = E.fromLit Q.Word (fromIntegral (-0x80000000 :: Int64)) :: DE.RegVal
-          let r = fromJust $ v `E.shr` (E.fromLit Q.Word 8)
+          let r = fromJust $ v `E.shr` E.fromLit Q.Word 8
           r @?= E.fromLit Q.Word 0x800000
     ]
   where

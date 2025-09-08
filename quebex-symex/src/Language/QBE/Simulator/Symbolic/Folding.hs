@@ -43,7 +43,7 @@ concatExpr
     | varLhs == varRhs =
         case (SMT.sexprToVal lx, SMT.sexprToVal ly, SMT.sexprToVal rx, SMT.sexprToVal ry) of
           (SMT.Int lx', SMT.Int ly', SMT.Int rx', SMT.Int ry') ->
-            if (ly' == rx' + 1)
+            if ly' == rx' + 1
               then extractExpr varLhs (fromIntegral ry') $ assert (lx' > ry') (fromIntegral $ lx' - ry' + 1)
               else SMT.concat lhs rhs
           _ -> error "unreachable" -- invalid SMT-LIB

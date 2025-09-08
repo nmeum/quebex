@@ -61,24 +61,24 @@ toShiftAmount bitSize amount =
 shiftSar :: RegVal -> Word32 -> Maybe RegVal
 shiftSar (VWord val) amount =
   (Just . VWord . fromIntegral) $
-    (fromIntegral val :: Int32) `unsafeShiftR` (toShiftAmount 32 amount)
+    (fromIntegral val :: Int32) `unsafeShiftR` toShiftAmount 32 amount
 shiftSar (VLong val) amount =
   (Just . VLong . fromIntegral) $
-    (fromIntegral val :: Int64) `unsafeShiftR` (toShiftAmount 64 amount)
+    (fromIntegral val :: Int64) `unsafeShiftR` toShiftAmount 64 amount
 shiftSar _ _ = Nothing
 
 shiftShr :: RegVal -> Word32 -> Maybe RegVal
 shiftShr (VWord val) amount =
-  (Just . VWord) $ val `unsafeShiftR` (toShiftAmount 32 amount)
+  (Just . VWord) $ val `unsafeShiftR` toShiftAmount 32 amount
 shiftShr (VLong val) amount =
-  (Just . VLong) $ val `unsafeShiftR` (toShiftAmount 64 amount)
+  (Just . VLong) $ val `unsafeShiftR` toShiftAmount 64 amount
 shiftShr _ _ = Nothing
 
 shiftShl :: RegVal -> Word32 -> Maybe RegVal
 shiftShl (VWord val) amount =
-  (Just . VWord) $ val `unsafeShiftL` (toShiftAmount 32 amount)
+  (Just . VWord) $ val `unsafeShiftL` toShiftAmount 32 amount
 shiftShl (VLong val) amount =
-  (Just . VLong) $ val `unsafeShiftL` (toShiftAmount 64 amount)
+  (Just . VLong) $ val `unsafeShiftL` toShiftAmount 64 amount
 shiftShl _ _ = Nothing
 
 ------------------------------------------------------------------------
@@ -154,7 +154,7 @@ instance E.ValueRepr RegVal where
   fromLit QBE.Single n = VSingle $ fromIntegral n
   fromLit QBE.Double n = VDouble $ fromIntegral n
 
-  toWord64 (VWord v) = fromIntegral $ v
+  toWord64 (VWord v) = fromIntegral v
   toWord64 (VLong v) = v
   toWord64 (VSingle v) = fromIntegral $ castFloatToWord32 v
   toWord64 (VDouble v) = castDoubleToWord64 v

@@ -36,8 +36,8 @@ eqConcrete sym con = do
   s <- getSolver
   symVal <- SMT.getExpr s (SE.toSExpr sym)
   case (symVal, con) of
-    (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == (fromIntegral cv)
-    (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == (fromIntegral cv)
+    (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == fromIntegral cv
+    (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == fromIntegral cv
     _ -> pure False
 
 ------------------------------------------------------------------------
@@ -48,8 +48,7 @@ data InstrInput = InstrInput QBE.BaseType Word64
 instance Arbitrary InstrInput where
   arbitrary = do
     t <- elements [QBE.Word, QBE.Long]
-    v <- arbitrary
-    pure $ InstrInput t v
+    InstrInput t <$> arbitrary
 
 unaryProp ::
   (SE.BitVector -> SE.BitVector) ->
@@ -71,8 +70,7 @@ instance Arbitrary ShiftInput where
   arbitrary = do
     t <- elements [QBE.Word, QBE.Long]
     v <- arbitrary
-    s <- arbitrary
-    pure $ ShiftInput t v s
+    ShiftInput t v <$> arbitrary
 
 shiftProp ::
   (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
@@ -83,8 +81,8 @@ shiftProp opSym opCon (ShiftInput ty val amount) = ioProperty $ do
   let symValue = E.fromLit ty val :: SE.BitVector
   let conValue = E.fromLit ty val :: DE.RegVal
 
-  let symResult = symValue `opSym` (E.fromLit QBE.Word $ fromIntegral amount)
-  let conResult = conValue `opCon` (E.fromLit QBE.Word $ fromIntegral amount)
+  let symResult = symValue `opSym` E.fromLit QBE.Word (fromIntegral amount)
+  let conResult = conValue `opCon` E.fromLit QBE.Word (fromIntegral amount)
 
   case (symResult, conResult) of
     (Just s, Just c) -> eqConcrete s c

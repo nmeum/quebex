@@ -74,7 +74,7 @@ toCond isTrue BitVector {sexpr = s, qtype = ty} =
 instance MEM.Storable BitVector BitVector where
   toBytes BitVector {sexpr = s, qtype = ty} =
     assert (size `mod` 8 == 0) $
-      map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. (fromIntegral size) `div` 8]
+      map (\n -> BitVector (nthByte s n) QBE.Byte) [1 .. fromIntegral size `div` 8]
     where
       size :: Integer
       size = fromIntegral $ QBE.extTypeBitSize ty
@@ -122,11 +122,11 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
 
 -- TODO: Move this into the expression abstraction.
 toShiftAmount :: Word64 -> BitVector -> Maybe BitVector
-toShiftAmount bitSize amount = amount `E.urem` (E.fromLit QBE.Word bitSize)
+toShiftAmount bitSize amount = amount `E.urem` E.fromLit QBE.Word bitSize
 
 shiftOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 shiftOp op value amount@BitVector {qtype = QBE.Base QBE.Word} =
-  case (qtype value) of
+  case qtype value of
     QBE.Base QBE.Word -> toShiftAmount 32 amount >>= binaryOp op value
     QBE.Base QBE.Long -> do
       shiftAmount <- toShiftAmount 64 amount

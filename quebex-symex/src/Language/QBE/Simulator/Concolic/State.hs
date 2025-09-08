@@ -39,7 +39,7 @@ modifyTracer f =
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   isTrue value = do
-    let condResult = (E.toWord64 $ CE.concrete value) /= 0
+    let condResult = E.toWord64 (CE.concrete value) /= 0
     case CE.symbolic value of
       Nothing -> pure condResult
       Just sexpr -> do
@@ -53,9 +53,9 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   toAddress CE.Concolic {CE.concrete = cv, CE.symbolic = svMaybe} =
     case svMaybe of
       Just sv ->
-        case sv `E.eq` (SE.fromReg cv) of
+        case sv `E.eq` SE.fromReg cv of
           Just c -> do
-            modifyTracer (\t -> T.appendCons t c)
+            modifyTracer (`T.appendCons` c)
             pure $ E.toWord64 cv
           Nothing -> throwM TypingError
       Nothing -> pure $ E.toWord64 cv
