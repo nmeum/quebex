@@ -31,5 +31,6 @@ executable quebex-cli
       quebex,
       quebex-symex,
       quebex-syntax,
-      parsec
+      parsec,
+      optparse-applicative >=0.17.0.0
 

@@ -5,32 +5,44 @@
 module Main (main) where
 
 import Control.Exception (Exception, throwIO)
-import Control.Monad (when)
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
-import System.Exit (ExitCode (ExitSuccess))
-import System.IO (IOMode (WriteMode), hClose, hPutStrLn, openFile, withFile)
+import Options.Applicative qualified as OPT
+import System.IO (IOMode (WriteMode), withFile)
 import Text.Parsec (ParseError)
 
--- OPTS:
---
---  -d dump queries
---  -D dump and unwind queries
---  -p print paths
---  -v print values for each path
+data Opts = Opts
+  { optDump :: Bool,
+    optUnwind :: Bool,
+    optSMTLog :: FilePath,
+    optQBEFile :: FilePath
+  }
 
-data Opt
-  = DumpQueries
-  | DumpUnwind
-
-newtype OptSet = OptSet [Opt]
-
-hasFlag :: OptSet -> Opt -> Bool
-hasFlag _ _ = True
+optsParser :: OPT.Parser Opts
+optsParser =
+  Opts
+    <$> OPT.switch
+      ( OPT.long "dump-smt2"
+          <> OPT.short 'd'
+          <> OPT.help "Output queries as a non-incremental SMT-LIB file"
+      )
+    <*> OPT.switch
+      ( OPT.long "dump-incr-smt2"
+          <> OPT.short 'D'
+          <> OPT.help "Output queries as an incremental SMT-LIB file"
+      )
+    <*> OPT.strOption
+      ( OPT.long "log-file"
+          <> OPT.short 'l'
+          <> OPT.value "all-queries.smt2"
+          <> OPT.metavar "FILE"
+          <> OPT.help "Name of SMT-LIB file with generated queries"
+      )
+    <*> OPT.argument OPT.str (OPT.metavar "FILE")
 
 ------------------------------------------------------------------------
 
@@ -41,8 +53,9 @@ data ExecError
 
 instance Exception ExecError
 
-exploreFile :: OptSet -> FilePath -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
-exploreFile opts filePath params = do
+exploreFile :: Opts -> IO [(ST.Assign, T.ExecTrace)]
+exploreFile opts = do
+  let filePath = optQBEFile opts
   content <- readFile filePath
   prog <- case parse filePath content of
     Right rt -> pure rt
@@ -53,12 +66,16 @@ exploreFile opts filePath params = do
     Just x -> pure x
     Nothing -> throwIO $ UnknownFunction entryFunc
 
-  if hasFlag opts DumpQueries
-    then withFile "foo.smt2" WriteMode (exploreWithHandle prog func)
+  if (optDump opts || optUnwind opts)
+    then withFile (optSMTLog opts) WriteMode (exploreWithHandle prog func)
     else do
       engine <- defSolver >>= newEngine
       explore engine prog func params
   where
+    params :: [(String, QBE.BaseType)]
+    params = []
+
+    entryFunc :: QBE.GlobalIdent
     entryFunc = QBE.GlobalIdent "main"
 
     exploreWithHandle prog func handle = do
@@ -67,4 +84,14 @@ exploreFile opts filePath params = do
 
 main :: IO ()
 main = do
-  putStrLn "hello!"
+  args <- OPT.execParser cmd
+  paths <- exploreFile args
+  putStrLn $ "Amount of paths: " ++ show (length paths)
+  where
+    cmd :: OPT.ParserInfo Opts
+    cmd =
+      OPT.info
+        (optsParser OPT.<**> OPT.helper)
+        ( OPT.fullDesc
+            <> OPT.progDesc "Symbolic execution of programs in the QBE intermediate language"
+        )
