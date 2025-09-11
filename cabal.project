@@ -5,4 +5,5 @@
 packages:
   quebex-syntax/
   quebex-symex/
+  quebex-cli/
   quebex/
