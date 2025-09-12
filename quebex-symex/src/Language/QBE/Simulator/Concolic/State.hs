@@ -4,6 +4,7 @@
 
 module Language.QBE.Simulator.Concolic.State
   ( Env (..),
+    mkEnv,
     run,
     run',
     makeConcolic,
@@ -23,6 +24,7 @@ import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.Error (EvalError (TypingError))
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
@@ -33,6 +35,15 @@ data Env
     envTracer :: T.ExecTrace,
     envStore :: ST.Store
   }
+
+mkEnv ::
+  Program ->
+  MEM.Address ->
+  MEM.Size ->
+  IO Env
+mkEnv prog memStart memSize = do
+  initEnv <- DS.mkEnv (globalFuncs prog) memStart memSize
+  Env initEnv T.newExecTrace <$> ST.empty
 
 liftState ::
   (DS.SimState (CE.Concolic DE.RegVal) (CE.Concolic Word8)) a ->
