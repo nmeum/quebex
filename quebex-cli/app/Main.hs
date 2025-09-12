@@ -47,7 +47,7 @@ optsParser =
 ------------------------------------------------------------------------
 
 data ExecError
-  = ParserError ParseError
+  = SyntaxError ParseError
   | UnknownFunction QBE.GlobalIdent
   deriving (Show)
 
@@ -59,7 +59,7 @@ exploreFile opts = do
   content <- readFile filePath
   prog <- case parse filePath content of
     Right rt -> pure rt
-    Left err -> throwIO err
+    Left err -> throwIO $ SyntaxError err
 
   let funcs = globalFuncs prog
   func <- case find (\f -> QBE.fName f == entryFunc) funcs of
