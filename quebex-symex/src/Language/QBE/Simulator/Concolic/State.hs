@@ -7,21 +7,28 @@ module Language.QBE.Simulator.Concolic.State (run) where
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
+import Data.Char (chr)
 import Data.Word (Word8)
 import Language.QBE (Program, globalFuncs)
+import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.Error (EvalError (TypingError))
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory (toBytes)
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Types qualified as QBE
+import SimpleSMT qualified as SMT
 
 data Env
   = Env
   { envBase :: DS.Env (CE.Concolic DE.RegVal) (CE.Concolic Word8),
-    envTracer :: T.ExecTrace
+    envTracer :: T.ExecTrace,
+    envStore :: ST.Store,
+    envSolver :: SMT.Solver
   }
 
 liftState ::
@@ -36,6 +43,18 @@ liftState toLift = do
 modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
+
+-- TODO: Make this more dynamic, allow registration of additional procedures.
+simFuncs ::
+  QBE.GlobalIdent ->
+  [CE.Concolic DE.RegVal] ->
+  StateT Env IO (Maybe (Maybe (CE.Concolic DE.RegVal)))
+simFuncs (QBE.GlobalIdent "make_symbolic_word") [] = do
+  sl <- gets envSolver
+  st <- gets envStore
+  v <- liftIO $ ST.getConcolic sl st "test" QBE.Word
+  pure (Just $ Just v)
+simFuncs _ _ = pure Nothing
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   isTrue value = do
@@ -60,6 +79,7 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
           Nothing -> throwM TypingError
       Nothing -> pure $ E.toWord64 cv
 
+  simFunc (QBE.VConst (QBE.Const (QBE.Global n))) p = simFuncs n p
   simFunc _ _ = pure Nothing
 
   lookupGlobal = liftState . lookupGlobal
@@ -76,7 +96,18 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
-run :: Program -> StateT Env IO a -> IO T.ExecTrace
-run prog state = do
+run ::
+  Program ->
+  ST.Store ->
+  SMT.Solver ->
+  StateT Env IO a ->
+  IO (T.ExecTrace, ST.Store)
+run prog store solver state = do
   initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
-  fst <$> runStateT (state >> gets envTracer) (Env initEnv' T.newExecTrace)
+  fst <$> runStateT go (Env initEnv' T.newExecTrace store solver)
+  where
+    go = do
+      _ <- state
+      t <- gets envTracer
+      s <- gets envStore
+      pure (t, s)

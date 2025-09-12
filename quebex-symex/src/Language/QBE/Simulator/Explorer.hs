@@ -68,10 +68,16 @@ findNext e@(Engine {expStore = store}) eTrace = do
     Just nm ->
       ST.setModel store nm >> pure (Just nm, ne)
 
-------------------------------------------------------------------------
+traceFunc ::
+  Program ->
+  Engine ->
+  QBE.FuncDef ->
+  [CE.Concolic DE.RegVal] ->
+  IO (T.ExecTrace, ST.Store)
+traceFunc prog (Engine {expSolver = solver, expStore = store}) func params =
+  run prog store solver (execFunc func params)
 
-traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic DE.RegVal] -> IO T.ExecTrace
-traceFunc prog func params = run prog (execFunc func params)
+------------------------------------------------------------------------
 
 explore ::
   Engine ->
@@ -82,9 +88,9 @@ explore ::
 explore engine@Engine {expSolver = solver, expStore = store} prog entry params = do
   varAssign <- ST.assign store
   values <- mapM (uncurry (ST.getConcolic solver store)) params
-  eTrace <- traceFunc prog entry values
 
-  (model, nEngine) <- findNext engine eTrace
+  (eTrace, nStore) <- traceFunc prog engine entry values
+  (model, nEngine) <- findNext (engine {expStore = nStore}) eTrace
   case model of
     Nothing -> pure [(varAssign, eTrace)]
     Just _m -> (:) (varAssign, eTrace) <$> explore nEngine prog entry params

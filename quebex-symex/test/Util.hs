@@ -8,7 +8,6 @@ import Data.List (find)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
@@ -33,11 +32,13 @@ findFunc prog funcName =
     Nothing -> error $ "Unknown function: " ++ show funcName
 
 -- TODO: Code duplication with quebex/test/Simulator.hs
-parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO ST.ExecTrace
+parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO T.ExecTrace
 parseAndExec funcName params input = do
   prog <- parseProg input
   let func = findFunc prog funcName
-  run prog (execFunc func params)
+  st <- ST.empty
+  sl <- defSolver
+  fst <$> run prog st sl (execFunc func params)
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
