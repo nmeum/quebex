@@ -14,6 +14,7 @@
   (list (package->development-manifest quebex)
         (package->development-manifest quebex-syntax)
         (package->development-manifest quebex-symex)
+        (package->development-manifest quebex-cli)
 
         ;; Extra packages, useful for development purposes.
         (specifications->manifest

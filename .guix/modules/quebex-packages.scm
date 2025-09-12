@@ -9,6 +9,7 @@
   #:use-module (gnu packages haskell)
   #:use-module (gnu packages haskell-apps)
   #:use-module (gnu packages haskell-check)
+  #:use-module (gnu packages haskell-xyz)
   #:use-module (gnu packages maths)
   #:use-module (guix build-system haskell)
   #:use-module (guix download)
@@ -87,6 +88,7 @@
                         #:recursive? #t))
     (build-system haskell-build-system)
     (inputs (list ghc-9.2))
+    (propagated-inputs (list bitwuzla)) ;; TODO: Wrapper on quebex-cli?
     (native-inputs
       (list
         quebex
@@ -94,9 +96,29 @@
         ghc-tasty
         ghc-tasty-hunit
         ghc-tasty-golden
-        ghc-simple-smt
-        bitwuzla))
+        ghc-tasty-quickcheck
+        ghc-simple-smt))
     (synopsis "Symbolic executor for the QBE intermediate language")
     (description "")
     (home-page "https://git.8pit.net/quebex")
     (license (list license:expat license:gpl3))))
+
+(define-public quebex-cli
+  (package
+    (name "quebex-cli")
+    (version "0.1.0.0")
+    (source (local-file (string-append %srcdir "/quebex-cli")
+                        "git-checkout"
+                        #:recursive? #t))
+    (build-system haskell-build-system)
+    (inputs (list ghc-9.2))
+    (native-inputs
+      (list
+        quebex
+        quebex-syntax
+        quebex-symex
+        ghc-optparse-applicative))
+    (synopsis "Command line utilities for Quebex")
+    (description "")
+    (home-page "https://git.8pit.net/quebex")
+    (license (list license:gpl3))))
