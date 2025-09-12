@@ -94,6 +94,7 @@
         ghc-tasty
         ghc-tasty-hunit
         ghc-tasty-golden
+        ghc-tasty-quickcheck
         ghc-simple-smt
         bitwuzla))
     (synopsis "Symbolic executor for the QBE intermediate language")
