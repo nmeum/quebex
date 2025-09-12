@@ -117,11 +117,14 @@ execStmt (QBE.Assign name ty inst) = do
   modifyFrame (storeLocal name newVal)
 execStmt (QBE.Volatile v) = execVolatile v
 execStmt (QBE.Call ret toCall params) = do
-  funcDef <- lookupFunc toCall
   -- TODO: Check if provided args match FuncDef
   funcArgs <- lookupArgs params
+  mFuncDef <- lookupFunc toCall
 
-  mayRetVal <- execFunc funcDef funcArgs
+  mayRetVal <- case mFuncDef of
+    Just fn -> execFunc fn funcArgs
+    Nothing -> execSimFunc toCall funcArgs
+
   case mayRetVal of
     Nothing ->
       -- XXX: Could also check funcDef for the return value.
@@ -179,6 +182,14 @@ execBlock prevIdent block = do
   mapM_ execStmt (QBE.stmt block)
   execJump (QBE.term block)
 {-# INLINEABLE execBlock #-}
+
+execSimFunc :: (Simulator m v) => QBE.Value -> [v] -> m (Maybe v)
+execSimFunc toCall funcArgs = do
+  r <- simFunc toCall funcArgs
+  case r of
+    Just x -> pure x
+    Nothing -> throwM (UnknownFunction $ QBE.GlobalIdent "To-Do")
+{-# INLINEABLE execSimFunc #-}
 
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing

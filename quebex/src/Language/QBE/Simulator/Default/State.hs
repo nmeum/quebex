@@ -46,6 +46,7 @@ type SimState v b = StateT (Env v b) IO
 instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
   toAddress = pure . E.toWord64
+  simFunc _ _ = pure Nothing
 
   lookupGlobal ident = gets (Map.lookup ident . envGlobals)
   findFunc ident = gets (Map.lookup ident . envFuncs)

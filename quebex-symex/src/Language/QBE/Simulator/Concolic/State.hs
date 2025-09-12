@@ -60,6 +60,8 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
           Nothing -> throwM TypingError
       Nothing -> pure $ E.toWord64 cv
 
+  simFunc _ _ = pure Nothing
+
   lookupGlobal = liftState . lookupGlobal
   findFunc = liftState . findFunc
 

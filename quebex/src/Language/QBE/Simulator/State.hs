@@ -43,6 +43,7 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   isTrue :: v -> m Bool
   toAddress :: v -> m MEM.Address
+  simFunc :: QBE.Value -> [v] -> m (Maybe (Maybe v))
 
   lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
   findFunc :: QBE.GlobalIdent -> m (Maybe QBE.FuncDef)
@@ -131,12 +132,8 @@ lookupValue ty (QBE.VLocal k) = do
   subTypeE ty v
 {-# INLINEABLE lookupValue #-}
 
-lookupFunc :: (Simulator m v) => QBE.Value -> m QBE.FuncDef
-lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
-  maybeFunc <- findFunc name
-  case maybeFunc of
-    Just def -> pure def
-    Nothing -> throwM (UnknownFunction name)
+lookupFunc :: (Simulator m v) => QBE.Value -> m (Maybe QBE.FuncDef)
+lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = findFunc name
 lookupFunc _ = error "non-global functions not supported"
 {-# INLINEABLE lookupFunc #-}
 
