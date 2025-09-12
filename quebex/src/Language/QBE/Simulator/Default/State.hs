@@ -24,8 +24,23 @@ data Env v b
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
     envMem :: MEM.Memory IOArray b,
     envStk :: [StackFrame v],
-    envStkPtr :: v
+    envStkPtr :: v,
+    envDataPtr :: MEM.Address,
+    envDataSym :: Map.Map QBE.GlobalIdent MEM.Address
   }
+
+loadObj :: MEM.Memory IOArray Word8 -> MEM.Address -> QBE.DataObj -> IO MEM.Address
+loadObj mem startAddr (QBE.OZeroFill n) = do
+  MEM.storeBytes mem startAddr (replicate (fromIntegral n) 0)
+  pure $ startAddr + n
+loadObj mem startAddr (QBE.OItem ty items) = do
+  E.fromLit
+
+-- loadData :: (E.ValueRepr v, MEM.Storable v b) => Env v b -> QBE.DataDef -> IO (Env v b)
+-- loadData env dataDef = do
+--   let mem = envMem env
+--   let startAddr = alignAddr (envDataPtr env) (QBE.align dataDef)
+--   let newDataPtr = foldM (\acc x -> loadItem mem acc x) startAddr (QBE.objs dataDef)
 
 mkEnv ::
   (MEM.Storable v b, E.ValueRepr v) =>
@@ -35,8 +50,10 @@ mkEnv ::
   IO (Env v b)
 mkEnv prog a s = do
   mem <- MEM.mkMemory a s
+
   let funcs = globalFuncs prog
-  return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit QBE.Long $ s - 1)
+  return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit QBE.Long $ s - 1) 0 Map.empty
+
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
