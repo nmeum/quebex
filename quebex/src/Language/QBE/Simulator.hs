@@ -117,11 +117,14 @@ execStmt (QBE.Assign name ty inst) = do
   modifyFrame (storeLocal name newVal)
 execStmt (QBE.Volatile v) = execVolatile v
 execStmt (QBE.Call ret toCall params) = do
-  funcDef <- lookupFunc toCall
+  function <- lookupFunc toCall
   -- TODO: Check if provided args match FuncDef
   funcArgs <- lookupArgs params
 
-  mayRetVal <- execFunc funcDef funcArgs
+  mayRetVal <- case function of
+    SFuncDef funcDef -> execFunc funcDef funcArgs
+    SSimFunc simFunc -> simFunc funcArgs
+
   case mayRetVal of
     Nothing ->
       -- XXX: Could also check funcDef for the return value.
