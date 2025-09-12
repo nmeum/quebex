@@ -14,7 +14,7 @@ import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, run')
+import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, run)
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import System.IO (Handle)
@@ -72,7 +72,7 @@ explore ::
 explore engine@(Engine {expSolver = solver}) env entry params = do
   let store = envStore env
   let varAssign = ST.cValues store
-  (eTrace, nStore) <- run' env (makeConcolic params >>= execFunc entry)
+  (eTrace, nStore) <- run env (makeConcolic params >>= execFunc entry)
 
   let inputVars = ST.sexprs nStore
   finalStore <- ST.finalize solver nStore

@@ -6,7 +6,6 @@ module Language.QBE.Simulator.Concolic.State
   ( Env (..),
     mkEnv,
     run,
-    run',
     makeConcolic,
   )
 where
@@ -16,7 +15,7 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
 import Data.Map qualified as Map
 import Data.Word (Word8)
-import Language.QBE (Program, globalFuncs)
+import Language.QBE (Program)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
@@ -119,15 +118,8 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
--- | Deprecated.
-run :: Program -> StateT Env IO a -> IO T.ExecTrace
-run prog state = do
-  initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
-  initStore <- ST.empty
-  fst <$> run' (Env initEnv' T.newExecTrace initStore) state
-
-run' :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
-run' env state = fst <$> runStateT go env
+run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
+run env state = fst <$> runStateT go env
   where
     go = do
       _ <- state
