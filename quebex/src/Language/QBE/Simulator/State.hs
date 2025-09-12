@@ -34,6 +34,10 @@ lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 
 ------------------------------------------------------------------------
 
+data SomeFunc m v
+  = SSimFunc ([v] -> m (Maybe v))
+  | SFuncDef QBE.FuncDef
+
 -- This is an “abstract monad” representing the Simulator and allowing
 -- interaction with an encapsulated Simulator state 'm'. The module
 -- 'Language.QBE.Simulator.Default.State' provides an implementation of
@@ -45,7 +49,7 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   toAddress :: v -> m MEM.Address
 
   lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
-  findFunc :: QBE.GlobalIdent -> m (Maybe QBE.FuncDef)
+  findFunc :: QBE.GlobalIdent -> m (Maybe (SomeFunc m v))
 
   activeFrame :: m (StackFrame v)
   pushStackFrame :: StackFrame v -> m ()
@@ -131,7 +135,7 @@ lookupValue ty (QBE.VLocal k) = do
   subTypeE ty v
 {-# INLINEABLE lookupValue #-}
 
-lookupFunc :: (Simulator m v) => QBE.Value -> m QBE.FuncDef
+lookupFunc :: (Simulator m v) => QBE.Value -> m (SomeFunc m v)
 lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   maybeFunc <- findFunc name
   case maybeFunc of

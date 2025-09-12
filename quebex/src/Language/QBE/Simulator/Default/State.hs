@@ -48,7 +48,7 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   toAddress = pure . E.toWord64
 
   lookupGlobal ident = gets (Map.lookup ident . envGlobals)
-  findFunc ident = gets (Map.lookup ident . envFuncs)
+  findFunc ident = gets (fmap SFuncDef . Map.lookup ident . envFuncs)
 
   activeFrame = do
     stk <- gets envStk
