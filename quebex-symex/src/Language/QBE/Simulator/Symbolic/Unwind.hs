@@ -2,7 +2,7 @@
 --
 -- SPDX-License-Identifier: MIT AND GPL-3.0-only
 
-module SMTUnwind (unwind) where
+module Language.QBE.Simulator.Symbolic.Unwind (unwind) where
 
 import Control.Monad (forM_)
 import Control.Monad.State (State, gets, modify, runState)

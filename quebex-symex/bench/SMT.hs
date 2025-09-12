@@ -12,8 +12,8 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
+import Language.QBE.Simulator.Symbolic.Unwind (unwind)
 import Language.QBE.Types qualified as QBE
-import SMTUnwind (unwind)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath ((</>))
 import System.IO (IOMode (WriteMode), hClose, hPutStrLn, openFile, withFile)
