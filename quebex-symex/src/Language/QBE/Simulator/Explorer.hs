@@ -14,9 +14,7 @@ import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Concolic.State (Env (envStore), run')
-import Language.QBE.Simulator.Default.Expression qualified as DE
+import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, run')
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import System.IO (Handle)
@@ -26,8 +24,8 @@ logic = "QF_BV"
 
 defSolver :: IO SMT.Solver
 defSolver = do
-  -- l <- SMT.newLogger 0
-  s <- SMT.newSolver "bitwuzla" [] Nothing
+  l <- SMT.newLogger 0
+  s <- SMT.newSolver "bitwuzla" [] (Just l)
   SMT.setLogic s logic
   return s
 
@@ -65,11 +63,6 @@ findNext e symVars eTrace = do
     Just nm ->
       pure (Just nm, ne)
 
-------------------------------------------------------------------------
-
-traceFunc :: Env -> QBE.FuncDef -> [CE.Concolic DE.RegVal] -> IO T.ExecTrace
-traceFunc env func params = run' env (execFunc func params)
-
 explore ::
   Engine ->
   Env ->
@@ -78,14 +71,15 @@ explore ::
   IO [(ST.Assign, T.ExecTrace)]
 explore engine@(Engine {expSolver = solver}) env entry params = do
   let store = envStore env
-  varAssign <- ST.assign store
-  values <- mapM (uncurry (ST.getConcolic solver store)) params
-  eTrace <- traceFunc env entry values
+  let varAssign = ST.cValues store
+  (eTrace, nStore) <- run' env (makeConcolic params >>= execFunc entry)
 
-  inputVars <- ST.sexprs store
+  let inputVars = ST.sexprs nStore
+  finalStore <- ST.finalize solver nStore
+
   (model, nEngine) <- findNext engine inputVars eTrace
   case model of
     Nothing -> pure [(varAssign, eTrace)]
     Just newModel -> do
-      ST.setModel store newModel
-      (:) (varAssign, eTrace) <$> explore nEngine env entry params
+      let nEnv = env {envStore = ST.setModel finalStore newModel}
+      (:) (varAssign, eTrace) <$> explore nEngine nEnv entry params
