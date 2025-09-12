@@ -358,7 +358,7 @@ blockTests =
               \ret\n\
               \}"
 
-          res @?= Left (UnknownFunction $ QBE.GlobalIdent "bar"),
+          res @?= Left (UnknownFunction "bar"),
       testCase "Arithemtics with single-precision float" $
         do
           res <-

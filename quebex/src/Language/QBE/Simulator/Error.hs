@@ -16,7 +16,7 @@ data EvalError
   | InvalidReturnValue
   | UnknownBlock QBE.BlockIdent
   | InvalidMemoryLoad
-  | UnknownFunction QBE.GlobalIdent
+  | UnknownFunction String
   | MissingFunctionReturn
   | FunctionReturnIgnored
   | AssignedVoidReturnValue

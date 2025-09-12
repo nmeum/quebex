@@ -188,7 +188,11 @@ execSimFunc toCall funcArgs = do
   r <- simFunc toCall funcArgs
   case r of
     Just x -> pure x
-    Nothing -> throwM (UnknownFunction $ QBE.GlobalIdent "To-Do")
+    Nothing -> throwM (UnknownFunction $ toFuncName toCall)
+  where
+    toFuncName :: QBE.Value -> String
+    toFuncName (QBE.VConst (QBE.Const (QBE.Global (QBE.GlobalIdent name)))) = name
+    toFuncName value = show value
 {-# INLINEABLE execSimFunc #-}
 
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
