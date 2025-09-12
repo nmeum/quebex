@@ -42,7 +42,7 @@ mkEnv ::
   MEM.Size ->
   IO Env
 mkEnv prog memStart memSize = do
-  initEnv <- DS.mkEnv (globalFuncs prog) memStart memSize
+  initEnv <- DS.mkEnv prog memStart memSize
   Env initEnv T.newExecTrace <$> ST.empty
 
 liftState ::
