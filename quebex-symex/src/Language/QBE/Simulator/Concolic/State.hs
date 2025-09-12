@@ -2,7 +2,13 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Concolic.State (Env (..), run, run') where
+module Language.QBE.Simulator.Concolic.State
+  ( Env (..),
+    run,
+    run',
+    makeConcolic,
+  )
+where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
@@ -18,6 +24,7 @@ import Language.QBE.Simulator.Error (EvalError (TypingError))
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Types qualified as QBE
 
 data Env
   = Env
@@ -34,6 +41,17 @@ liftState toLift = do
   (a, s) <- liftIO $ runStateT toLift defEnv
   modify (\ps -> ps {envBase = s})
   pure a
+
+makeConcolic :: [(String, QBE.BaseType)] -> StateT Env IO [CE.Concolic DE.RegVal]
+makeConcolic values = do
+  mapM
+    ( \(name, ty) -> do
+        st <- gets envStore
+        let (ns, cv) = ST.getConcolic st name ty
+        modify (\e -> e {envStore = ns})
+        pure cv
+    )
+    values
 
 modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
@@ -76,11 +94,18 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
+-- | Deprecated.
 run :: Program -> StateT Env IO a -> IO T.ExecTrace
 run prog state = do
   initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
   initStore <- ST.empty
-  run' (Env initEnv' T.newExecTrace initStore) state
+  fst <$> run' (Env initEnv' T.newExecTrace initStore) state
 
-run' :: Env -> StateT Env IO a -> IO T.ExecTrace
-run' env state = fst <$> runStateT (state >> gets envTracer) env
+run' :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
+run' env state = fst <$> runStateT go env
+  where
+    go = do
+      _ <- state
+      t <- gets envTracer
+      s <- gets envStore
+      pure (t, s)
