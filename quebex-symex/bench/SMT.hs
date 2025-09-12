@@ -5,11 +5,14 @@
 module SMT (smtBench) where
 
 import Control.Monad (when)
+import Control.Monad.IO.Class (liftIO)
 import Criterion.Main
 import Data.List (find)
-import Language.QBE (globalFuncs, parse)
+import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.Simulator.Concolic.State (Env (..))
+import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
 import SMTUnwind (unwind)
@@ -33,6 +36,12 @@ entryFunc = QBE.GlobalIdent "entry"
 
 ------------------------------------------------------------------------
 
+defaultEnv :: Program -> IO Env
+defaultEnv prog = do
+  initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
+  initStore <- ST.empty
+  pure $ Env initEnv' T.newExecTrace initStore
+
 exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 exploreQBE filePath params = do
   content <- readFile filePath
@@ -48,8 +57,9 @@ exploreQBE filePath params = do
   withFile logPath WriteMode (explore' prog func)
   where
     explore' prog func handle = do
-      engine <- logSolver handle >>= newEngine
-      explore engine prog func params
+      engine <- newEngine <$> logSolver handle
+      defEnv <- defaultEnv prog
+      explore engine defEnv func params
 
 getQueries :: String -> [(String, QBE.BaseType)] -> IO String
 getQueries name params = do

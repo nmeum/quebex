@@ -2,13 +2,14 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Concolic.State (run) where
+module Language.QBE.Simulator.Concolic.State (Env (..), run, run') where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
 import Data.Word (Word8)
 import Language.QBE (Program, globalFuncs)
+import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
@@ -21,7 +22,8 @@ import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 data Env
   = Env
   { envBase :: DS.Env (CE.Concolic DE.RegVal) (CE.Concolic Word8),
-    envTracer :: T.ExecTrace
+    envTracer :: T.ExecTrace,
+    envStore :: ST.Store
   }
 
 liftState ::
@@ -77,4 +79,8 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 run :: Program -> StateT Env IO a -> IO T.ExecTrace
 run prog state = do
   initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
-  fst <$> runStateT (state >> gets envTracer) (Env initEnv' T.newExecTrace)
+  initStore <- ST.empty
+  run' (Env initEnv' T.newExecTrace initStore) state
+
+run' :: Env -> StateT Env IO a -> IO T.ExecTrace
+run' env state = fst <$> runStateT (state >> gets envTracer) env

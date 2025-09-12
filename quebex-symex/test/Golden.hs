@@ -4,8 +4,13 @@
 
 module Golden (goldenTests) where
 
+import Control.Monad.IO.Class (liftIO)
 import Data.List (find)
-import Language.QBE (globalFuncs, parse)
+import Language.QBE (Program, globalFuncs, parse)
+import Language.QBE.Backend.Store qualified as ST
+import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.Simulator.Concolic.State (Env (..))
+import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Types qualified as QBE
 import System.FilePath
@@ -16,6 +21,12 @@ type Result = Int
 
 entryFunc :: QBE.GlobalIdent
 entryFunc = QBE.GlobalIdent "entry"
+
+defaultEnv :: Program -> IO Env
+defaultEnv prog = do
+  initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
+  initStore <- ST.empty
+  pure $ Env initEnv' T.newExecTrace initStore
 
 exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO Result
 exploreQBE filePath params = do
@@ -29,8 +40,9 @@ exploreQBE filePath params = do
     Just x -> pure x
     Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
 
-  engine <- defSolver >>= newEngine
-  traces <- explore engine prog func params
+  engine <- newEngine <$> defSolver
+  defEnv <- defaultEnv prog
+  traces <- explore engine defEnv func params
   pure $ length traces
 
 simpleCmp :: Result -> Result -> IO (Maybe String)
