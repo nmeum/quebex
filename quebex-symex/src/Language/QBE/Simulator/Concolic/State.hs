@@ -13,6 +13,7 @@ where
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
+import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program, globalFuncs)
 import Language.QBE.Backend.Store qualified as ST
@@ -57,6 +58,15 @@ modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
 
+makeSymbolicWord :: [CE.Concolic DE.RegVal] -> StateT Env IO (Maybe (CE.Concolic DE.RegVal))
+makeSymbolicWord params = do
+  v <- head <$> makeConcolic [("test", QBE.Word)]
+  pure $ Just v
+
+findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
+findSimFunc (QBE.GlobalIdent "make_symbolic_word") = Just makeSymbolicWord
+findSimFunc _ = Nothing
+
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   isTrue value = do
     let condResult = E.toWord64 (CE.concrete value) /= 0
@@ -80,9 +90,13 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
           Nothing -> throwM TypingError
       Nothing -> pure $ E.toWord64 cv
 
-  lookupGlobal = liftState . lookupGlobal
-  findFunc = liftState . findFunc
+  findFunc ident = do
+    funcs <- gets (DS.envFuncs . envBase)
+    pure $ case Map.lookup ident funcs of
+      Just x -> Just $ SFuncDef x
+      Nothing -> SSimFunc <$> findSimFunc ident
 
+  lookupGlobal = liftState . lookupGlobal
   activeFrame = liftState activeFrame
   pushStackFrame = liftState . pushStackFrame
   popStackFrame = liftState popStackFrame

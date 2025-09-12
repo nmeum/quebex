@@ -171,5 +171,23 @@ exploreTests =
           let funcDef = findFunc prog (QBE.GlobalIdent "f")
           eTraces <- explore' prog funcDef [("y", QBE.Long), ("x", QBE.Word)]
 
-          branchPoints eTraces @?= [[False], [True, False], [True, True]]
+          branchPoints eTraces @?= [[False], [True, False], [True, True]],
+      testCase "make_symbolic_word" $
+        do
+          prog <-
+            parseProg
+              "function w $main() {\n\
+              \@start\n\
+              \%word =w call $make_symbolic_word()\n\
+              \jnz %word, @b1, @b2\n\
+              \@b1\n\
+              \ret 0\n\
+              \@b2\n\
+              \ret 1\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "main")
+          eTraces <- explore' prog funcDef []
+
+          length eTraces @?= 2
     ]
