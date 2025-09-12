@@ -178,7 +178,7 @@ exploreTests =
             parseProg
               "function w $main() {\n\
               \@start\n\
-              \%word =w call $make_symbolic_word()\n\
+              \%word =w call $make_symbolic_word(w 1)\n\
               \jnz %word, @b1, @b2\n\
               \@b1\n\
               \ret 0\n\

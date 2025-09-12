@@ -21,7 +21,7 @@ import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State qualified as DS
-import Language.QBE.Simulator.Error (EvalError (TypingError))
+import Language.QBE.Simulator.Error (EvalError (FuncArgsMismatch, TypingError))
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.State
@@ -53,28 +53,29 @@ liftState toLift = do
   modify (\ps -> ps {envBase = s})
   pure a
 
-makeConcolic :: [(String, QBE.BaseType)] -> StateT Env IO [CE.Concolic DE.RegVal]
-makeConcolic values = do
-  mapM
-    ( \(name, ty) -> do
-        st <- gets envStore
-        let (ns, cv) = ST.getConcolic st name ty
-        modify (\e -> e {envStore = ns})
-        pure cv
-    )
-    values
+makeConcolic :: String -> QBE.BaseType -> StateT Env IO (CE.Concolic DE.RegVal)
+makeConcolic name ty = do
+  st <- gets envStore
+  let (ns, cv) = ST.getConcolic st name ty
+  modify (\e -> e {envStore = ns})
+  pure cv
 
 modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
 
-makeSymbolicWord :: [CE.Concolic DE.RegVal] -> StateT Env IO (Maybe (CE.Concolic DE.RegVal))
-makeSymbolicWord params = do
-  v <- head <$> makeConcolic [("test", QBE.Word)]
+makeSymbolicWord ::
+  QBE.GlobalIdent ->
+  [CE.Concolic DE.RegVal] ->
+  StateT Env IO (Maybe (CE.Concolic DE.RegVal))
+-- TODO: Require a string as a parameter.
+makeSymbolicWord _ [ident] = do
+  v <- makeConcolic ("word" ++ (show $ E.toWord64 ident)) QBE.Word
   pure $ Just v
+makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
-findSimFunc (QBE.GlobalIdent "make_symbolic_word") = Just makeSymbolicWord
+findSimFunc i@(QBE.GlobalIdent "make_symbolic_word") = Just (makeSymbolicWord i)
 findSimFunc _ = Nothing
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where

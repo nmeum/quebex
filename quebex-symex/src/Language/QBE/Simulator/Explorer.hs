@@ -72,7 +72,7 @@ explore ::
 explore engine@(Engine {expSolver = solver}) env entry params = do
   let store = envStore env
   let varAssign = ST.cValues store
-  (eTrace, nStore) <- run env (makeConcolic params >>= execFunc entry)
+  (eTrace, nStore) <- run env (mapM (uncurry makeConcolic) params >>= execFunc entry)
 
   let inputVars = ST.sexprs nStore
   finalStore <- ST.finalize solver nStore
