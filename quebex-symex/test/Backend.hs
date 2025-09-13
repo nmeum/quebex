@@ -64,7 +64,7 @@ traceTests =
           let pathSel = trackTrace newPathSel t
           (mm, nextPathSel) <- findUnexplored s inputs pathSel
 
-          assign <- Model.toList (fromJust mm)
+          let assign = Model.toList (fromJust mm)
           case assign of
             [(_, DE.VWord v)] ->
               assertBool "condition must be /= 0" (v /= 0)

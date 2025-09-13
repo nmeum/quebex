@@ -9,15 +9,12 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
-import Language.QBE (Program)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Concolic.State (run)
-import Language.QBE.Simulator.Default.Expression qualified as DE
+import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, run)
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
 import System.IO (Handle)
@@ -48,17 +45,15 @@ logSolver handle = do
 data Engine
   = Engine
   { expSolver :: SMT.Solver,
-    expPathSel :: PathSel,
-    expStore :: ST.Store
+    expPathSel :: PathSel
   }
 
-newEngine :: SMT.Solver -> IO Engine
-newEngine solver = Engine solver newPathSel <$> ST.empty
+newEngine :: SMT.Solver -> Engine
+newEngine solver = Engine solver newPathSel
 
-findNext :: Engine -> T.ExecTrace -> IO (Maybe Model, Engine)
-findNext e@(Engine {expStore = store}) eTrace = do
+findNext :: Engine -> [SMT.SExpr] -> T.ExecTrace -> IO (Maybe Model, Engine)
+findNext e symVars eTrace = do
   let pathSel = trackTrace (expPathSel e) eTrace
-  symVars <- ST.sexprs store
   (model, nextPathSel) <- findUnexplored (expSolver e) symVars pathSel
 
   let ne = e {expPathSel = nextPathSel}
@@ -66,25 +61,25 @@ findNext e@(Engine {expStore = store}) eTrace = do
     Nothing ->
       pure (model, ne)
     Just nm ->
-      ST.setModel store nm >> pure (Just nm, ne)
-
-------------------------------------------------------------------------
-
-traceFunc :: Program -> QBE.FuncDef -> [CE.Concolic DE.RegVal] -> IO T.ExecTrace
-traceFunc prog func params = run prog (execFunc func params)
+      pure (Just nm, ne)
 
 explore ::
   Engine ->
-  Program ->
+  Env ->
   QBE.FuncDef ->
   [(String, QBE.BaseType)] ->
   IO [(ST.Assign, T.ExecTrace)]
-explore engine@Engine {expSolver = solver, expStore = store} prog entry params = do
-  varAssign <- ST.assign store
-  values <- mapM (uncurry (ST.getConcolic solver store)) params
-  eTrace <- traceFunc prog entry values
+explore engine@(Engine {expSolver = solver}) env entry params = do
+  let store = envStore env
+  let varAssign = ST.cValues store
+  (eTrace, nStore) <- run env (mapM (uncurry makeConcolic) params >>= execFunc entry)
 
-  (model, nEngine) <- findNext engine eTrace
+  let inputVars = ST.sexprs nStore
+  finalStore <- ST.finalize solver nStore
+
+  (model, nEngine) <- findNext engine inputVars eTrace
   case model of
     Nothing -> pure [(varAssign, eTrace)]
-    Just _m -> (:) (varAssign, eTrace) <$> explore nEngine prog entry params
+    Just newModel -> do
+      let nEnv = env {envStore = ST.setModel finalStore newModel}
+      (:) (varAssign, eTrace) <$> explore nEngine nEnv entry params

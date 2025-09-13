@@ -12,7 +12,7 @@ import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Concolic.State (run)
+import Language.QBE.Simulator.Concolic.State (mkEnv, run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
@@ -37,15 +37,19 @@ parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO ST.Ex
 parseAndExec funcName params input = do
   prog <- parseProg input
   let func = findFunc prog funcName
-  run prog (execFunc func params)
+  env <- mkEnv prog 0 128
+  fst <$> run env (execFunc func params)
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
+  let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
+  symbolic <- SE.fromSExpr ty <$> SMT.declare solver name bits
+
   let concrete = E.fromLit ty initCon
-  symbolic <- SE.symbolic solver name ty
   pure $ CE.Concolic concrete (Just symbolic)
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
-  engine <- defSolver >>= newEngine
-  explore engine prog entry params
+  engine <- newEngine <$> defSolver
+  defEnv <- mkEnv prog 0 128
+  explore engine defEnv entry params

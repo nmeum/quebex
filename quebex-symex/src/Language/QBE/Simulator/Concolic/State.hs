@@ -2,27 +2,47 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Concolic.State (run) where
+module Language.QBE.Simulator.Concolic.State
+  ( Env (..),
+    mkEnv,
+    run,
+    makeConcolic,
+  )
+where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
+import Data.Map qualified as Map
 import Data.Word (Word8)
-import Language.QBE (Program, globalFuncs)
+import Language.QBE (Program)
+import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State qualified as DS
-import Language.QBE.Simulator.Error (EvalError (TypingError))
+import Language.QBE.Simulator.Error (EvalError (FuncArgsMismatch, TypingError))
 import Language.QBE.Simulator.Expression qualified as E
+import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
+import Language.QBE.Types qualified as QBE
 
 data Env
   = Env
   { envBase :: DS.Env (CE.Concolic DE.RegVal) (CE.Concolic Word8),
-    envTracer :: T.ExecTrace
+    envTracer :: T.ExecTrace,
+    envStore :: ST.Store
   }
+
+mkEnv ::
+  Program ->
+  MEM.Address ->
+  MEM.Size ->
+  IO Env
+mkEnv prog memStart memSize = do
+  initEnv <- DS.mkEnv prog memStart memSize
+  Env initEnv T.newExecTrace <$> ST.empty
 
 liftState ::
   (DS.SimState (CE.Concolic DE.RegVal) (CE.Concolic Word8)) a ->
@@ -33,9 +53,30 @@ liftState toLift = do
   modify (\ps -> ps {envBase = s})
   pure a
 
+makeConcolic :: String -> QBE.BaseType -> StateT Env IO (CE.Concolic DE.RegVal)
+makeConcolic name ty = do
+  st <- gets envStore
+  let (ns, cv) = ST.getConcolic st name ty
+  modify (\e -> e {envStore = ns})
+  pure cv
+
 modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
+
+makeSymbolicWord ::
+  QBE.GlobalIdent ->
+  [CE.Concolic DE.RegVal] ->
+  StateT Env IO (Maybe (CE.Concolic DE.RegVal))
+-- TODO: Require a string as a parameter.
+makeSymbolicWord _ [ident] = do
+  v <- makeConcolic ("word" ++ show (E.toWord64 ident)) QBE.Word
+  pure $ Just v
+makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
+
+findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
+findSimFunc i@(QBE.GlobalIdent "make_symbolic_word") = Just (makeSymbolicWord i)
+findSimFunc _ = Nothing
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   isTrue value = do
@@ -60,9 +101,13 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
           Nothing -> throwM TypingError
       Nothing -> pure $ E.toWord64 cv
 
-  lookupGlobal = liftState . lookupGlobal
-  findFunc = liftState . findFunc
+  findFunc ident = do
+    funcs <- gets (DS.envFuncs . envBase)
+    pure $ case Map.lookup ident funcs of
+      Just x -> Just $ SFuncDef x
+      Nothing -> SSimFunc <$> findSimFunc ident
 
+  lookupGlobal = liftState . lookupGlobal
   activeFrame = liftState activeFrame
   pushStackFrame = liftState . pushStackFrame
   popStackFrame = liftState popStackFrame
@@ -74,7 +119,11 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
-run :: Program -> StateT Env IO a -> IO T.ExecTrace
-run prog state = do
-  initEnv' <- liftIO $ DS.mkEnv (globalFuncs prog) 0x0 128 -- TODO
-  fst <$> runStateT (state >> gets envTracer) (Env initEnv' T.newExecTrace)
+run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
+run env state = fst <$> runStateT go env
+  where
+    go = do
+      _ <- state
+      t <- gets envTracer
+      s <- gets envStore
+      pure (t, s)

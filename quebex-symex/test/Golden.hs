@@ -6,6 +6,7 @@ module Golden (goldenTests) where
 
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
+import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Types qualified as QBE
 import System.FilePath
@@ -29,8 +30,9 @@ exploreQBE filePath params = do
     Just x -> pure x
     Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
 
-  engine <- defSolver >>= newEngine
-  traces <- explore engine prog func params
+  engine <- newEngine <$> defSolver
+  defEnv <- mkEnv prog 0 128
+  traces <- explore engine defEnv func params
   pure $ length traces
 
 simpleCmp :: Result -> Result -> IO (Maybe String)

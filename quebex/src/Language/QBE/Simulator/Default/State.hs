@@ -29,12 +29,13 @@ data Env v b
 
 mkEnv ::
   (MEM.Storable v b, E.ValueRepr v) =>
-  [QBE.FuncDef] ->
+  Program ->
   MEM.Address ->
   MEM.Size ->
   IO (Env v b)
-mkEnv funcs a s = do
+mkEnv prog a s = do
   mem <- MEM.mkMemory a s
+  let funcs = globalFuncs prog
   return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit QBE.Long $ s - 1)
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
@@ -48,7 +49,7 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   toAddress = pure . E.toWord64
 
   lookupGlobal ident = gets (Map.lookup ident . envGlobals)
-  findFunc ident = gets (Map.lookup ident . envFuncs)
+  findFunc ident = gets (fmap SFuncDef . Map.lookup ident . envFuncs)
 
   activeFrame = do
     stk <- gets envStk
@@ -91,7 +92,7 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
 
 run :: (E.ValueRepr v, MEM.Storable v b) => Program -> SimState v b a -> IO a
 run prog state = do
-  emptyEnv <- liftIO $ mkEnv (globalFuncs prog) 0x0 memSize
+  emptyEnv <- liftIO $ mkEnv prog 0x0 memSize
   fst <$> runStateT state emptyEnv
   where
     -- TODO: Don't hardcode the empty state.

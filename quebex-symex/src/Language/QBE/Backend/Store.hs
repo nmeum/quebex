@@ -3,18 +3,16 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 
 module Language.QBE.Backend.Store
-  ( Store,
+  ( Store (cValues),
     Assign,
     empty,
     sexprs,
-    assign,
+    finalize,
     setModel,
     getConcolic,
   )
 where
 
-import Data.Functor (($>))
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map qualified as Map
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
@@ -23,7 +21,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleSMT qualified as SMT
-import System.Random.Stateful (IOGenM, StdGen, initStdGen, newIOGenM, uniformWord64)
+import System.Random (StdGen, genWord64, initStdGen)
 
 -- | Concrete variable assignment.
 type Assign = Map.Map String DE.RegVal
@@ -31,52 +29,59 @@ type Assign = Map.Map String DE.RegVal
 -- A variable store mapping variable names to concrete values.
 data Store
   = Store
-  { cValues :: IORef Assign,
-    sValues :: IORef (Map.Map String SE.BitVector),
-    randGen :: IOGenM StdGen
+  { cValues :: Assign,
+    sValues :: Map.Map String SE.BitVector,
+    defined :: Map.Map String SE.BitVector,
+    randGen :: StdGen
   }
 
 -- | Create a new (empty) store.
 empty :: IO Store
-empty = do
-  ranGen <- initStdGen >>= newIOGenM
-  conMap <- newIORef Map.empty
-  symMap <- newIORef Map.empty
-  pure $ Store conMap symMap ranGen
+empty =
+  -- TODO: Make seed configurable
+  Store Map.empty Map.empty Map.empty <$> initStdGen
 
 -- | Obtain symbolic values as a list of 'SimpleSMT' expressions.
-sexprs :: Store -> IO [SMT.SExpr]
-sexprs Store {sValues = m} =
-  map SE.toSExpr . Map.elems <$> readIORef m
+sexprs :: Store -> [SMT.SExpr]
+sexprs = map SE.toSExpr . Map.elems . sValues
 
--- | Obtain a list of concrete variable assignments.
-assign :: Store -> IO Assign
-assign store = readIORef (cValues store)
+-- | Finalize all pending symbolic variable declarations.
+finalize :: SMT.Solver -> Store -> IO Store
+finalize solver store@(Store {sValues = m, defined = defs}) = do
+  let new = m `Map.difference` defs
+  mapM_ (uncurry declareSymbolic) $ Map.toList new
+
+  pure
+    store
+      { defined = Map.union m new,
+        sValues = Map.empty
+      }
+  where
+    declareSymbolic n v =
+      SMT.declare solver n $ SMT.tBits (fromIntegral $ SE.bitSize v)
 
 -- | Create a variable store from a 'Model'.
-setModel :: Store -> Model.Model -> IO ()
-setModel store model = do
-  modelMap <- Map.fromList <$> Model.toList model
-  writeIORef (cValues store) modelMap
+setModel :: Store -> Model.Model -> Store
+setModel store model =
+  store {cValues = Map.fromList $ Model.toList model}
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
-getConcolic :: SMT.Solver -> Store -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
-getConcolic solver store@Store {cValues = con, sValues = sym} name ty = do
-  concreteMap <- readIORef con
-  concrete <-
-    case Map.lookup name concreteMap of
-      Just x -> pure x
-      Nothing ->
-        -- TODO: The uniform generator must consider the bounds of QBE.BaseType.
-        E.fromLit ty <$> uniformWord64 (randGen store)
+getConcolic :: Store -> String -> QBE.BaseType -> (Store, CE.Concolic DE.RegVal)
+getConcolic store@Store {randGen = rand} name ty =
+  ( store {sValues = newSymVars, randGen = nextRand},
+    CE.Concolic concrete (Just symbolic)
+  )
+  where
+    (symbolic, newSymVars) =
+      let bv = SE.symbolic name ty
+       in (bv, Map.insert name bv $ sValues store)
 
-  symbolicMap <- readIORef sym
-  symbolic <-
-    case Map.lookup name symbolicMap of
-      Just x -> pure x
-      Nothing -> do
-        s <- SE.symbolic solver name ty
-        writeIORef sym (Map.insert name s symbolicMap) $> s
-
-  pure $ CE.Concolic concrete (Just symbolic)
+    (concrete, nextRand) =
+      case Map.lookup name (cValues store) of
+        Just cv -> (cv, rand)
+        Nothing ->
+          -- TODO: The generator should consider the bounds of QBE.BaseType.
+          let (rv, nr) = genWord64 rand
+              conValue = E.fromLit ty rv
+           in (conValue, nr)

@@ -10,9 +10,10 @@ import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
+import Language.QBE.Simulator.Symbolic.Unwind (unwind)
 import Language.QBE.Types qualified as QBE
-import SMTUnwind (unwind)
 import System.Exit (ExitCode (ExitSuccess))
 import System.FilePath ((</>))
 import System.IO (IOMode (WriteMode), hClose, hPutStrLn, openFile, withFile)
@@ -48,8 +49,9 @@ exploreQBE filePath params = do
   withFile logPath WriteMode (explore' prog func)
   where
     explore' prog func handle = do
-      engine <- logSolver handle >>= newEngine
-      explore engine prog func params
+      engine <- newEngine <$> logSolver handle
+      defEnv <- mkEnv prog 0 128
+      explore engine defEnv func params
 
 getQueries :: String -> [(String, QBE.BaseType)] -> IO String
 getQueries name params = do

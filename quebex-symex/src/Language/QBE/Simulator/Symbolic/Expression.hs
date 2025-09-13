@@ -9,6 +9,7 @@ module Language.QBE.Simulator.Symbolic.Expression
     fromSExpr,
     toSExpr,
     symbolic,
+    bitSize,
     toCond,
   )
 where
@@ -51,11 +52,11 @@ fromSExpr ty sexpr = BitVector sexpr (QBE.Base ty)
 toSExpr :: BitVector -> SMT.SExpr
 toSExpr = sexpr
 
-symbolic :: SMT.Solver -> String -> QBE.BaseType -> IO BitVector
-symbolic solver name ty = do
-  let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
-  sym <- SMT.declare solver name bits
-  return $ BitVector sym (QBE.Base ty)
+symbolic :: String -> QBE.BaseType -> BitVector
+symbolic name ty = BitVector (SMT.const name) (QBE.Base ty)
+
+bitSize :: BitVector -> Int
+bitSize = QBE.extTypeBitSize . qtype
 
 -- In the QBE a condition (see `jnz`) is true if the Word value is not zero.
 toCond :: Bool -> BitVector -> SMT.SExpr
@@ -122,7 +123,7 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
 
 -- TODO: Move this into the expression abstraction.
 toShiftAmount :: Word64 -> BitVector -> Maybe BitVector
-toShiftAmount bitSize amount = amount `E.urem` E.fromLit QBE.Word bitSize
+toShiftAmount size amount = amount `E.urem` E.fromLit QBE.Word size
 
 shiftOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 shiftOp op value amount@BitVector {qtype = QBE.Base QBE.Word} =
