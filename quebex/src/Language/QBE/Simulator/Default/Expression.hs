@@ -30,7 +30,9 @@ import Language.QBE.Types qualified as QBE
 -- TODO: Can we just wrap base type here?
 -- TODO: Do not export the constructors
 data RegVal
-  = VWord Word32
+  = VByte Word8
+  | VHalf Word16
+  | VWord Word32
   | VLong Word64
   | VSingle Float
   | VDouble Double
@@ -90,7 +92,9 @@ regToBytes val =
           (\off -> fromIntegral $ shiftR w off .&. 0xff)
           (take (bytesize w) $ iterate (+ 8) 0)
    in case val of
+        (VByte v) -> [v]
         (VWord v) -> f v
+        (VHalf v) -> f v
         (VLong v) -> f v
         (VSingle v) -> MEM.toBytes (VWord $ castFloatToWord32 v)
         (VDouble v) -> MEM.toBytes (VLong $ castDoubleToWord64 v)
@@ -129,11 +133,12 @@ generateOperators
 
 -- We could also add support for unary operators to the generator. However,
 -- presently there is only one unary operator so it isn't worth it.
-neg' :: RegVal -> RegVal
-neg' (VWord v) = VWord $ negate v
-neg' (VLong v) = VLong $ negate v
-neg' (VSingle v) = VSingle $ negate v
-neg' (VDouble v) = VDouble $ negate v
+neg' :: RegVal -> Maybe RegVal
+neg' (VWord v) = Just . VWord $ negate v
+neg' (VLong v) = Just . VLong $ negate v
+neg' (VSingle v) = Just . VSingle $ negate v
+neg' (VDouble v) = Just . VDouble $ negate v
+neg' _ = Nothing
 
 -- This can't be easily auto generated because the operation differs
 -- based on the type.
@@ -149,11 +154,15 @@ div' (VDouble lhs) (VDouble rhs) = (Just . VDouble) $ lhs / rhs
 div' _ _ = Nothing
 
 instance E.ValueRepr RegVal where
-  fromLit QBE.Long n = VLong n
-  fromLit QBE.Word n = VWord $ fromIntegral n
-  fromLit QBE.Single n = VSingle $ fromIntegral n
-  fromLit QBE.Double n = VDouble $ fromIntegral n
+  fromLit QBE.Byte n = VByte $ fromIntegral n
+  fromLit QBE.HalfWord n = VHalf $ fromIntegral n
+  fromLit (QBE.Base QBE.Long) n = VLong n
+  fromLit (QBE.Base QBE.Word) n = VWord $ fromIntegral n
+  fromLit (QBE.Base QBE.Single) n = VSingle $ fromIntegral n
+  fromLit (QBE.Base QBE.Double) n = VDouble $ fromIntegral n
 
+  toWord64 (VByte v) = fromIntegral v
+  toWord64 (VHalf v) = fromIntegral v
   toWord64 (VWord v) = fromIntegral v
   toWord64 (VLong v) = v
   toWord64 (VSingle v) = fromIntegral $ castFloatToWord32 v

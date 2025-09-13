@@ -78,7 +78,9 @@ execBinary retTy op lhs rhs = do
   runBinary retTy op v1 v2
 
 execInstr :: (Simulator m v) => QBE.BaseType -> QBE.Instr -> m v
-execInstr retTy (QBE.Neg op) = E.neg <$> lookupValue retTy op
+execInstr retTy (QBE.Neg op) = do
+  v <- lookupValue retTy op
+  liftMaybe TypingError (E.neg v)
 execInstr retTy (QBE.Add lhs rhs) = execBinary retTy E.add lhs rhs
 execInstr retTy (QBE.Sub lhs rhs) = execBinary retTy E.sub lhs rhs
 execInstr retTy (QBE.Mul lhs rhs) = execBinary retTy E.mul lhs rhs

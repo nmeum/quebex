@@ -36,7 +36,7 @@ mkEnv ::
 mkEnv prog a s = do
   mem <- MEM.mkMemory a s
   let funcs = globalFuncs prog
-  return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit QBE.Long $ s - 1)
+  return $ Env Map.empty (makeFuncs funcs) mem [] (E.fromLit (QBE.Base QBE.Long) $ s - 1)
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
