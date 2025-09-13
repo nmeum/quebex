@@ -487,6 +487,20 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0x45444342),
+      testCase "Data definition with constant number" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 4 { l 42 }\n\
+              \function l $main() {\n\
+              \@start\n\
+              \%l =l loadl $a\n\
+              \ret %l\n\
+              \}"
+
+          res @?= Just (D.VLong 42),
       testCase "Subtyping with load instruction" $
         do
           res <-

@@ -63,6 +63,14 @@ loadItem addr ty (QBE.DSymOff ident off) = do
       pure $ addr + fromIntegral (length bytes)
 loadItem addr ty (QBE.DConst (QBE.Global ident)) =
   loadItem addr ty (QBE.DSymOff ident 0)
+loadItem addr ty (QBE.DConst (QBE.Number num)) = do
+  let value = E.fromLit @v ty num
+  let bytes = MEM.toBytes value
+
+  mem <- gets envMem
+  liftIO $ MEM.storeBytes mem addr bytes
+
+  pure $ addr + fromIntegral (length bytes)
 loadItem addr _ _ = pure addr
 
 loadObj ::
