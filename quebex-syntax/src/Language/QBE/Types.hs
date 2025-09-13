@@ -160,7 +160,7 @@ data DataObj
   deriving (Show, Eq)
 
 data DataItem
-  = DSymbol GlobalIdent (Maybe Word64)
+  = DSymOff GlobalIdent Word64
   | DString String
   | DConst Const
   deriving (Show, Eq)
