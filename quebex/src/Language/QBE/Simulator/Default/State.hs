@@ -24,7 +24,7 @@ import Language.QBE.Types qualified as QBE
 
 data Env v b
   = Env
-  { envGlobals :: Map.Map QBE.GlobalIdent v,
+  { envSyms :: Map.Map QBE.GlobalIdent MEM.Address,
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
     envMem :: MEM.Memory IOArray b,
     envStk :: [StackFrame v],
@@ -50,13 +50,13 @@ loadItem addr ty (QBE.DString str) = do
   liftIO $ MEM.storeBytes mem addr bytes
 
   pure $ addr + fromIntegral (length bytes)
-loadItem addr (QBE.Base QBE.Long) (QBE.DSymbol ident Nothing) = do
-  globals <- gets envGlobals
+loadItem addr ty (QBE.DSymbol ident Nothing) = do
+  globals <- gets envSyms
   case Map.lookup ident globals of
     Nothing -> throwM $ (Err.UnknownVariable $ show ident)
     Just symAddr -> do
       mem <- gets envMem
-      let bytes = MEM.toBytes symAddr
+      let bytes = MEM.toBytes $ E.fromLit @v ty symAddr
       liftIO $ MEM.storeBytes mem addr bytes
       pure $ addr + fromIntegral (length bytes)
 loadItem addr _ _ = pure addr
@@ -88,12 +88,11 @@ loadData dataDef = do
 
   newAddr <- foldM loadObj addr $ QBE.objs dataDef
   let symName = QBE.name dataDef
-  let symAddr = E.fromLit (QBE.Base QBE.Long) addr
 
   modify
     ( \e ->
         e
-          { envGlobals = Map.insert symName symAddr (envGlobals e),
+          { envSyms = Map.insert symName addr (envSyms e),
             envDataPtr = newAddr
           }
     )
@@ -139,7 +138,7 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
   toAddress = pure . E.toWord64
 
-  lookupGlobal ident = gets (Map.lookup ident . envGlobals)
+  lookupSymbol ident = gets (Map.lookup ident . envSyms)
   findFunc ident = gets (fmap SFuncDef . Map.lookup ident . envFuncs)
 
   activeFrame = do
