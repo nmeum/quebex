@@ -10,6 +10,7 @@ import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Array.IO (IOArray)
+import Data.Bits (complement, (.&.))
 import Data.Char (ord)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -50,15 +51,18 @@ loadItem addr ty (QBE.DString str) = do
   liftIO $ MEM.storeBytes mem addr bytes
 
   pure $ addr + fromIntegral (length bytes)
-loadItem addr ty (QBE.DSymbol ident Nothing) = do
+loadItem addr ty (QBE.DSymOff ident off) = do
+  -- TODO: Support recursive DataDef's (e.g., `data $c = { l $c }`).
   globals <- gets envSyms
   case Map.lookup ident globals of
     Nothing -> throwM $ (Err.UnknownVariable $ show ident)
     Just symAddr -> do
       mem <- gets envMem
-      let bytes = MEM.toBytes $ E.fromLit @v ty symAddr
+      let bytes = MEM.toBytes $ E.fromLit @v ty (symAddr + off)
       liftIO $ MEM.storeBytes mem addr bytes
       pure $ addr + fromIntegral (length bytes)
+loadItem addr ty (QBE.DConst (QBE.Global ident)) =
+  loadItem addr ty (QBE.DSymOff ident 0)
 loadItem addr _ _ = pure addr
 
 loadObj ::
@@ -102,7 +106,7 @@ loadData dataDef = do
     maxAlign = 4
 
     alignAddr :: MEM.Address -> Word64 -> MEM.Address
-    alignAddr addr align = addr - addr `mod` align
+    alignAddr addr align = (addr + (align - 1)) .&. complement (align - 1)
 
 mkEnv ::
   (MEM.Storable v b, E.ValueRepr v) =>

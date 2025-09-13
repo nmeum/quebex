@@ -455,6 +455,38 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0x44434241),
+      testCase "Data definition with symbol reference" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { b \"ABCD\" }\n\
+              \data $p = { l $a }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 0x44434241),
+      testCase "Data definition with symbol offset" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 1 { b \"ABCDE\" }\n\
+              \data $p = align 8 { l $a + 1 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 0x45444342),
       testCase "Subtyping with load instruction" $
         do
           res <-
