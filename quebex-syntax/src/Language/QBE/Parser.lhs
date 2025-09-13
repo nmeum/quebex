@@ -574,11 +574,13 @@ specifies the bits to be stored in the field.
 dataItem :: Parser Q.DataItem
 dataItem =
   (Q.DString <$> strLit)
+    <|> try
+      ( do
+          i <- ws global
+          off <- (ws $ char '+') >> ws decNumber
+          return $ Q.DSymOff i off
+      )
     <|> (Q.DConst <$> constant)
-    <|> do
-      i <- global
-      off <- optionMaybe (char '+' >> decNumber)
-      return $ Q.DSymbol i off
 \end{code}
 
 Within each object, several items can be defined. When several data items
