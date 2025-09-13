@@ -41,7 +41,7 @@ optsParser =
       OPT.auto
       ( OPT.long "memory-size"
           <> OPT.short 's'
-          <> OPT.value (1024 * 1024 * 1) -- 1 MB RAM
+          <> OPT.value (1024 * 1024) -- 1 MB RAM
           <> OPT.help "Size of the memory region"
       )
     <*> OPT.optional
@@ -85,18 +85,18 @@ exploreFile opts = do
     Nothing -> throwIO $ UnknownFunction entryFunc
 
   env <- mkEnv prog (optMemStart opts) (optMemSize opts)
-  if ((isJust $ optLog opts) || (isJust $ optLogIncr opts))
+  if (isJust $ optLog opts) || (isJust $ optLogIncr opts)
     then do
-      (logPath, logFile) <- case (optLogIncr opts) of
+      (logPath, logFile) <- case optLogIncr opts of
         Just fn -> do
           f <- openFile fn WriteMode
           pure (fn, f)
         Nothing -> do
           tempDir <- getTemporaryDirectory
-          openTempFile tempDir "quebex-queriesXXX.smt2"
+          openTempFile tempDir "quebex-queries.smt2"
 
       ret <- exploreWithHandle env func logFile <* hClose logFile
-      case (optLog opts) of
+      case optLog opts of
         Just fn -> withFile fn WriteMode (\h -> unwind logPath >>= hPutStr h)
         Nothing -> pure ()
       pure ret

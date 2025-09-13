@@ -49,7 +49,7 @@ sexprs = map SE.toSExpr . Map.elems . sValues
 finalize :: SMT.Solver -> Store -> IO Store
 finalize solver store@(Store {sValues = m, defined = defs}) = do
   let new = m `Map.difference` defs
-  mapM_ (\(n, v) -> declareSymbolic n v) $ Map.toList new
+  mapM_ (uncurry declareSymbolic) $ Map.toList new
 
   pure
     store
@@ -67,7 +67,7 @@ setModel store model =
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
-getConcolic :: Store -> String -> QBE.BaseType -> (Store, (CE.Concolic DE.RegVal))
+getConcolic :: Store -> String -> QBE.BaseType -> (Store, CE.Concolic DE.RegVal)
 getConcolic store@Store {randGen = rand} name ty =
   ( store {sValues = newSymVars, randGen = nextRand},
     CE.Concolic concrete (Just symbolic)

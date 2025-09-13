@@ -70,7 +70,7 @@ makeSymbolicWord ::
   StateT Env IO (Maybe (CE.Concolic DE.RegVal))
 -- TODO: Require a string as a parameter.
 makeSymbolicWord _ [ident] = do
-  v <- makeConcolic ("word" ++ (show $ E.toWord64 ident)) QBE.Word
+  v <- makeConcolic ("word" ++ show (E.toWord64 ident)) QBE.Word
   pure $ Just v
 makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
