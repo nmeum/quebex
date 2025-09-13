@@ -8,7 +8,7 @@ import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
 class ValueRepr v where
-  fromLit :: QBE.BaseType -> Word64 -> v
+  fromLit :: QBE.ExtType -> Word64 -> v
   fromFloat :: Float -> v
   fromDouble :: Double -> v
   toWord64 :: v -> Word64
@@ -45,8 +45,8 @@ class ValueRepr v where
   ugt :: v -> v -> Maybe v
 
 boolToValue :: (ValueRepr v) => Bool -> v
-boolToValue True = fromLit QBE.Long 1
-boolToValue False = fromLit QBE.Long 0
+boolToValue True = fromLit (QBE.Base QBE.Long) 1
+boolToValue False = fromLit (QBE.Base QBE.Long) 0
 
 compareExpr :: (ValueRepr v) => QBE.CmpOp -> (v -> v -> Maybe v)
 compareExpr QBE.CEq = eq

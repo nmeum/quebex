@@ -95,7 +95,7 @@ modifyFrame func = do
 stackAlloc :: (Simulator m v) => v -> Word64 -> m v
 stackAlloc size align = do
   stkPtr <- getSP
-  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit QBE.Long align)
+  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit (QBE.Base QBE.Long) align)
   case newStkPtr of
     Just ptr -> setSP ptr >> pure ptr
     Nothing -> throwM InvalidAddressType
@@ -119,7 +119,7 @@ maybeLookup name = liftMaybe (UnknownVariable name)
 
 lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
-  pure $ E.fromLit ty v
+  pure $ E.fromLit (QBE.Base ty) v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
   subTypeE ty (E.fromFloat v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
