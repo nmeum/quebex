@@ -441,21 +441,20 @@ blockTests =
               \}"
 
           res @?= Just (D.VDouble 0.3333333331111),
-      -- XXX: Doesn't work yet because we are not loading $data into memory.
-      -- testCase "Load data object from memory" $
-      --   do
-      --     res <-
-      --       parseAndExec
-      --         (QBE.GlobalIdent "main")
-      --         []
-      --         "data $a = { w 2342 2 3, b 0 }\n\
-      --         \function w $main() {\n\
-      --         \@start\n\
-      --         \%w =w loadw $a\n\
-      --         \ret %w\n\
-      --         \}"
-      --
-      --     res @?= Just (D.VWord 2342),
+      testCase "Load data object from memory" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { b \"ABCD\" }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%w =w loadw $a\n\
+              \ret %w\n\
+              \}"
+
+          res @?= Just (D.VWord 0x44434241),
       testCase "Subtyping with load instruction" $
         do
           res <-
