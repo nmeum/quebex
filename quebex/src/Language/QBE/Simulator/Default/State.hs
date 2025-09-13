@@ -13,7 +13,7 @@ import Data.Array.IO (IOArray)
 import Data.Char (ord)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import Language.QBE (Definition (DefData), Program, globalFuncs)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Error as Err
@@ -33,57 +33,67 @@ data Env v b
   }
 
 serialize :: (MEM.Storable v b, E.ValueRepr v) => [v] -> [b]
-serialize = concat . map MEM.toBytes
+serialize = concatMap MEM.toBytes
 
 loadItem ::
   forall v b.
   (MEM.Storable v b, E.ValueRepr v) =>
-  Env v b ->
+  MEM.Address ->
   QBE.ExtType ->
   QBE.DataItem ->
-  IO (Env v b)
-loadItem env@(Env {envMem = mem, envDataPtr = addr}) ty (QBE.DString str) = do
+  StateT (Env v b) IO MEM.Address
+loadItem addr ty (QBE.DString str) = do
   let string = map (\c -> E.fromLit @v ty (fromIntegral $ ord c)) str
   let bytes = serialize string
-  MEM.storeBytes mem addr bytes
-  pure env {envDataPtr = addr + fromIntegral (length bytes)}
-loadItem env _ _ = pure env
+
+  mem <- gets envMem
+  liftIO $ MEM.storeBytes mem addr bytes
+
+  pure $ addr + fromIntegral (length bytes)
+loadItem addr _ _ = pure addr
 
 loadObj ::
   forall v b.
   (MEM.Storable v b, E.ValueRepr v) =>
-  Env v b ->
+  MEM.Address ->
   QBE.DataObj ->
-  IO (Env v b)
-loadObj env@(Env {envMem = mem, envDataPtr = addr}) (QBE.OZeroFill n) = do
+  StateT (Env v b) IO MEM.Address
+loadObj addr (QBE.OZeroFill n) = do
   let zeroByte = E.fromLit @v QBE.Byte 0
   let bytes = replicate (fromIntegral n) zeroByte
-  MEM.storeBytes mem addr (serialize bytes)
-  pure $ env {envDataPtr = addr + n}
-loadObj env (QBE.OItem ty items) = do
-  foldM (\e i -> loadItem e ty i) env items
+
+  mem <- gets envMem
+  liftIO $ MEM.storeBytes mem addr (serialize bytes)
+
+  pure $ addr + n
+loadObj addr (QBE.OItem ty items) = do
+  foldM (`loadItem` ty) addr items
 
 loadData ::
-  forall v b.
   (MEM.Storable v b, E.ValueRepr v) =>
-  Env v b ->
   QBE.DataDef ->
-  IO (Env v b)
-loadData env@(Env {envDataPtr = startAddr}) dataDef = do
-  let addr = alignAddr startAddr (fromMaybe 4 $ QBE.align dataDef)
-  newEnv <-
-    foldM
-      (\e o -> loadObj e o)
-      (env {envDataPtr = addr})
-      (QBE.objs dataDef)
+  StateT (Env v b) IO ()
+loadData dataDef = do
+  startAddr <- gets envDataPtr
+  let addr = alignAddr startAddr (fromMaybe maxAlign $ QBE.align dataDef)
 
-  let newGlobalMap =
-        Map.insert
-          (QBE.name dataDef)
-          (E.fromLit @v (QBE.Base QBE.Long) addr)
-          (envGlobals newEnv)
-  pure $ newEnv {envGlobals = newGlobalMap}
+  newAddr <- foldM loadObj addr $ QBE.objs dataDef
+  let symName = QBE.name dataDef
+  let symAddr = E.fromLit (QBE.Base QBE.Long) addr
+
+  modify
+    ( \e ->
+        e
+          { envGlobals = Map.insert symName symAddr (envGlobals e),
+            envDataPtr = newAddr
+          }
+    )
   where
+    -- TODO
+    maxAlign :: Word64
+    maxAlign = 4
+
+    alignAddr :: MEM.Address -> Word64 -> MEM.Address
     alignAddr addr align = addr - addr `mod` align
 
 mkEnv ::
@@ -102,7 +112,9 @@ mkEnv prog a s = do
           []
           (E.fromLit (QBE.Base QBE.Long) $ s - 1)
           0
-  foldM loadData env $ mapMaybe isData prog
+
+  let dataDefs = mapMaybe isData prog
+  snd <$> runStateT (mapM loadData dataDefs) env
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
