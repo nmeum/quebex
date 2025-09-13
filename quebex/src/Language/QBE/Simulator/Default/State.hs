@@ -50,6 +50,15 @@ loadItem addr ty (QBE.DString str) = do
   liftIO $ MEM.storeBytes mem addr bytes
 
   pure $ addr + fromIntegral (length bytes)
+loadItem addr (QBE.Base QBE.Long) (QBE.DSymbol ident Nothing) = do
+  globals <- gets envGlobals
+  case Map.lookup ident globals of
+    Nothing -> throwM $ (Err.UnknownVariable $ show ident)
+    Just symAddr -> do
+      mem <- gets envMem
+      let bytes = MEM.toBytes symAddr
+      liftIO $ MEM.storeBytes mem addr bytes
+      pure $ addr + fromIntegral (length bytes)
 loadItem addr _ _ = pure addr
 
 loadObj ::
