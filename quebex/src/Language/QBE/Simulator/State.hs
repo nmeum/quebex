@@ -48,7 +48,7 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   isTrue :: v -> m Bool
   toAddress :: v -> m MEM.Address
 
-  lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
+  lookupSymbol :: QBE.GlobalIdent -> m (Maybe MEM.Address)
   findFunc :: QBE.GlobalIdent -> m (Maybe (SomeFunc m v))
 
   activeFrame :: m (StackFrame v)
@@ -113,7 +113,7 @@ returnFromFunc :: (Simulator m v) => m ()
 returnFromFunc = popStackFrame >>= setSP . stkFp
 {-# INLINE returnFromFunc #-}
 
-maybeLookup :: (Simulator m v) => String -> Maybe v -> m v
+maybeLookup :: (Simulator m v) => String -> Maybe a -> m a
 maybeLookup name = liftMaybe (UnknownVariable name)
 {-# INLINE maybeLookup #-}
 
@@ -125,11 +125,11 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
   subTypeE ty (E.fromDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
+  v <- lookupSymbol k >>= maybeLookup (show k)
+  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
+  v <- lookupSymbol k >>= maybeLookup (show k)
+  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   subTypeE ty v
