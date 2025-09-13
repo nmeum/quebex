@@ -5,6 +5,7 @@
 module Main (main) where
 
 import Control.Exception (Exception, throwIO)
+import Control.Monad (when)
 import Data.List (find)
 import Data.Maybe (isJust)
 import Language.QBE (globalFuncs, parse)
@@ -16,7 +17,7 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Symbolic.Unwind (unwind)
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
-import System.Directory (getTemporaryDirectory)
+import System.Directory (getTemporaryDirectory, removeFile)
 import System.IO (IOMode (WriteMode), hClose, hPutStr, openFile, openTempFile, withFile)
 import Text.Parsec (ParseError)
 
@@ -87,18 +88,22 @@ exploreFile opts = do
   env <- mkEnv prog (optMemStart opts) (optMemSize opts)
   if (isJust $ optLog opts) || (isJust $ optLogIncr opts)
     then do
-      (logPath, logFile) <- case optLogIncr opts of
+      (logPath, logFile, isTemp) <- case optLogIncr opts of
         Just fn -> do
           f <- openFile fn WriteMode
-          pure (fn, f)
+          pure (fn, f, False)
         Nothing -> do
           tempDir <- getTemporaryDirectory
-          openTempFile tempDir "quebex-queries.smt2"
+          (name, file) <- openTempFile tempDir "quebex-queries.smt2"
+          pure (name, file, True)
 
       ret <- exploreWithHandle env func logFile <* hClose logFile
       case optLog opts of
         Just fn -> withFile fn WriteMode (\h -> unwind logPath >>= hPutStr h)
         Nothing -> pure ()
+
+      when isTemp $
+        removeFile logPath
       pure ret
     else do
       engine <- newEngine <$> defSolver
