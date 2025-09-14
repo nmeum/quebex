@@ -10,7 +10,6 @@ import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Array.IO (IOArray)
-import Data.Bits (complement, (.&.))
 import Data.Char (ord)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -33,89 +32,6 @@ data Env v b
     envDataPtr :: MEM.Address
   }
 
-serialize :: (MEM.Storable v b, E.ValueRepr v) => [v] -> [b]
-serialize = concatMap MEM.toBytes
-
-loadItem ::
-  forall v b.
-  (MEM.Storable v b, E.ValueRepr v) =>
-  MEM.Address ->
-  QBE.ExtType ->
-  QBE.DataItem ->
-  StateT (Env v b) IO MEM.Address
-loadItem addr ty (QBE.DString str) = do
-  let string = map (\c -> E.fromLit @v ty (fromIntegral $ ord c)) str
-  let bytes = serialize string
-
-  mem <- gets envMem
-  liftIO $ MEM.storeBytes mem addr bytes
-
-  pure $ addr + fromIntegral (length bytes)
-loadItem addr ty (QBE.DSymOff ident off) = do
-  -- TODO: Support recursive DataDef's (e.g., `data $c = { l $c }`).
-  globals <- gets envSyms
-  case Map.lookup ident globals of
-    Nothing -> throwM $ (Err.UnknownVariable $ show ident)
-    Just symAddr -> do
-      mem <- gets envMem
-      let bytes = MEM.toBytes $ E.fromLit @v ty (symAddr + off)
-      liftIO $ MEM.storeBytes mem addr bytes
-      pure $ addr + fromIntegral (length bytes)
-loadItem addr ty (QBE.DConst (QBE.Global ident)) =
-  loadItem addr ty (QBE.DSymOff ident 0)
-loadItem addr ty (QBE.DConst (QBE.Number num)) = do
-  let value = E.fromLit @v ty num
-  let bytes = MEM.toBytes value
-
-  mem <- gets envMem
-  liftIO $ MEM.storeBytes mem addr bytes
-
-  pure $ addr + fromIntegral (length bytes)
-loadItem addr _ _ = pure addr
-
-loadObj ::
-  forall v b.
-  (MEM.Storable v b, E.ValueRepr v) =>
-  MEM.Address ->
-  QBE.DataObj ->
-  StateT (Env v b) IO MEM.Address
-loadObj addr (QBE.OZeroFill n) = do
-  let zeroByte = E.fromLit @v QBE.Byte 0
-  let bytes = replicate (fromIntegral n) zeroByte
-
-  mem <- gets envMem
-  liftIO $ MEM.storeBytes mem addr (serialize bytes)
-
-  pure $ addr + n
-loadObj addr (QBE.OItem ty items) = do
-  foldM (`loadItem` ty) addr items
-
-loadData ::
-  (MEM.Storable v b, E.ValueRepr v) =>
-  QBE.DataDef ->
-  StateT (Env v b) IO ()
-loadData dataDef = do
-  startAddr <- gets envDataPtr
-  let addr = alignAddr startAddr (fromMaybe maxAlign $ QBE.align dataDef)
-
-  newAddr <- foldM loadObj addr $ QBE.objs dataDef
-  let symName = QBE.name dataDef
-
-  modify
-    ( \e ->
-        e
-          { envSyms = Map.insert symName addr (envSyms e),
-            envDataPtr = newAddr
-          }
-    )
-  where
-    -- TODO
-    maxAlign :: Word64
-    maxAlign = 4
-
-    alignAddr :: MEM.Address -> Word64 -> MEM.Address
-    alignAddr addr align = (addr + (align - 1)) .&. complement (align - 1)
-
 mkEnv ::
   (MEM.Storable v b, E.ValueRepr v) =>
   Program ->
@@ -123,6 +39,11 @@ mkEnv ::
   MEM.Size ->
   IO (Env v b)
 mkEnv prog a s = do
+  -- Memory Layout: Data memory starts add address zero. The
+  -- stack starts at the maximum address and grows downward
+  -- towards address zero.
+  --
+  -- TODO: Check for stack overflow.
   mem <- MEM.mkMemory a s
   let env =
         Env
@@ -142,6 +63,106 @@ mkEnv prog a s = do
     isData :: Definition -> Maybe QBE.DataDef
     isData (DefData def) = Just def
     isData _ = Nothing
+
+------------------------------------------------------------------------
+
+-- TODO: Move this to Loader.hs
+
+storeBytes ::
+  (MEM.Storable v b) =>
+  MEM.Address ->
+  [b] ->
+  StateT (Env v b) IO MEM.Address
+storeBytes addr bytes = do
+  mem <- gets envMem
+  liftIO $ MEM.storeBytes mem addr bytes
+  pure $ addr + fromIntegral (length bytes)
+{-# INLINEABLE storeBytes #-}
+
+storeValue ::
+  (MEM.Storable v b) =>
+  MEM.Address ->
+  v ->
+  StateT (Env v b) IO MEM.Address
+storeValue addr = storeBytes addr . MEM.toBytes
+{-# INLINE storeValue #-}
+
+storeValues ::
+  (MEM.Storable v b) =>
+  MEM.Address ->
+  [v] ->
+  StateT (Env v b) IO MEM.Address
+storeValues addr = storeBytes addr . concatMap MEM.toBytes
+{-# INLINE storeValues #-}
+
+loadItem ::
+  forall v b.
+  (MEM.Storable v b, E.ValueRepr v) =>
+  MEM.Address ->
+  QBE.ExtType ->
+  QBE.DataItem ->
+  StateT (Env v b) IO MEM.Address
+loadItem addr ty (QBE.DString str) = do
+  let string = map (\c -> E.fromLit @v ty (fromIntegral $ ord c)) str
+  storeValues addr string
+loadItem addr ty (QBE.DSymOff ident off) = do
+  -- TODO: Support recursive DataDef's (e.g., `data $c = { l $c }`).
+  globals <- gets envSyms
+  case Map.lookup ident globals of
+    Nothing -> throwM (Err.UnknownVariable $ show ident)
+    Just symAddr ->
+      storeValue addr $ E.fromLit @v ty (symAddr + off)
+loadItem addr ty (QBE.DConst (QBE.Global ident)) =
+  loadItem addr ty (QBE.DSymOff ident 0)
+loadItem addr ty (QBE.DConst (QBE.Number num)) =
+  storeValue addr $ E.fromLit @v ty num
+loadItem addr (QBE.Base QBE.Single) (QBE.DConst (QBE.SFP num)) = do
+  storeValue addr $ E.fromFloat @v num
+loadItem addr (QBE.Base QBE.Double) (QBE.DConst (QBE.DFP num)) = do
+  storeValue addr $ E.fromDouble @v num
+loadItem _ _ item = error $ "unsupported DataItem: " ++ show item
+{-# INLINEABLE loadItem #-}
+
+loadObj ::
+  forall v b.
+  (MEM.Storable v b, E.ValueRepr v) =>
+  MEM.Address ->
+  QBE.DataObj ->
+  StateT (Env v b) IO MEM.Address
+loadObj addr (QBE.OZeroFill n) = do
+  let zeroByte = E.fromLit @v QBE.Byte 0
+  storeValues addr $ replicate (fromIntegral n) zeroByte
+loadObj addr (QBE.OItem ty items) = do
+  foldM (`loadItem` ty) addr items
+{-# INLINEABLE loadObj #-}
+
+loadData ::
+  (MEM.Storable v b, E.ValueRepr v) =>
+  QBE.DataDef ->
+  StateT (Env v b) IO ()
+loadData dataDef = do
+  startAddr <- gets envDataPtr
+  let addr =
+        MEM.alignAddr startAddr $
+          fromMaybe maxAlign (QBE.align dataDef)
+
+  newAddr <- foldM loadObj addr $ QBE.objs dataDef
+  let symName = QBE.name dataDef
+
+  modify
+    ( \e ->
+        e
+          { envSyms = Map.insert symName addr (envSyms e),
+            envDataPtr = newAddr
+          }
+    )
+  where
+    -- TODO
+    maxAlign :: Word64
+    maxAlign = 4
+{-# SPECIALIZE loadData :: QBE.DataDef -> StateT (Env D.RegVal Word8) IO () #-}
+
+------------------------------------------------------------------------
 
 -- | Simulator state, parameterized over a value and byte representation.
 type SimState v b = StateT (Env v b) IO
