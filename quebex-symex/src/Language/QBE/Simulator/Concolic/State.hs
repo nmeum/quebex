@@ -20,6 +20,7 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
+import Language.QBE.Simulator.Default.Funcs (lookupSimFunc)
 import Language.QBE.Simulator.Default.State qualified as DS
 import Language.QBE.Simulator.Error (EvalError (FuncArgsMismatch, TypingError))
 import Language.QBE.Simulator.Expression qualified as E
@@ -68,15 +69,14 @@ makeSymbolicWord ::
   QBE.GlobalIdent ->
   [CE.Concolic DE.RegVal] ->
   StateT Env IO (Maybe (CE.Concolic DE.RegVal))
--- TODO: Require a string as a parameter.
-makeSymbolicWord _ [ident] = do
-  v <- makeConcolic ("word" ++ show (E.toWord64 ident)) QBE.Word
-  pure $ Just v
+makeSymbolicWord _ [namePtr] = do
+  bytes <- toAddress namePtr >>= readNullArray
+  Just <$> makeConcolic (E.toString bytes) QBE.Word
 makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
 findSimFunc i@(QBE.GlobalIdent "make_symbolic_word") = Just (makeSymbolicWord i)
-findSimFunc _ = Nothing
+findSimFunc ident = lookupSimFunc ident
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
   isTrue value = do
@@ -107,7 +107,7 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
       Just x -> Just $ SFuncDef x
       Nothing -> SSimFunc <$> findSimFunc ident
 
-  lookupGlobal = liftState . lookupGlobal
+  lookupSymbol = liftState . lookupSymbol
   activeFrame = liftState activeFrame
   pushStackFrame = liftState . pushStackFrame
   popStackFrame = liftState popStackFrame

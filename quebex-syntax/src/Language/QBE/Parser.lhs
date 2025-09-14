@@ -35,12 +35,13 @@
 \begin{code}
 module Language.QBE.Parser (dataDef, typeDef, funcDef) where
 
+import Data.Char (chr)
 import Data.Word (Word64)
 import Data.Functor ((<&>))
 import Data.List (singleton)
 import Data.Map qualified as Map
 import qualified Language.QBE.Types as Q
-import Language.QBE.Util (bind, decNumber, float)
+import Language.QBE.Util (bind, decNumber, octNumber, float)
 import Text.ParserCombinators.Parsec
   ( Parser,
     alphaNum,
@@ -55,6 +56,7 @@ import Text.ParserCombinators.Parsec
     newline,
     noneOf,
     oneOf,
+    optional,
     optionMaybe,
     sepBy,
     sepBy1,
@@ -137,6 +139,16 @@ bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
 
 quoted :: Parser a -> Parser a
 quoted = let q = char '"' in between q q
+
+sepByTrail1 :: Parser a -> Parser sep -> Parser [a]
+sepByTrail1 p sep = do
+  x <- p
+  xs <- many (try $ sep >> p)
+  _ <- optional sep
+  return (x:xs)
+
+sepByTrail :: Parser a -> Parser sep -> Parser [a]
+sepByTrail p sep = sepByTrail1 p sep <|> return []
 
 parenLst :: Parser a -> Parser [a]
 parenLst p = between (ws $ char '(') (char ')') inner
@@ -260,11 +272,16 @@ strLit = concat <$> quoted (many strChr)
     strChr :: Parser [Char]
     strChr = (singleton <$> noneOf "\"\\") <|> escSeq
 
+    -- TODO: not documnted in the QBE BNF.
+    octEsc :: Parser Char
+    octEsc = do
+      n <- octNumber
+      pure $ chr (fromIntegral n)
+
     escSeq :: Parser [Char]
     escSeq = try $ do
       esc <- char '\\'
-      chr <- anyChar
-      return $ [esc, chr]
+      (singleton <$> octEsc) <|> (anyChar <&> (\c -> [esc, c]))
 \end{code}
 
 Strings are enclosed by double quotes and are, for example, used to specify a
@@ -494,10 +511,9 @@ field = do
   s <- ws $ optionMaybe decNumber
   pure (f, s)
 
--- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".
 fields :: Bool -> Parser [Q.Field]
 fields allowEmpty =
-  (if allowEmpty then sepBy else sepBy1) field (wsNL $ char ',')
+  (if allowEmpty then sepByTrail else sepByTrail1) field (wsNL $ char ',')
 \end{code}
 
 A field consists of a subtype, either an extended type or a user-defined type,
@@ -544,7 +560,8 @@ dataDef = do
   alignment <- optionMaybe alignAny
   bracesNL dataObjs <&> Q.DataDef link name alignment
  where
-    dataObjs = sepBy dataObj (wsNL $ char ',')
+    -- TODO: sepByTrail is not documented in the QBE BNF.
+    dataObjs = sepByTrail dataObj (wsNL $ char ',')
 \end{code}
 
 Data definitions express objects that will be emitted in the compiled
@@ -574,11 +591,13 @@ specifies the bits to be stored in the field.
 dataItem :: Parser Q.DataItem
 dataItem =
   (Q.DString <$> strLit)
+    <|> try
+      ( do
+          i <- ws global
+          off <- (ws $ char '+') >> ws decNumber
+          return $ Q.DSymOff i off
+      )
     <|> (Q.DConst <$> constant)
-    <|> do
-      i <- global
-      off <- optionMaybe (char '+' >> decNumber)
-      return $ Q.DSymbol i off
 \end{code}
 
 Within each object, several items can be defined. When several data items

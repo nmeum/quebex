@@ -31,14 +31,16 @@ getSolver = do
   s <- defSolver
   SMT.check s >> pure s
 
-eqConcrete :: SE.BitVector -> DE.RegVal -> IO Bool
-eqConcrete sym con = do
+eqConcrete :: Maybe SE.BitVector -> Maybe DE.RegVal -> IO Bool
+eqConcrete (Just sym) (Just con) = do
   s <- getSolver
   symVal <- SMT.getExpr s (SE.toSExpr sym)
   case (symVal, con) of
     (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == fromIntegral cv
     (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == fromIntegral cv
     _ -> pure False
+eqConcrete Nothing Nothing = pure True
+eqConcrete _ _ = pure False
 
 ------------------------------------------------------------------------
 
@@ -51,12 +53,12 @@ instance Arbitrary InstrInput where
     InstrInput t <$> arbitrary
 
 unaryProp ::
-  (SE.BitVector -> SE.BitVector) ->
-  (DE.RegVal -> DE.RegVal) ->
+  (SE.BitVector -> Maybe SE.BitVector) ->
+  (DE.RegVal -> Maybe DE.RegVal) ->
   InstrInput ->
   Property
 unaryProp opSym opCon (InstrInput ty val) = ioProperty $ do
-  eqConcrete (opSym $ E.fromLit ty val) (opCon $ E.fromLit ty val)
+  eqConcrete (opSym $ E.fromLit (QBE.Base ty) val) (opCon $ E.fromLit (QBE.Base ty) val)
 
 negEquiv :: TestTree
 negEquiv = testProperty "neg" (unaryProp E.neg E.neg)
@@ -78,16 +80,13 @@ shiftProp ::
   ShiftInput ->
   Property
 shiftProp opSym opCon (ShiftInput ty val amount) = ioProperty $ do
-  let symValue = E.fromLit ty val :: SE.BitVector
-  let conValue = E.fromLit ty val :: DE.RegVal
+  let symValue = E.fromLit (QBE.Base ty) val :: SE.BitVector
+  let conValue = E.fromLit (QBE.Base ty) val :: DE.RegVal
 
-  let symResult = symValue `opSym` E.fromLit QBE.Word (fromIntegral amount)
-  let conResult = conValue `opCon` E.fromLit QBE.Word (fromIntegral amount)
+  let symResult = symValue `opSym` E.fromLit (QBE.Base QBE.Word) (fromIntegral amount)
+  let conResult = conValue `opCon` E.fromLit (QBE.Base QBE.Word) (fromIntegral amount)
 
-  case (symResult, conResult) of
-    (Just s, Just c) -> eqConcrete s c
-    (Nothing, Nothing) -> pure True
-    _ -> pure False
+  eqConcrete symResult conResult
 
 shiftEquiv :: TestTree
 shiftEquiv =
@@ -113,14 +112,14 @@ storeTests =
     [ testCase "Create bitvector and convert it to bytes" $
         do
           s <- getSolver
-          let bytes = (MEM.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
+          let bytes = (MEM.toBytes (E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           values <- mapM (SMT.getExpr s . SE.toSExpr) bytes
           values @?= [SMT.Bits 8 0xef, SMT.Bits 8 0xbe, SMT.Bits 8 0xad, SMT.Bits 8 0xde],
       testCase "Convert bitvector to bytes and back" $
         do
           s <- getSolver
 
-          let bytes = (MEM.toBytes (E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
+          let bytes = (MEM.toBytes (E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
           length bytes @?= 4
 
           value <- case MEM.fromBytes (QBE.LBase QBE.Word) bytes of
@@ -137,15 +136,15 @@ valueReprTests =
         do
           s <- getSolver
 
-          let v1 = E.fromLit QBE.Word 127
-          let v2 = E.fromLit QBE.Word 128
+          let v1 = E.fromLit (QBE.Base QBE.Word) 127
+          let v2 = E.fromLit (QBE.Base QBE.Word) 128
 
           expr <- SMT.getExpr s (SE.toSExpr $ fromJust $ v1 `E.add` v2)
           expr @?= SMT.Bits 32 0xff,
       testCase "Add incompatible values" $
         do
-          let v1 = E.fromLit QBE.Word 0xffffffff :: SE.BitVector
-          let v2 = E.fromLit QBE.Long 0xff :: SE.BitVector
+          let v1 = E.fromLit (QBE.Base QBE.Word) 0xffffffff :: SE.BitVector
+          let v2 = E.fromLit (QBE.Base QBE.Long) 0xff :: SE.BitVector
 
           -- Note: E.add doesn't do subtyping if invoked directly
           (v1 `E.add` v2) @?= Nothing,
@@ -153,8 +152,8 @@ valueReprTests =
         do
           s <- getSolver
 
-          let v1 = E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector
-          let v2 = E.fromLit QBE.Long 0xff :: SE.BitVector
+          let v1 = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
+          let v2 = E.fromLit (QBE.Base QBE.Long) 0xff :: SE.BitVector
 
           let v1sub = fromJust $ E.subType QBE.Word v1
           v1sub' <- SMT.getExpr s (SE.toSExpr v1sub)
@@ -172,7 +171,7 @@ valueReprTests =
         do
           s <- getSolver
 
-          let value = E.fromLit QBE.Word 0xdeadbeef :: SE.BitVector
+          let value = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
 
           -- let sext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.SignedByte) value
           -- sextVal <- SMT.getExpr s (SE.toSExpr sext)

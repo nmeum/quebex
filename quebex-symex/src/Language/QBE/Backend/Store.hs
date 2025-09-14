@@ -83,5 +83,5 @@ getConcolic store@Store {randGen = rand} name ty =
         Nothing ->
           -- TODO: The generator should consider the bounds of QBE.BaseType.
           let (rv, nr) = genWord64 rand
-              conValue = E.fromLit ty rv
+              conValue = E.fromLit (QBE.Base ty) rv
            in (conValue, nr)

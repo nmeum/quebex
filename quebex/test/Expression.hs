@@ -18,8 +18,8 @@ exprTests =
     "Expression Tests"
     [ testCase "Test equality" $
         do
-          let lhs = E.fromLit Q.Word 23 :: DE.RegVal
-          let rhs = E.fromLit Q.Word 42 :: DE.RegVal
+          let lhs = E.fromLit (Q.Base Q.Word) 23 :: DE.RegVal
+          let rhs = E.fromLit (Q.Base Q.Word) 42 :: DE.RegVal
 
           lhs `E.eq` lhs @?= truthValue
           lhs `E.ne` lhs @?= falseValue
@@ -28,31 +28,31 @@ exprTests =
           lhs `E.ne` rhs @?= truthValue,
       testCase "Test unsigned comparison" $
         do
-          let lhs = E.fromLit Q.Word 23 :: DE.RegVal
-          let rhs = E.fromLit Q.Word 42 :: DE.RegVal
+          let lhs = E.fromLit (Q.Base Q.Word) 23 :: DE.RegVal
+          let rhs = E.fromLit (Q.Base Q.Word) 42 :: DE.RegVal
 
           lhs `E.ule` rhs @?= truthValue
           lhs `E.ule` lhs @?= truthValue
           lhs `E.ult` lhs @?= falseValue,
       testCase "Test signed comparision" $
         do
-          let lhs = E.fromLit Q.Word (fromIntegral (-1 :: Int64)) :: DE.RegVal
-          let rhs = E.fromLit Q.Word 0 :: DE.RegVal
+          let lhs = E.fromLit (Q.Base Q.Word) (fromIntegral (-1 :: Int64)) :: DE.RegVal
+          let rhs = E.fromLit (Q.Base Q.Word) 0 :: DE.RegVal
 
           lhs `E.slt` rhs @?= truthValue
           lhs `E.sle` lhs @?= truthValue
           lhs `E.ult` rhs @?= falseValue,
       testCase "sar preserves sign bit" $
         do
-          let v = E.fromLit Q.Word (fromIntegral (-256 :: Int64)) :: DE.RegVal
-          let r = fromJust $ v `E.sar` E.fromLit Q.Word 1
-          r @?= E.fromLit Q.Word (fromIntegral (-128 :: Int64)),
+          let v = E.fromLit (Q.Base Q.Word) (fromIntegral (-256 :: Int64)) :: DE.RegVal
+          let r = fromJust $ v `E.sar` E.fromLit (Q.Base Q.Word) 1
+          r @?= E.fromLit (Q.Base Q.Word) (fromIntegral (-128 :: Int64)),
       testCase "shr does not preserve sign bit" $
         do
-          let v = E.fromLit Q.Word (fromIntegral (-0x80000000 :: Int64)) :: DE.RegVal
-          let r = fromJust $ v `E.shr` E.fromLit Q.Word 8
-          r @?= E.fromLit Q.Word 0x800000
+          let v = E.fromLit (Q.Base Q.Word) (fromIntegral (-0x80000000 :: Int64)) :: DE.RegVal
+          let r = fromJust $ v `E.shr` E.fromLit (Q.Base Q.Word) 8
+          r @?= E.fromLit (Q.Base Q.Word) 0x800000
     ]
   where
-    falseValue = Just (E.fromLit Q.Long 0 :: DE.RegVal)
-    truthValue = Just (E.fromLit Q.Long 1 :: DE.RegVal)
+    falseValue = Just (E.fromLit (Q.Base Q.Long) 0 :: DE.RegVal)
+    truthValue = Just (E.fromLit (Q.Base Q.Long) 1 :: DE.RegVal)

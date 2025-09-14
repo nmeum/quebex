@@ -39,7 +39,11 @@ typeTests =
                 [(SExtType (Base Word), Nothing), (SExtType (Base Long), Nothing)]
               ]
             v = TypeDef (UserIdent "un9") Nothing (AUnion f)
-         in parse "type :un9 = { { l, s } { w, l } }" @?= Right v
+         in parse "type :un9 = { { l, s } { w, l } }" @?= Right v,
+      testCase "Type definition with trailing comma" $
+        let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
+            v = TypeDef (UserIdent "twofloats") Nothing (ARegular f)
+         in parse "type :twofloats = { s, s, }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError TypeDef
@@ -89,7 +93,22 @@ dataTests =
          in parse "export data $b = align 8 { z 1000 }" @?= Right v,
       testCase "Data definition with linkage section and string escape sequences" $
         let v = DataDef [LSection "f\\oo\\\"bar" Nothing] (GlobalIdent "b") (Just 8) [OZeroFill 1]
-         in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v
+         in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v,
+      testCase "Data definition with symbol offset" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DSymOff (GlobalIdent "s") 1]]}
+         in parse "data $b = align 8 { l $s + 1 }" @?= Right v,
+      testCase "Data definition with symbol offset and without whitespaces" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DSymOff (GlobalIdent "s") 1]]}
+         in parse "data $b = align 8 {l $s+1}" @?= Right v,
+      testCase "Data definition with symbol but without offset" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DConst (Global (GlobalIdent "s"))]]}
+         in parse "data $b = align 8 {l $s}" @?= Right v,
+      testCase "Data definition with octal character sequence" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 1, objs = [OItem Byte [DString "f\too\NUL"]]}
+         in parse "data $b = align 1 { b \"f\\011oo\\000\" }" @?= Right v,
+      testCase "Data definition with trailing comma" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 1, objs = [OItem Byte [DConst (Number 1)], OItem Byte [DConst (Number 2)]]}
+         in parse "data $b = align 1 { b 1, b 2,}" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
@@ -153,7 +172,7 @@ funcTests =
             fn = FuncDef [] (GlobalIdent "f") Nothing [] [b1, b2, b3]
          in parse "function $f() {\n@b1\njmp @b2\n@b2\njmp @b3\n@b3\n%v =w phi @b1 1, @b2 2\nret\n}" @?= Right fn,
       testCase "Call instruction with integer literal value" $
-        let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
+        let c = Call Nothing (VConst (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
             b = [Block {label = BlockIdent "s", phi = [], stmt = [c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f,

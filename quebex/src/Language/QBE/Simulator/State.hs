@@ -48,7 +48,7 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   isTrue :: v -> m Bool
   toAddress :: v -> m MEM.Address
 
-  lookupGlobal :: QBE.GlobalIdent -> m (Maybe v)
+  lookupSymbol :: QBE.GlobalIdent -> m (Maybe MEM.Address)
   findFunc :: QBE.GlobalIdent -> m (Maybe (SomeFunc m v))
 
   activeFrame :: m (StackFrame v)
@@ -95,7 +95,7 @@ modifyFrame func = do
 stackAlloc :: (Simulator m v) => v -> Word64 -> m v
 stackAlloc size align = do
   stkPtr <- getSP
-  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit QBE.Long align)
+  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit (QBE.Base QBE.Long) align)
   case newStkPtr of
     Just ptr -> setSP ptr >> pure ptr
     Nothing -> throwM InvalidAddressType
@@ -113,23 +113,23 @@ returnFromFunc :: (Simulator m v) => m ()
 returnFromFunc = popStackFrame >>= setSP . stkFp
 {-# INLINE returnFromFunc #-}
 
-maybeLookup :: (Simulator m v) => String -> Maybe v -> m v
+maybeLookup :: (Simulator m v) => String -> Maybe a -> m a
 maybeLookup name = liftMaybe (UnknownVariable name)
 {-# INLINE maybeLookup #-}
 
 lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
-  pure $ E.fromLit ty v
+  pure $ E.fromLit (QBE.Base ty) v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
   subTypeE ty (E.fromFloat v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
   subTypeE ty (E.fromDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
+  v <- lookupSymbol k >>= maybeLookup (show k)
+  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- lookupGlobal k >>= maybeLookup (show k)
-  subTypeE ty v
+  v <- lookupSymbol k >>= maybeLookup (show k)
+  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   subTypeE ty v
@@ -154,3 +154,13 @@ lookupArg QBE.ArgVar = error "variadic functions not supported"
 lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
 lookupArgs = mapM lookupArg
 {-# INLINE lookupArgs #-}
+
+readNullArray :: (Simulator m v) => MEM.Address -> m [v]
+readNullArray addr = go addr []
+  where
+    go a acc = do
+      byte <- readMemory (QBE.LSubWord QBE.SignedByte) a
+      if E.toWord64 byte == 0
+        then pure acc
+        else go (a + 1) (acc ++ [byte])
+{-# INLINE readNullArray #-}

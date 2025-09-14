@@ -441,21 +441,117 @@ blockTests =
               \}"
 
           res @?= Just (D.VDouble 0.3333333331111),
-      -- XXX: Doesn't work yet because we are not loading $data into memory.
-      -- testCase "Load data object from memory" $
-      --   do
-      --     res <-
-      --       parseAndExec
-      --         (QBE.GlobalIdent "main")
-      --         []
-      --         "data $a = { w 2342 2 3, b 0 }\n\
-      --         \function w $main() {\n\
-      --         \@start\n\
-      --         \%w =w loadw $a\n\
-      --         \ret %w\n\
-      --         \}"
-      --
-      --     res @?= Just (D.VWord 2342),
+      testCase "Load data object from memory" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { b \"ABCD\" }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%w =w loadw $a\n\
+              \ret %w\n\
+              \}"
+
+          res @?= Just (D.VWord 0x44434241),
+      testCase "Data definition with symbol reference" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { b \"ABCD\" }\n\
+              \data $p = { l $a }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 0x44434241),
+      testCase "Data definition with symbol offset" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 1 { b \"ABCDE\" }\n\
+              \data $p = align 8 { l $a + 1 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 0x45444342),
+      testCase "Data definition with constant number" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 4 { l 42 }\n\
+              \function l $main() {\n\
+              \@start\n\
+              \%l =l loadl $a\n\
+              \ret %l\n\
+              \}"
+
+          res @?= Just (D.VLong 42),
+      testCase "Data definition with multiple fields" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 1 { b \"ABCD\", w 42 }\n\
+              \data $p = align 8 { l $a + 4 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 42),
+      testCase "Data definition with zero fill" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 1 { w 4294967295, z 4, w 4294967295 }\n\
+              \data $p = align 8 { l $a }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l loadl $p\n\
+              \%ptr =l add %ptr, 4\n\
+              \%res =w loadw %ptr\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 0),
+      testCase "Data definition with single" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = align 1 { s s_2.3, s s_4.2 }\n\
+              \data $p = align 8 { l $a }\n\
+              \function s $main() {\n\
+              \@start\n\
+              \%ptr.1 =l loadl $p\n\
+              \%ptr.2 =l add %ptr.1, 4\n\
+              \%val.1 =s loads %ptr.1\n\
+              \%val.2 =s loads %ptr.2\n\
+              \%res =s add %val.1, %val.2\n\
+              \ret %res\n\
+              \}"
+          res @?= Just (D.VSingle $ 2.3 + 4.2),
       testCase "Subtyping with load instruction" $
         do
           res <-

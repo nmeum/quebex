@@ -59,7 +59,7 @@ applySignedOp opName vCon lhs rhs =
 applyBoolOp :: Name -> ValueCons -> Exp -> Exp -> Exp
 applyBoolOp opName _vCons lhs rhs =
   let res = thBinaryOp (VarE opName) lhs rhs
-      toL = AppE (AppE (VarE $ mkName "E.fromLit") (ConE $ mkName "QBE.Long"))
+      toL = AppE (AppE (VarE $ mkName "E.fromLit") (AppE (ConE $ mkName "QBE.Base") (ConE $ mkName "QBE.Long")))
    in toL $ CondE res (LitE $ IntegerL 1) (LitE $ IntegerL 0)
 
 applySignedBoolOp :: Name -> ValueCons -> Exp -> Exp -> Exp

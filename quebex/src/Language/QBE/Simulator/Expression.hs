@@ -4,11 +4,12 @@
 
 module Language.QBE.Simulator.Expression where
 
+import Data.Char (chr, ord)
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
 class ValueRepr v where
-  fromLit :: QBE.BaseType -> Word64 -> v
+  fromLit :: QBE.ExtType -> Word64 -> v
   fromFloat :: Float -> v
   fromDouble :: Double -> v
   toWord64 :: v -> Word64
@@ -27,7 +28,7 @@ class ValueRepr v where
   xor :: v -> v -> Maybe v
   and :: v -> v -> Maybe v
 
-  neg :: v -> v
+  neg :: v -> Maybe v
 
   sar :: v -> v -> Maybe v
   shr :: v -> v -> Maybe v
@@ -44,9 +45,15 @@ class ValueRepr v where
   uge :: v -> v -> Maybe v
   ugt :: v -> v -> Maybe v
 
+fromString :: (ValueRepr v) => String -> [v]
+fromString = map (\c -> fromLit QBE.Byte (fromIntegral $ ord c))
+
+toString :: (ValueRepr v) => [v] -> String
+toString = map (\b -> chr (fromIntegral $ toWord64 b))
+
 boolToValue :: (ValueRepr v) => Bool -> v
-boolToValue True = fromLit QBE.Long 1
-boolToValue False = fromLit QBE.Long 0
+boolToValue True = fromLit (QBE.Base QBE.Long) 1
+boolToValue False = fromLit (QBE.Base QBE.Long) 0
 
 compareExpr :: (ValueRepr v) => QBE.CmpOp -> (v -> v -> Maybe v)
 compareExpr QBE.CEq = eq
