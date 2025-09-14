@@ -115,6 +115,10 @@ decimal = number 10 digit
 hexnum :: (Integral i, Stream s m Char) => ParsecT s u m i
 hexnum = number 16 hexDigit
 
+-- | parse an octal number
+octnum :: (Integral i, Stream s m Char) => ParsecT s u m i
+octnum = number 8 octDigit
+
 -- | parse a non-negative number given a base and a parser for the digits
 number ::
   (Integral i, Stream s m t) =>

@@ -6,22 +6,21 @@
 module Language.QBE.Util where
 
 import Data.Word (Word64)
-import Language.QBE.Numbers (decimal, fractExponent, hexnum, sign)
-import Numeric (readDec)
+import Language.QBE.Numbers
+  ( decimal,
+    fractExponent,
+    hexnum,
+    octnum,
+    sign,
+  )
 import Text.ParserCombinators.Parsec
   ( Parser,
-    digit,
-    many1,
+    char,
     oneOf,
     skipMany,
     string,
     (<|>),
   )
-
-readWord64 :: String -> Word64
-readWord64 = fst . head . readDec
-
-------------------------------------------------------------------------
 
 bind :: String -> a -> Parser a
 bind str val = val <$ string str
@@ -30,8 +29,11 @@ decNumber :: Parser Word64
 decNumber = do
   -- TODO: QBE probably doesn't support a '+' sign prefix
   s <- sign
-  n <- many1 digit
-  return (s $ readWord64 n)
+  s <$> decimal
+
+octNumber :: Parser Word64
+octNumber = do
+  char '0' >> octnum
 
 -- A float parser that tries to be compatible with strtod(3).
 float :: (Floating f, Read f) => Parser f
