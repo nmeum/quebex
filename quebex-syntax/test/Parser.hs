@@ -39,7 +39,11 @@ typeTests =
                 [(SExtType (Base Word), Nothing), (SExtType (Base Long), Nothing)]
               ]
             v = TypeDef (UserIdent "un9") Nothing (AUnion f)
-         in parse "type :un9 = { { l, s } { w, l } }" @?= Right v
+         in parse "type :un9 = { { l, s } { w, l } }" @?= Right v,
+      testCase "Type definition with trailing comma" $
+        let f = [(SExtType (Base Single), Nothing), (SExtType (Base Single), Nothing)]
+            v = TypeDef (UserIdent "twofloats") Nothing (ARegular f)
+         in parse "type :twofloats = { s, s, }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError TypeDef
@@ -101,7 +105,10 @@ dataTests =
          in parse "data $b = align 8 {l $s}" @?= Right v,
       testCase "Data definition with octal character sequence" $
         let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 1, objs = [OItem Byte [DString "f\too\NUL"]]}
-         in parse "data $b = align 1 { b \"f\\011oo\\000\" }" @?= Right v
+         in parse "data $b = align 1 { b \"f\\011oo\\000\" }" @?= Right v,
+      testCase "Data definition with trailing comma" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 1, objs = [OItem Byte [DConst (Number 1)], OItem Byte [DConst (Number 2)]]}
+         in parse "data $b = align 1 { b 1, b 2,}" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
