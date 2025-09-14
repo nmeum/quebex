@@ -107,7 +107,7 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
       Just x -> Just $ SFuncDef x
       Nothing -> SSimFunc <$> findSimFunc ident
 
-  lookupGlobal = liftState . lookupGlobal
+  lookupSymbol = liftState . lookupSymbol
   activeFrame = liftState activeFrame
   pushStackFrame = liftState . pushStackFrame
   popStackFrame = liftState popStackFrame

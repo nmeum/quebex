@@ -10,7 +10,7 @@ where
 
 import Control.Exception (assert)
 import Data.Functor ((<&>))
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
@@ -101,8 +101,7 @@ instance E.ValueRepr (Concolic D.RegVal) where
   srem = binaryOp E.srem E.srem
   udiv = binaryOp E.udiv E.udiv
 
-  -- TODO: Don't wrap everything in a Maybe just to call unaryOp.
-  neg = fromJust . unaryOp (Just . E.neg) (Just . E.neg)
+  neg = unaryOp E.neg E.neg
 
   sar = binaryOp E.sar E.sar
   shr = binaryOp E.shr E.shr

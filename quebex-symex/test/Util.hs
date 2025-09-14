@@ -45,7 +45,7 @@ unconstrained solver initCon name ty = do
   let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
   symbolic <- SE.fromSExpr ty <$> SMT.declare solver name bits
 
-  let concrete = E.fromLit ty initCon
+  let concrete = E.fromLit (QBE.Base ty) initCon
   pure $ CE.Concolic concrete (Just symbolic)
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
