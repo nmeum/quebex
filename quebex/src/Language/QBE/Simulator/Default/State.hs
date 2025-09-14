@@ -15,6 +15,7 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Word (Word64, Word8)
 import Language.QBE (Definition (DefData), Program, globalFuncs)
 import Language.QBE.Simulator.Default.Expression qualified as D
+import Language.QBE.Simulator.Default.Funcs (lookupSimFunc)
 import Language.QBE.Simulator.Error as Err
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -170,7 +171,11 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   toAddress = pure . E.toWord64
 
   lookupSymbol ident = gets (Map.lookup ident . envSyms)
-  findFunc ident = gets (fmap SFuncDef . Map.lookup ident . envFuncs)
+  findFunc ident = do
+    funcs <- gets envFuncs
+    pure $ case Map.lookup ident funcs of
+      Just x -> Just $ SFuncDef x
+      Nothing -> SSimFunc <$> lookupSimFunc ident
 
   activeFrame = do
     stk <- gets envStk

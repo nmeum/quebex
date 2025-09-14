@@ -43,6 +43,7 @@ library
       Language.QBE.Simulator.Memory,
       Language.QBE.Simulator.Expression,
       Language.QBE.Simulator.Default.State,
+      Language.QBE.Simulator.Default.Funcs,
       Language.QBE.Simulator.Default.Expression,
       Language.QBE.Simulator.Default.Generator,
 
