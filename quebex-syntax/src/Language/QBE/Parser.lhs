@@ -35,12 +35,13 @@
 \begin{code}
 module Language.QBE.Parser (dataDef, typeDef, funcDef) where
 
+import Data.Char (chr)
 import Data.Word (Word64)
 import Data.Functor ((<&>))
 import Data.List (singleton)
 import Data.Map qualified as Map
 import qualified Language.QBE.Types as Q
-import Language.QBE.Util (bind, decNumber, float)
+import Language.QBE.Util (bind, decNumber, octNumber, float)
 import Text.ParserCombinators.Parsec
   ( Parser,
     alphaNum,
@@ -260,11 +261,16 @@ strLit = concat <$> quoted (many strChr)
     strChr :: Parser [Char]
     strChr = (singleton <$> noneOf "\"\\") <|> escSeq
 
+    -- TODO: not documnted in the QBE BNF.
+    octEsc :: Parser Char
+    octEsc = do
+      n <- octNumber
+      pure $ chr (fromIntegral n)
+
     escSeq :: Parser [Char]
     escSeq = try $ do
       esc <- char '\\'
-      chr <- anyChar
-      return $ [esc, chr]
+      (singleton <$> octEsc) <|> (anyChar <&> (\c -> [esc, c]))
 \end{code}
 
 Strings are enclosed by double quotes and are, for example, used to specify a

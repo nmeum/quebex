@@ -98,7 +98,10 @@ dataTests =
          in parse "data $b = align 8 {l $s+1}" @?= Right v,
       testCase "Data definition with symbol but without offset" $
         let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DConst (Global (GlobalIdent "s"))]]}
-         in parse "data $b = align 8 {l $s}" @?= Right v
+         in parse "data $b = align 8 {l $s}" @?= Right v,
+      testCase "Data definition with octal character sequence" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 1, objs = [OItem Byte [DString "f\too\NUL"]]}
+         in parse "data $b = align 1 { b \"f\\011oo\\000\" }" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
