@@ -56,6 +56,7 @@ import Text.ParserCombinators.Parsec
     newline,
     noneOf,
     oneOf,
+    optional,
     optionMaybe,
     sepBy,
     sepBy1,
@@ -138,6 +139,16 @@ bracesNL = between (wsNL $ char '{') (wsNL $ char '}')
 
 quoted :: Parser a -> Parser a
 quoted = let q = char '"' in between q q
+
+sepByTrail1 :: Parser a -> Parser sep -> Parser [a]
+sepByTrail1 p sep = do
+  x <- p
+  xs <- many (try $ sep >> p)
+  _ <- optional sep
+  return (x:xs)
+
+sepByTrail :: Parser a -> Parser sep -> Parser [a]
+sepByTrail p sep = sepByTrail1 p sep <|> return []
 
 parenLst :: Parser a -> Parser [a]
 parenLst p = between (ws $ char '(') (char ')') inner
@@ -500,10 +511,9 @@ field = do
   s <- ws $ optionMaybe decNumber
   pure (f, s)
 
--- TODO: "For ease of IL generation, a trailing comma is tolerated by the parser".
 fields :: Bool -> Parser [Q.Field]
 fields allowEmpty =
-  (if allowEmpty then sepBy else sepBy1) field (wsNL $ char ',')
+  (if allowEmpty then sepByTrail else sepByTrail1) field (wsNL $ char ',')
 \end{code}
 
 A field consists of a subtype, either an extended type or a user-defined type,
@@ -550,7 +560,8 @@ dataDef = do
   alignment <- optionMaybe alignAny
   bracesNL dataObjs <&> Q.DataDef link name alignment
  where
-    dataObjs = sepBy dataObj (wsNL $ char ',')
+    -- TODO: sepByTrail is not documented in the QBE BNF.
+    dataObjs = sepByTrail dataObj (wsNL $ char ',')
 \end{code}
 
 Data definitions express objects that will be emitted in the compiled
