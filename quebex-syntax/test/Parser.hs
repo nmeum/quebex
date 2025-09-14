@@ -162,7 +162,7 @@ funcTests =
             fn = FuncDef [] (GlobalIdent "f") Nothing [] [b1, b2, b3]
          in parse "function $f() {\n@b1\njmp @b2\n@b2\njmp @b3\n@b3\n%v =w phi @b1 1, @b2 2\nret\n}" @?= Right fn,
       testCase "Call instruction with integer literal value" $
-        let c = Call Nothing (VConst $ (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
+        let c = Call Nothing (VConst (Const $ Global (GlobalIdent "foo"))) [ArgReg (ABase Word) (VConst (Const (Number 42)))]
             b = [Block {label = BlockIdent "s", phi = [], stmt = [c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@s\ncall $foo(w 42)\nret\n}" @?= Right f,
