@@ -89,7 +89,16 @@ dataTests =
          in parse "export data $b = align 8 { z 1000 }" @?= Right v,
       testCase "Data definition with linkage section and string escape sequences" $
         let v = DataDef [LSection "f\\oo\\\"bar" Nothing] (GlobalIdent "b") (Just 8) [OZeroFill 1]
-         in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v
+         in parse "section \"f\\oo\\\"bar\" data $b =align 8 {z 1}" @?= Right v,
+      testCase "Data definition with symbol offset" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DSymOff (GlobalIdent "s") 1]]}
+         in parse "data $b = align 8 { l $s + 1 }" @?= Right v,
+      testCase "Data definition with symbol offset and without whitespaces" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DSymOff (GlobalIdent "s") 1]]}
+         in parse "data $b = align 8 {l $s+1}" @?= Right v,
+      testCase "Data definition with symbol but without offset" $
+        let v = DataDef {linkage = [], name = GlobalIdent "b", align = Just 8, objs = [OItem (Base Long) [DConst (Global (GlobalIdent "s"))]]}
+         in parse "data $b = align 8 {l $s}" @?= Right v
     ]
   where
     parse :: String -> Either P.ParseError DataDef
