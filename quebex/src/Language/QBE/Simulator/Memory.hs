@@ -10,6 +10,7 @@ module Language.QBE.Simulator.Memory
     mkMemory,
     toMemAddr,
     addrOverlap,
+    alignAddr,
     memSize,
     loadBytes,
     storeBytes,
@@ -24,6 +25,7 @@ import Data.Array.IO
     readArray,
     writeArray,
   )
+import Data.Bits (complement, (.&.))
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
@@ -65,6 +67,9 @@ addrOverlap addr1 addr2 range =
     endAddr :: Address -> Address
     endAddr a = a + range
 
+alignAddr :: Address -> Word64 -> Address
+alignAddr addr align = (addr + (align - 1)) .&. complement (align - 1)
+
 -- | Returns the size of the memory in bytes.
 memSize :: (MArray t a IO) => Memory t a -> IO Size
 memSize = fmap ((+ 1) . snd) . getBounds . memBytes
@@ -83,5 +88,5 @@ loadBytes mem addr byteSize =
   mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
   where
     loadByte :: (MArray t a IO) => Memory t a -> Address -> IO a
-    loadByte m = readArray (memBytes m) . toMemAddr m
+    loadByte m addr = readArray (memBytes m) . toMemAddr m
 {-# INLINEABLE loadBytes #-}
