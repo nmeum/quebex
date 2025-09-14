@@ -154,3 +154,13 @@ lookupArg QBE.ArgVar = error "variadic functions not supported"
 lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
 lookupArgs = mapM lookupArg
 {-# INLINE lookupArgs #-}
+
+readNullArray :: (Simulator m v) => MEM.Address -> m [v]
+readNullArray addr = go addr []
+  where
+    go a acc = do
+      byte <- readMemory (QBE.LSubWord QBE.SignedByte) a
+      if E.toWord64 byte == 0
+        then pure acc
+        else go (a + 1) (acc ++ [byte])
+{-# INLINE readNullArray #-}
