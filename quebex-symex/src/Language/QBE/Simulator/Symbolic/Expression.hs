@@ -41,6 +41,8 @@ fromByte :: Word8 -> BitVector
 fromByte byte = BitVector (SMT.bvBin 8 $ fromIntegral byte) QBE.Byte
 
 fromReg :: D.RegVal -> BitVector
+fromReg (D.VByte v) = BitVector (SMT.bvBin 8 $ fromIntegral v) QBE.Byte
+fromReg (D.VHalf v) = BitVector (SMT.bvBin 16 $ fromIntegral v) QBE.HalfWord
 fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v) (QBE.Base QBE.Word)
 fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v) (QBE.Base QBE.Long)
 fromReg (D.VSingle _) = error "symbolic floats not supported"
@@ -63,7 +65,7 @@ toCond :: Bool -> BitVector -> SMT.SExpr
 toCond isTrue BitVector {sexpr = s, qtype = ty} =
   -- Equality is only defined for Words.
   assert (ty == QBE.Base QBE.Word) $
-    let zeroSExpr = sexpr (fromReg $ E.fromLit QBE.Word 0)
+    let zeroSExpr = sexpr (fromReg $ E.fromLit (QBE.Base QBE.Word) 0)
      in toCond' s zeroSExpr
   where
     toCond' lhs rhs
@@ -123,7 +125,7 @@ binaryOp op lhs@(BitVector {sexpr = slhs}) rhs@(BitVector {sexpr = srhs})
 
 -- TODO: Move this into the expression abstraction.
 toShiftAmount :: Word64 -> BitVector -> Maybe BitVector
-toShiftAmount size amount = amount `E.urem` E.fromLit QBE.Word size
+toShiftAmount size amount = amount `E.urem` E.fromLit (QBE.Base QBE.Word) size
 
 shiftOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 shiftOp op value amount@BitVector {qtype = QBE.Base QBE.Word} =
@@ -143,17 +145,16 @@ binaryBoolOp op lhs rhs = do
   where
     -- TODO: Declare these as constants.
     trueValue :: SMT.SExpr
-    trueValue = toSExpr $ E.fromLit QBE.Long 1
+    trueValue = toSExpr $ E.fromLit (QBE.Base QBE.Long) 1
 
     falseValue :: SMT.SExpr
-    falseValue = toSExpr $ E.fromLit QBE.Long 0
+    falseValue = toSExpr $ E.fromLit (QBE.Base QBE.Long) 0
 
 -- TODO: If we Change E.ValueRepr to operate in 'Exec' then we can do IO stuff here.
 instance E.ValueRepr BitVector where
   fromLit ty n =
-    let exty = QBE.Base ty
-        size = fromIntegral $ QBE.extTypeBitSize exty
-     in BitVector (SMT.bvBin size $ fromIntegral n) exty
+    let size = fromIntegral $ QBE.extTypeBitSize ty
+     in BitVector (SMT.bvBin size $ fromIntegral n) ty
 
   fromFloat = error "symbolic floats currently unsupported"
   fromDouble = error "symbolic doubles currently unsupported"
@@ -198,7 +199,7 @@ instance E.ValueRepr BitVector where
   srem = binaryOp SMT.bvSRem
   udiv = binaryOp SMT.bvUDiv
 
-  neg value = value {sexpr = SMT.bvNeg $ sexpr value}
+  neg value = Just $ value {sexpr = SMT.bvNeg $ sexpr value}
 
   sar = shiftOp SMT.bvAShr
   shr = shiftOp SMT.bvLShr

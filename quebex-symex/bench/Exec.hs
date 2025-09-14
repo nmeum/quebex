@@ -37,7 +37,7 @@ exec params input = do
 
 bubbleSort :: Word64 -> Benchmarkable
 bubbleSort inputSize =
-  nfIO (readFile "bench/data/Exec/bubble-sort.qbe" >>= exec [E.fromLit QBE.Word inputSize])
+  nfIO (readFile "bench/data/Exec/bubble-sort.qbe" >>= exec [E.fromLit (QBE.Base QBE.Word) inputSize])
 
 execBench :: Benchmark
 execBench =

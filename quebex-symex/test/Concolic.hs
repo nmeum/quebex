@@ -22,7 +22,7 @@ storeTests =
     -- TODO: Test case for partial concoilc bytes
     [ testCase "Convert concrete concolic value to bytes and back" $
         do
-          let value = E.fromLit QBE.Word 0xdeadbeef :: C.Concolic D.RegVal
+          let value = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: C.Concolic D.RegVal
 
           let bytes = MEM.toBytes value :: [C.Concolic Word8]
           length bytes @?= 4
