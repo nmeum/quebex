@@ -27,7 +27,7 @@ class ValueRepr v where
   xor :: v -> v -> Maybe v
   and :: v -> v -> Maybe v
 
-  neg :: v -> v
+  neg :: v -> Maybe v
 
   sar :: v -> v -> Maybe v
   shr :: v -> v -> Maybe v

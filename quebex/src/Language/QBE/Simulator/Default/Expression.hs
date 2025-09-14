@@ -133,11 +133,12 @@ generateOperators
 
 -- We could also add support for unary operators to the generator. However,
 -- presently there is only one unary operator so it isn't worth it.
-neg' :: RegVal -> RegVal
-neg' (VWord v) = VWord $ negate v
-neg' (VLong v) = VLong $ negate v
-neg' (VSingle v) = VSingle $ negate v
-neg' (VDouble v) = VDouble $ negate v
+neg' :: RegVal -> Maybe RegVal
+neg' (VWord v) = Just . VWord $ negate v
+neg' (VLong v) = Just . VLong $ negate v
+neg' (VSingle v) = Just . VSingle $ negate v
+neg' (VDouble v) = Just . VDouble $ negate v
+neg' _ = Nothing
 
 -- This can't be easily auto generated because the operation differs
 -- based on the type.
