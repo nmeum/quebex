@@ -4,6 +4,7 @@
 
 module Language.QBE.Simulator.Expression where
 
+import Data.Char (chr, ord)
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
@@ -43,6 +44,12 @@ class ValueRepr v where
   ult :: v -> v -> Maybe v
   uge :: v -> v -> Maybe v
   ugt :: v -> v -> Maybe v
+
+fromString :: (ValueRepr v) => String -> [v]
+fromString = map (\c -> fromLit QBE.Byte (fromIntegral $ ord c))
+
+toString :: (ValueRepr v) => [v] -> String
+toString = map (\b -> chr (fromIntegral $ toWord64 b))
 
 boolToValue :: (ValueRepr v) => Bool -> v
 boolToValue True = fromLit (QBE.Base QBE.Long) 1

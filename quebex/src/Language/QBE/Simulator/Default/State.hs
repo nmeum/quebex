@@ -10,7 +10,6 @@ import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Array.IO (IOArray)
-import Data.Char (ord)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Word (Word64, Word8)
@@ -102,9 +101,8 @@ loadItem ::
   QBE.ExtType ->
   QBE.DataItem ->
   StateT (Env v b) IO MEM.Address
-loadItem addr ty (QBE.DString str) = do
-  let string = map (\c -> E.fromLit @v ty (fromIntegral $ ord c)) str
-  storeValues addr string
+loadItem addr QBE.Byte (QBE.DString str) = do
+  storeValues addr $ E.fromString str
 loadItem addr ty (QBE.DSymOff ident off) = do
   -- TODO: Support recursive DataDef's (e.g., `data $c = { l $c }`).
   globals <- gets envSyms
