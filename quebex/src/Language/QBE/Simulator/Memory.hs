@@ -88,5 +88,5 @@ loadBytes mem addr byteSize =
   mapM (\off -> loadByte mem (addr + off)) [0 .. byteSize - 1]
   where
     loadByte :: (MArray t a IO) => Memory t a -> Address -> IO a
-    loadByte m addr = readArray (memBytes m) . toMemAddr m
+    loadByte m = readArray (memBytes m) . toMemAddr m
 {-# INLINEABLE loadBytes #-}
