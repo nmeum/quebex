@@ -68,10 +68,9 @@ makeSymbolicWord ::
   QBE.GlobalIdent ->
   [CE.Concolic DE.RegVal] ->
   StateT Env IO (Maybe (CE.Concolic DE.RegVal))
--- TODO: Require a string as a parameter.
-makeSymbolicWord _ [ident] = do
-  v <- makeConcolic ("word" ++ show (E.toWord64 ident)) QBE.Word
-  pure $ Just v
+makeSymbolicWord _ [namePtr] = do
+  bytes <- toAddress namePtr >>= readNullArray
+  Just <$> makeConcolic (E.toString bytes) QBE.Word
 makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
