@@ -109,7 +109,7 @@ exploreFile opts = do
       engine <- newEngine <$> defSolver
       explore engine env func params
   where
-    params :: [(String, QBE.BaseType)]
+    params :: [(String, QBE.ExtType)]
     params = []
 
     entryFunc :: QBE.GlobalIdent

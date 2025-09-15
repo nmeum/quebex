@@ -39,6 +39,8 @@ data RegVal
   deriving (Show, Eq)
 
 fromBits :: Int -> Integer -> Maybe RegVal
+fromBits 08 = Just . VHalf . fromIntegral
+fromBits 16 = Just . VHalf . fromIntegral
 fromBits 32 = Just . VWord . fromIntegral
 fromBits 64 = Just . VLong . fromIntegral
 fromBits _ = const Nothing

@@ -67,7 +67,7 @@ setModel store model =
 
 -- | Lookup the variable name in the store, if it doesn't exist return
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
-getConcolic :: Store -> String -> QBE.BaseType -> (Store, CE.Concolic DE.RegVal)
+getConcolic :: Store -> String -> QBE.ExtType -> (Store, CE.Concolic DE.RegVal)
 getConcolic store@Store {randGen = rand} name ty =
   ( store {sValues = newSymVars, randGen = nextRand},
     CE.Concolic concrete (Just symbolic)
@@ -83,5 +83,5 @@ getConcolic store@Store {randGen = rand} name ty =
         Nothing ->
           -- TODO: The generator should consider the bounds of QBE.BaseType.
           let (rv, nr) = genWord64 rand
-              conValue = E.fromLit (QBE.Base ty) rv
+              conValue = E.fromLit ty rv
            in (conValue, nr)

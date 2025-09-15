@@ -55,7 +55,7 @@ liftState toLift = do
   pure a
 
 -- TODO: Use QBE.ExtType here
-makeConcolic :: String -> QBE.BaseType -> StateT Env IO (CE.Concolic DE.RegVal)
+makeConcolic :: String -> QBE.ExtType -> StateT Env IO (CE.Concolic DE.RegVal)
 makeConcolic name ty = do
   st <- gets envStore
   let (ns, cv) = ST.getConcolic st name ty
@@ -73,7 +73,7 @@ makeSymbolicWord ::
   StateT Env IO (Maybe (CE.Concolic DE.RegVal))
 makeSymbolicWord _ [namePtr] = do
   bytes <- toAddress namePtr >>= readNullArray
-  Just <$> makeConcolic (E.toString bytes) QBE.Word
+  Just <$> makeConcolic (E.toString bytes) (QBE.Base QBE.Word)
 makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
 makeSymbolicArray ::
@@ -83,10 +83,10 @@ makeSymbolicArray ::
 makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
   name <- E.toString <$> (toAddress namePtr >>= readNullArray)
   vlty <- case E.toWord64 elemSize of
-    -- 1 -> _
-    -- 2 -> _
-    4 -> pure QBE.Word
-    8 -> pure QBE.Long
+    1 -> pure QBE.Byte
+    2 -> pure QBE.HalfWord
+    4 -> pure (QBE.Base QBE.Word)
+    8 -> pure (QBE.Base QBE.Long)
     _ -> throwM TypingError
 
   values <-

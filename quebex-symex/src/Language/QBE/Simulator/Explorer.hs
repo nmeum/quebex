@@ -67,7 +67,7 @@ explore ::
   Engine ->
   Env ->
   QBE.FuncDef ->
-  [(String, QBE.BaseType)] ->
+  [(String, QBE.ExtType)] ->
   IO [(ST.Assign, T.ExecTrace)]
 explore engine@(Engine {expSolver = solver}) env entry params = do
   let store = envStore env

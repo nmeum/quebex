@@ -4,6 +4,7 @@
 
 module Util where
 
+import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Word (Word64)
 import Language.QBE (Program, globalFuncs, parse)
@@ -52,4 +53,5 @@ explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign
 explore' prog entry params = do
   engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128
-  explore engine defEnv entry params
+  explore engine defEnv entry $
+    map (second QBE.Base) params

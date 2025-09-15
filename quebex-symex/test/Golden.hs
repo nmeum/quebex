@@ -4,6 +4,7 @@
 
 module Golden (goldenTests) where
 
+import Data.Bifunctor (second)
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
@@ -32,7 +33,9 @@ exploreQBE filePath params = do
 
   engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128
-  traces <- explore engine defEnv func params
+  traces <-
+    explore engine defEnv func $
+      map (second QBE.Base) params
   pure $ length traces
 
 simpleCmp :: Result -> Result -> IO (Maybe String)

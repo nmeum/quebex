@@ -54,8 +54,8 @@ fromSExpr ty sexpr = BitVector sexpr (QBE.Base ty)
 toSExpr :: BitVector -> SMT.SExpr
 toSExpr = sexpr
 
-symbolic :: String -> QBE.BaseType -> BitVector
-symbolic name ty = BitVector (SMT.const name) (QBE.Base ty)
+symbolic :: String -> QBE.ExtType -> BitVector
+symbolic name = BitVector (SMT.const name)
 
 bitSize :: BitVector -> Int
 bitSize = QBE.extTypeBitSize . qtype

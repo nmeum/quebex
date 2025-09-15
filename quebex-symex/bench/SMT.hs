@@ -6,6 +6,7 @@ module SMT (smtBench) where
 
 import Control.Monad (when)
 import Criterion.Main
+import Data.Bifunctor (second)
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
@@ -51,7 +52,8 @@ exploreQBE filePath params = do
     explore' prog func handle = do
       engine <- newEngine <$> logSolver handle
       defEnv <- mkEnv prog 0 128
-      explore engine defEnv func params
+      explore engine defEnv func $
+        map (second QBE.Base) params
 
 getQueries :: String -> [(String, QBE.BaseType)] -> IO String
 getQueries name params = do
