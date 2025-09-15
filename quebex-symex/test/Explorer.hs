@@ -179,7 +179,7 @@ exploreTests =
               "data $name = align 1 {  b \"abcd\", b 0 }\n\
               \function w $main() {\n\
               \@start\n\
-              \%word =w call $make_symbolic_word(l $name)\n\
+              \%word =w call $quebex_symbolic_word(l $name)\n\
               \jnz %word, @b1, @b2\n\
               \@b1\n\
               \ret 0\n\
