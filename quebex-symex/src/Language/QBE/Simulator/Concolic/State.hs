@@ -54,6 +54,7 @@ liftState toLift = do
   modify (\ps -> ps {envBase = s})
   pure a
 
+-- TODO: Use QBE.ExtType here
 makeConcolic :: String -> QBE.BaseType -> StateT Env IO (CE.Concolic DE.RegVal)
 makeConcolic name ty = do
   st <- gets envStore
@@ -65,6 +66,7 @@ modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
 
+-- TODO: Remove in favor of makeSymbolicArray.
 makeSymbolicWord ::
   QBE.GlobalIdent ->
   [CE.Concolic DE.RegVal] ->
@@ -74,8 +76,31 @@ makeSymbolicWord _ [namePtr] = do
   Just <$> makeConcolic (E.toString bytes) QBE.Word
 makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
 
+makeSymbolicArray ::
+  QBE.GlobalIdent ->
+  [CE.Concolic DE.RegVal] ->
+  StateT Env IO (Maybe (CE.Concolic DE.RegVal))
+makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
+  name <- E.toString <$> (toAddress namePtr >>= readNullArray)
+  vlty <- case E.toWord64 elemSize of
+    -- 1 -> _
+    -- 2 -> _
+    4 -> pure QBE.Word
+    8 -> pure QBE.Long
+    _ -> throwM TypingError
+
+  values <-
+    mapM
+      (\n -> makeConcolic (name ++ show n) vlty)
+      [0 .. E.toWord64 numElem]
+
+  arrayAddr <- toAddress arrayPtr
+  liftState (DS.storeValues arrayAddr values) >> pure Nothing
+makeSymbolicArray ident _ = throwM $ FuncArgsMismatch ident
+
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
-findSimFunc i@(QBE.GlobalIdent "make_symbolic_word") = Just (makeSymbolicWord i)
+findSimFunc i@(QBE.GlobalIdent "quebex_symbolic_word") = Just (makeSymbolicWord i)
+findSimFunc i@(QBE.GlobalIdent "quebex_symbolic_array") = Just (makeSymbolicArray i)
 findSimFunc ident = lookupSimFunc ident
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
