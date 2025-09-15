@@ -9,6 +9,20 @@ staged_files() {
 		awk '/..*\.hs/'
 }
 
+if command -v hlint 1>/dev/null && [ ${SKIP_HLINT:-0} -ne 1 ]; then
+	files=$(staged_files | \
+		xargs -r hlint 2>&1 | \
+		awk '/[a-zA-Z.\/][a-zA-Z.\/]*\.hs/')
+
+	if [ -n "${files}" ]; then
+		printf "hlint found the following hints:\n\n" 1>&2
+		printf "%s\n" "${files}" | sed 's/^/\t/' 1>&2
+		exit 1
+	fi
+fi
+
+########################################################################
+
 if ! command -v ormolu 1>/dev/null; then
 	echo "error: ormolu is not installed" 1>&2
 	exit 1
@@ -23,20 +37,6 @@ if [ -n "${files}" ]; then
 	printf "The following files need to be formated with 'ormolu':\n\n" 1>&2
 	printf "%s\n" "${files}" | sed 's/^/\t/' 1>&2
 	exit 1
-fi
-
-########################################################################
-
-if command -v hlint 1>/dev/null && [ ${SKIP_HLINT:-0} -ne 1 ]; then
-	files=$(staged_files | \
-		xargs -r hlint 2>&1 | \
-		awk '/[a-zA-Z.\/][a-zA-Z.\/]*\.hs/')
-
-	if [ -n "${files}" ]; then
-		printf "hlint found the following hints:\n\n" 1>&2
-		printf "%s\n" "${files}" | sed 's/^/\t/' 1>&2
-		exit 1
-	fi
 fi
 
 ########################################################################
