@@ -53,12 +53,12 @@ For example, consider the following C program:
 ```C
 #include <stdio.h>
 
-extern int make_symbolic_word(const char *name);
+extern int quebex_symbolic_word(const char *name);
 
 int main(void) {
 	puts("<path>");
 
-	int a = make_symbolic_word("a");
+	int a = quebex_symbolic_word("a");
 	if (a == 42) {
 		puts("you found the answer");
 	} else {
@@ -73,13 +73,13 @@ int main(void) {
 This program can be compiled using [cproc] as follows:
 
 ```
-$ cproc -emit-qbe test.c
+$ cproc -emit-qbe example.c
 ```
 
-The resulting QBE representation (`test.qbe`) can be symbolically executed using quebex:
+The resulting QBE representation (`example.qbe`) can be symbolically executed using quebex:
 
 ```
-$ quebex-cli test.qbe
+$ quebex-cli example.qbe
 ```
 
 This will yield the following output:
@@ -91,10 +91,12 @@ not the answer
 <path>
 you found the answer
 </path>
+
+Amount of paths: 2
 ```
 
 This tells us that quebex found two paths through our program based on the symbolic variable `a`.
-In the future, it will be possible to obtain test inputs for each path in a standardized format using `quebex-cli` which can then be used to automatically [generate high-coverage tests][KLEE OSDI].
+In the future, it will be possible to obtain test inputs for each path in a standardized format using `quebex-cli`, which can then be used to automatically [generate high-coverage tests][KLEE OSDI].
 However, for now the focus is on improving the library, not the command-line interface.
 
 ### Design Goals
@@ -139,4 +141,4 @@ This project uses the [REUSE Specification] to indicated used software license.
 [ormolu github]: https://github.com/tweag/ormolu
 [REUSE Specification]: https://reuse.software/spec-3.3/
 [Guix]: https://guix.gnu.org
-[symbolic exeuction]: https://en.wikipedia.org/wiki/Symbolic_execution
+[symbolic execution]: https://en.wikipedia.org/wiki/Symbolic_execution
