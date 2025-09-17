@@ -12,7 +12,7 @@ A work-in-progress software analysis framework built around the [QBE] intermedia
 
 Existing analysis frameworks are predominantly built around [LLVM].
 Unfortunately, LLVM is a fast-moving target with constant changes and updates to its intermediate representation.
-Therefore, tooling built on LLVM often requires dated LLVM versions (e.g., [KLEE] [recommends LLVM 13][KLEE LLVM] released in 2022).
+Therefore, tooling built on LLVM often requires dated LLVM versions (e.g., [KLEE] currently [recommends LLVM 13][KLEE LLVM] released in 2022).
 Obtaining these LLVM versions can be cumbersome and often hinders employment of these tools.
 To overcome these issues, maintainers of analysis tooling need to constantly invest time to catch up with LLVM releases instead of focusing on improving their analysis framework.
 
