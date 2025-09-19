@@ -5,6 +5,11 @@
 (use-modules (guix gexp)
              (guix packages)
              (guix profiles)
+             (gnu packages base)
+             (gnu packages c)
+             (gnu packages haskell-apps)
+             (gnu packages license)
+             (gnu packages version-control)
              (quebex-packages))
 
 ;; This setup here is inspired by the guile-git Guix setup.
@@ -17,12 +22,14 @@
         (package->development-manifest quebex-cli)
 
         ;; Extra packages, useful for development purposes.
-        (specifications->manifest
-          '("cabal-install"
-            "coreutils"
-            "hlint"
-            "apply-refact"
-            "reuse"
-            ;; TODO: ormolu
-            "cproc"
-            "git"))))
+        (packages->manifest
+          (list
+            cabal-install
+            ghc-lhs2tex
+            coreutils
+            hlint
+            apply-refact
+            reuse
+            cproc
+            git
+            ghc-lhs2tex))))
