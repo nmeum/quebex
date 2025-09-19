@@ -172,14 +172,16 @@ exploreTests =
           eTraces <- explore' prog funcDef [("y", QBE.Long), ("x", QBE.Word)]
 
           branchPoints eTraces @?= [[False], [True, False], [True, True]],
-      testCase "make_symbolic_word" $
+      testCase "make a single word symbolic" $
         do
           prog <-
             parseProg
               "data $name = align 1 {  b \"abcd\", b 0 }\n\
               \function w $main() {\n\
               \@start\n\
-              \%word =w call $quebex_symbolic_word(l $name)\n\
+              \%ptr =l alloc4 4\n\
+              \call $quebex_symbolic_array(l %ptr, l 1, l 4, l $name)\n\
+              \%word =w loadw %ptr\n\
               \jnz %word, @b1, @b2\n\
               \@b1\n\
               \ret 0\n\
@@ -190,5 +192,32 @@ exploreTests =
           let funcDef = findFunc prog (QBE.GlobalIdent "main")
           eTraces <- explore' prog funcDef []
 
-          length eTraces @?= 2
+          length eTraces @?= 2,
+      testCase "make a range of memory symbolic" $
+        do
+          prog <-
+            parseProg
+              "data $name = align 1 {  b \"array\", b 0 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr =l alloc4 32\n\
+              \call $quebex_symbolic_array(l %ptr, l 8, l 4, l $name)\n\
+              \%word =w loadw %ptr\n\
+              \jnz %word, @b1, @b2\n\
+              \@b1\n\
+              \%ptr =l add %ptr, 4\n\
+              \%word =w loadw %ptr\n\
+              \jnz %word, @b3, @b4\n\
+              \@b2\n\
+              \ret 1\n\
+              \@b3\n\
+              \ret 0\n\
+              \@b4\n\
+              \ret 1\n\
+              \}"
+
+          let funcDef = findFunc prog (QBE.GlobalIdent "main")
+          eTraces <- explore' prog funcDef []
+
+          length eTraces @?= 3
     ]

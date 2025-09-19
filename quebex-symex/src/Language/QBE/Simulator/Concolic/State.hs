@@ -66,16 +66,6 @@ modifyTracer :: (MonadState Env m) => (T.ExecTrace -> T.ExecTrace) -> m ()
 modifyTracer f =
   modify (\s@Env {envTracer = t} -> s {envTracer = f t})
 
--- TODO: Remove in favor of makeSymbolicArray.
-makeSymbolicWord ::
-  QBE.GlobalIdent ->
-  [CE.Concolic DE.RegVal] ->
-  StateT Env IO (Maybe (CE.Concolic DE.RegVal))
-makeSymbolicWord _ [namePtr] = do
-  bytes <- toAddress namePtr >>= readNullArray
-  Just <$> makeConcolic (E.toString bytes) (QBE.Base QBE.Word)
-makeSymbolicWord ident _ = throwM $ FuncArgsMismatch ident
-
 makeSymbolicArray ::
   QBE.GlobalIdent ->
   [CE.Concolic DE.RegVal] ->
@@ -99,7 +89,6 @@ makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
 makeSymbolicArray ident _ = throwM $ FuncArgsMismatch ident
 
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
-findSimFunc i@(QBE.GlobalIdent "quebex_symbolic_word") = Just (makeSymbolicWord i)
 findSimFunc i@(QBE.GlobalIdent "quebex_symbolic_array") = Just (makeSymbolicArray i)
 findSimFunc ident = lookupSimFunc ident
 
