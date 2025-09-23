@@ -80,10 +80,8 @@ runBinary ::
   v ->
   v ->
   m v
-runBinary ty op lhs rhs = do
-  lhs' <- subTypeE ty lhs
-  rhs' <- subTypeE ty rhs
-  liftMaybe TypingError (op lhs' rhs')
+runBinary ty op lhs rhs =
+  liftMaybe TypingError (op lhs rhs >>= E.subType ty)
 {-# INLINEABLE runBinary #-}
 
 modifyFrame :: (Simulator m v) => (StackFrame v -> StackFrame v) -> m ()

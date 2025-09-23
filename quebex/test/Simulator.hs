@@ -679,6 +679,19 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0),
+      testCase "Compare with long exceeding 32-bit" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $main() {\n\
+              \@start\n\
+              \%r =w cultl 4294967296, 20\n\
+              \ret %r\n\
+              \}"
+
+          res @?= Just (D.VWord 0),
       testCase "Phi instruction" $
         do
           res <-
