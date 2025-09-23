@@ -332,6 +332,7 @@ Read more about these types in the \nameref{sec:aggregate-types}
 and \nameref{sec:functions} sections.
 
 \subsection{Subtyping}
+\label{sec:subtyping}
 
 The IL has a minimal subtyping feature, for integer types only. Any
 value of type \texttt{l} can be used in a \texttt{w} context. In that case, only the
@@ -1169,7 +1170,7 @@ form is to insert a phi instruction.
 \end{verbatim}
 
 Phi instructions return one of their arguments depending on where the control
-came from. In the example, \texttt{%y} is set to 1 if the \texttt{@ift} branch
+came from. In the example, \texttt{\%y} is set to 1 if the \texttt{@ift} branch
 is taken, or it is set to 2 otherwise.
 
 An important remark about phi instructions is that QBE assumes that if a
