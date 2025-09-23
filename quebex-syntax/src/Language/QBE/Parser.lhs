@@ -1069,7 +1069,7 @@ holding the value. This is because aggregate types are not first-class
 citizens of the IL.
 
 Sub-word types are used for arguments and return values of width less than a
-word. Details on these types are presented in the <@ Functions > section.
+word. Details on these types are presented in the \nameref{sec:functions} section.
 Arguments with sub-word types need not be sign or zero extended according to
 their type. Calls with a sub-word return type define a temporary of base type
 \texttt{w} with its most significant bits unspecified.
