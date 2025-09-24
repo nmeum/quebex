@@ -751,6 +751,20 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0xdeadbee0),
+      testCase "Shift with long amount" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "shift")
+              []
+              "function l $shift() {\n\
+              \@start\n\
+              \%r =l shl 2, 4294967300\n\
+              \ret %r\n\
+              \}"
+
+          -- 4294967300 overflows to 4 so this is: 2 << 4.
+          res @?= Just (D.VLong 32),
       testCase "Div instruction with single" $
         do
           res <-

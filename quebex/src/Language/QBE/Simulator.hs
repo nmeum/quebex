@@ -65,6 +65,18 @@ execVolatile (QBE.Blit src dst toCopy) = do
       [0 .. toCopy - 1]
 {-# INLINEABLE execVolatile #-}
 
+execBinaryTy ::
+  (Simulator m v) =>
+  QBE.BaseType ->
+  (v -> v -> Maybe v) ->
+  (QBE.BaseType, QBE.Value) ->
+  (QBE.BaseType, QBE.Value) ->
+  m v
+execBinaryTy retTy op (lty, lhs) (rty, rhs) = do
+  v1 <- lookupValue lty lhs
+  v2 <- lookupValue rty rhs
+  runBinary retTy op v1 v2
+
 execBinary ::
   (Simulator m v) =>
   QBE.BaseType ->
@@ -72,10 +84,20 @@ execBinary ::
   QBE.Value ->
   QBE.Value ->
   m v
-execBinary retTy op lhs rhs = do
-  v1 <- lookupValue retTy lhs
-  v2 <- lookupValue retTy rhs
-  runBinary retTy op v1 v2
+execBinary retTy op lhs rhs =
+  execBinaryTy retTy op (retTy, lhs) (retTy, rhs)
+{-# INLINE execBinary #-}
+
+execShift ::
+  (Simulator m v) =>
+  QBE.BaseType ->
+  (v -> v -> Maybe v) ->
+  QBE.Value ->
+  QBE.Value ->
+  m v
+execShift retTy op lhs amount =
+  execBinaryTy retTy op (retTy, lhs) (QBE.Word, amount)
+{-# INLINE execShift #-}
 
 execInstr :: (Simulator m v) => QBE.BaseType -> QBE.Instr -> m v
 execInstr retTy (QBE.Neg op) = do
@@ -91,9 +113,9 @@ execInstr retTy (QBE.And lhs rhs) = execBinary retTy E.and lhs rhs
 execInstr retTy (QBE.URem lhs rhs) = execBinary retTy E.urem lhs rhs
 execInstr retTy (QBE.Rem lhs rhs) = execBinary retTy E.srem lhs rhs
 execInstr retTy (QBE.UDiv lhs rhs) = execBinary retTy E.udiv lhs rhs
-execInstr retTy (QBE.Sar lhs rhs) = execBinary retTy E.sar lhs rhs
-execInstr retTy (QBE.Shr lhs rhs) = execBinary retTy E.shr lhs rhs
-execInstr retTy (QBE.Shl lhs rhs) = execBinary retTy E.shl lhs rhs
+execInstr retTy (QBE.Sar lhs rhs) = execShift retTy E.sar lhs rhs
+execInstr retTy (QBE.Shr lhs rhs) = execShift retTy E.shr lhs rhs
+execInstr retTy (QBE.Shl lhs rhs) = execShift retTy E.shl lhs rhs
 execInstr retTy (QBE.Load ty addrVal) = do
   addr <- lookupValue QBE.Long addrVal >>= toAddress
   val <- readMemory ty addr
