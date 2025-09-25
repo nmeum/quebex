@@ -2,6 +2,7 @@
 --
 -- SPDX-License-Identifier: MIT AND GPL-3.0-only
 
+{-# LANGUAGE PatternSynonyms #-}
 module SimpleBV
   ( SExpr,
     SMT.Solver,
@@ -29,6 +30,9 @@ data SExpr
     sexpr :: SMT.SExpr
   }
 
+pattern SMT :: SMT.SExpr -> SExpr
+pattern SMT expr <- SExpr { sexpr = expr }
+
 declare :: SMT.Solver -> String -> SExpr -> IO SMT.SExpr
 declare solver name = SMT.declare solver name . sexpr
 
@@ -37,8 +41,11 @@ bvHex width value = SExpr width (SMT.bvHex width value)
 
 ------------------------------------------------------------------------
 
+pattern NotExpr :: SMT.SExpr -> SMT.SExpr
+pattern NotExpr cond = SMT.List [SMT.Atom "not", cond]
+
 not :: SExpr -> SExpr
-not v@(SExpr {sexpr = (SMT.List [SMT.Atom "not", cond])}) = v {sexpr = cond}
+not v@(SMT (NotExpr cond)) = v {sexpr = cond}
 not expr = expr {sexpr = SMT.not (sexpr expr)}
 
 ------------------------------------------------------------------------
