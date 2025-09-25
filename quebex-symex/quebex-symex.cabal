@@ -37,6 +37,7 @@ library
       simple-smt
 
     exposed-modules:
+      SimpleBV,
       Language.QBE.Backend,
       Language.QBE.Backend.Model,
       Language.QBE.Backend.Store,
