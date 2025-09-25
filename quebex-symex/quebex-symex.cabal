@@ -37,6 +37,7 @@ library
       simple-smt
 
     exposed-modules:
+      SimpleBV,
       Language.QBE.Backend,
       Language.QBE.Backend.Model,
       Language.QBE.Backend.Store,
@@ -86,6 +87,7 @@ test-suite quebex-symex-test
       Explorer,
       Symbolic,
       Concolic,
+      BV
 
     build-depends:
         base,

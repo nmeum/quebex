@@ -14,7 +14,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
@@ -34,7 +34,7 @@ getSolver = do
 eqConcrete :: Maybe SE.BitVector -> Maybe DE.RegVal -> IO Bool
 eqConcrete (Just sym) (Just con) = do
   s <- getSolver
-  symVal <- SMT.getExpr s (SE.toSExpr sym)
+  symVal <- SMT.getValue s (SE.toSExpr sym)
   case (symVal, con) of
     (SMT.Bits 32 sv, DE.VWord cv) -> pure $ sv == fromIntegral cv
     (SMT.Bits 64 sv, DE.VLong cv) -> pure $ sv == fromIntegral cv
@@ -113,7 +113,7 @@ storeTests =
         do
           s <- getSolver
           let bytes = (MEM.toBytes (E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector) :: [SE.BitVector])
-          values <- mapM (SMT.getExpr s . SE.toSExpr) bytes
+          values <- mapM (SMT.getValue s . SE.toSExpr) bytes
           values @?= [SMT.Bits 8 0xef, SMT.Bits 8 0xbe, SMT.Bits 8 0xad, SMT.Bits 8 0xde],
       testCase "Convert bitvector to bytes and back" $
         do
@@ -123,7 +123,7 @@ storeTests =
           length bytes @?= 4
 
           value <- case MEM.fromBytes (QBE.LBase QBE.Word) bytes of
-            Just x -> SMT.getExpr s (SE.toSExpr x) <&> Just
+            Just x -> SMT.getValue s (SE.toSExpr x) <&> Just
             Nothing -> pure Nothing
           value @?= Just (SMT.Bits 32 0xdeadbeef)
     ]
@@ -139,7 +139,7 @@ valueReprTests =
           let v1 = E.fromLit (QBE.Base QBE.Word) 127
           let v2 = E.fromLit (QBE.Base QBE.Word) 128
 
-          expr <- SMT.getExpr s (SE.toSExpr $ fromJust $ v1 `E.add` v2)
+          expr <- SMT.getValue s (SE.toSExpr $ fromJust $ v1 `E.add` v2)
           expr @?= SMT.Bits 32 0xff,
       testCase "Add incompatible values" $
         do
@@ -156,15 +156,15 @@ valueReprTests =
           let v2 = E.fromLit (QBE.Base QBE.Long) 0xff :: SE.BitVector
 
           let v1sub = fromJust $ E.subType QBE.Word v1
-          v1sub' <- SMT.getExpr s (SE.toSExpr v1sub)
+          v1sub' <- SMT.getValue s (SE.toSExpr v1sub)
           v1sub' @?= SMT.Bits 32 0xdeadbeef
 
           let v2sub = fromJust $ E.subType QBE.Word v2
-          v2sub' <- SMT.getExpr s (SE.toSExpr v2sub)
+          v2sub' <- SMT.getValue s (SE.toSExpr v2sub)
           v2sub' @?= SMT.Bits 32 0xff
 
           let subtypedAddExpr = v1sub `E.add` v2sub
-          expr <- SMT.getExpr s (SE.toSExpr (fromJust subtypedAddExpr))
+          expr <- SMT.getValue s (SE.toSExpr (fromJust subtypedAddExpr))
 
           expr @?= SMT.Bits 32 0xdeadbfee,
       testCase "Extend subwords" $
@@ -174,11 +174,11 @@ valueReprTests =
           let value = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
 
           -- let sext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.SignedByte) value
-          -- sextVal <- SMT.getExpr s (SE.toSExpr sext)
+          -- sextVal <- SMT.getValue s (SE.toSExpr sext)
           -- sextVal @?= SMT.Bits 64 0xffffffffffffffef
 
           let zext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.UnsignedByte) value
-          zextVal <- SMT.getExpr s (SE.toSExpr zext)
+          zextVal <- SMT.getValue s (SE.toSExpr zext)
           zextVal @?= SMT.Bits 64 0xef
     ]
 

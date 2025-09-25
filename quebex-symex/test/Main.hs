@@ -4,6 +4,7 @@
 
 module Main (main) where
 
+import BV (bvTests)
 import Backend (backendTests)
 import Concolic qualified as CE
 import Explorer (exploreTests)
@@ -22,5 +23,6 @@ tests =
       CE.exprTests,
       backendTests,
       exploreTests,
-      goldenTests
+      goldenTests,
+      bvTests
     ]
