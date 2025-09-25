@@ -12,6 +12,7 @@ module SimpleBV
     -- SMT.newSolver,
     -- SMT.newSolverWithConfig,
     toSMT,
+    ite,
     not,
     eq,
     bvHex,
@@ -25,6 +26,7 @@ where
 
 -- import Control.Exception (assert)
 
+import Control.Exception (assert)
 import Data.Bits (shiftL, shiftR, (.&.))
 import SimpleSMT qualified as SMT
 import Prelude hiding (concat, const, not)
@@ -80,7 +82,12 @@ const name width = SExpr width (Var name)
 bvHex :: Int -> Integer -> SExpr
 bvHex width value = SExpr width (Int value)
 
--- ------------------------------------------------------------------------
+---------------------------------------------------------------------------
+
+ite :: SExpr -> SExpr -> SExpr -> SExpr
+ite cond ifT ifF =
+  assert (width ifT == width ifF) $
+    SExpr (width ifT) (Ite cond ifT ifF)
 
 not :: SExpr -> SExpr
 not (E (Not cond)) = cond
@@ -112,15 +119,21 @@ concat
 concat lhs rhs = concat' lhs rhs
 
 extract' :: SExpr -> Int -> Int -> SExpr
-extract' expr off w = SExpr (width expr - w) $ Extract off w expr
+extract' expr off w = SExpr w $ Extract off w expr
 
--- Eliminate nested extract expression fo the same width.
+-- Eliminate extract expression where the value already has the desired bits.
+extractSameWidth :: SExpr -> Int -> Int -> SExpr
+extractSameWidth expr off w
+  | off == 0 && width expr == w = expr
+  | otherwise = extract' expr off w
+
+-- Eliminate nested extract expression of the same width.
 extractNested :: SExpr -> Int -> Int -> SExpr
 extractNested expr@(E (Extract ioff iwidth _)) off width =
   if ioff == off && iwidth == width
     then expr
-    else extract' expr off width
-extractNested expr off width = extract' expr off width
+    else extractSameWidth expr off width
+extractNested expr off width = extractSameWidth expr off width
 
 -- Performs direct extractions of constant immediate values.
 extractConst :: SExpr -> Int -> Int -> SExpr
@@ -133,9 +146,9 @@ extractConst expr off width = extractNested expr off width
 -- This performs constant propagation for subtyping of condition values (i.e.
 -- the conversion from long to word).
 extractIte :: SExpr -> Int -> Int -> SExpr
-extractIte expr@(E (Ite cond ifT@(E (Int _)) ifF@(E (Int _)))) off w =
+extractIte (E (Ite cond ifT@(E (Int _)) ifF@(E (Int _)))) off w =
   let ex x = extractConst x off w
-   in SExpr (width expr - w) $ Ite cond (ex ifT) (ex ifF)
+   in SExpr w $ Ite cond (ex ifT) (ex ifF)
 extractIte expr off width = extractConst expr off width
 
 extract :: SExpr -> Int -> Int -> SExpr
