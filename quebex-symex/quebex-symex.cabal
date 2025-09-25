@@ -87,6 +87,7 @@ test-suite quebex-symex-test
       Explorer,
       Symbolic,
       Concolic,
+      BV
 
     build-depends:
         base,
