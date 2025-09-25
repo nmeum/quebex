@@ -22,8 +22,8 @@ module SimpleBV
 where
 
 -- import Control.Exception (assert)
--- import SimpleSMT qualified as SMT
--- import Prelude hiding (concat, not)
+import SimpleSMT qualified as SMT
+import Prelude hiding (concat, not)
 
 -- TODO https://gitlab.haskell.org/ghc/ghc/-/wikis/pattern-synonyms
 
@@ -35,9 +35,12 @@ where
 
 data Expr a
   = Var String
+  | Int Integer
   | Not a
   | Eq a a
+  | Add a a
   | Concat a a
+  | Ite a a a
   | Extract Int Int a
   deriving (Show, Eq)
 
@@ -47,6 +50,15 @@ data SExpr
     sexpr :: Expr SExpr
   }
   deriving (Show, Eq)
+
+-- TODO: view patterns
+toSMT :: SExpr -> SMT.SExpr
+toSMT (E (Var name)) = SMT.const name
+toSMT SExpr { width = w, sexpr = Int v } = SMT.bvHex w v
+toSMT (E (Not v)) = SMT.not (toSMT v)
+toSMT (E (Eq lhs rhs)) = SMT.eq (toSMT lhs) (toSMT rhs)
+toSMT (E (Concat lhs rhs)) = SMT.concat (toSMT lhs) (toSMT rhs)
+toSMT (E (Extract _off _width _expr)) = error "unimplemented"
 
 -- boolWidth :: Int
 -- boolWidth = 1
@@ -60,49 +72,36 @@ const name width = SExpr width (Var name)
 --
 -- declare :: SMT.Solver -> String -> SExpr -> IO SMT.SExpr
 -- declare solver name = SMT.declare solver name . sexpr
---
--- bvHex :: Int -> Integer -> SExpr
--- bvHex width value = SExpr width (SMT.bvHex width value)
---
--- sexprToVal :: SExpr -> SMT.Value
--- sexprToVal = SMT.sexprToVal . sexpr
---
+
+bvHex :: Int -> Integer -> SExpr
+bvHex width value = SExpr width (Int value)
+
 -- ------------------------------------------------------------------------
---
--- pattern NotExpr :: SMT.SExpr -> SMT.SExpr
--- pattern NotExpr cond = SMT.List [SMT.Atom "not", cond]
---
+
 not :: SExpr -> SExpr
 not (E (Not cond)) = cond
 not expr = expr {sexpr = Not (expr)}
---
--- pattern IteExpr :: SMT.SExpr -> SMT.SExpr -> SMT.SExpr -> SMT.SExpr
--- pattern IteExpr cond ifT ifF = SMT.List [SMT.Atom "ite", cond, ifT, ifF]
---
--- -- Eliminates ITE expressions when comparing with constants values, this is
--- -- useful in the QBE context to eliminate comparisons with truth values.
--- eq :: SExpr -> SExpr -> SExpr
--- eq (SMT expr@(IteExpr cond ifT ifF)) (SMT o) =
---   SExpr boolWidth $ case (SMT.sexprToVal ifT, SMT.sexprToVal ifF, SMT.sexprToVal o) of
---     -- XXX: bit sizes must be equal, otherwise it would be invalid SMT-LIB.
---     (SMT.Bits _ tv, SMT.Bits _ fv, SMT.Bits _ ov) ->
---       if ov == tv
---         then cond
---         else
---           if ov == fv
---             then SMT.not cond
---             else SMT.eq expr o
---     _ -> SMT.eq expr o
--- eq lhs rhs = lhs {sexpr = SMT.eq (sexpr lhs) (sexpr rhs)}
---
--- pattern ExtractExpr :: SMT.SExpr -> SMT.SExpr -> SMT.SExpr -> SMT.SExpr
--- pattern ExtractExpr expr lowerBound upperBound =
---   SMT.List [SMT.List [SMT.Atom "_", SMT.Atom "extract", upperBound, lowerBound], expr]
---
+
+eq' :: SExpr -> SExpr -> SExpr
+eq' lhs rhs = lhs { sexpr = Eq lhs rhs }
+
+-- Eliminates ITE expressions when comparing with constants values, this is
+-- useful in the QBE context to eliminate comparisons with truth values.
+eq :: SExpr -> SExpr -> SExpr
+eq lexpr@(E (Ite cond (E (Int ifT)) (E (Int ifF)))) rexpr@(E (Int other)) =
+  if other == ifT
+    then cond
+    else
+      if other == ifF
+        then not cond
+        else eq' lexpr rexpr
+eq lhs rhs = eq' lhs rhs
+
 concat' :: SExpr -> SExpr -> SExpr
 concat' lhs rhs =
   SExpr (width lhs + width rhs) $ Concat lhs rhs
 
+-- Replaces continuous concat expressions with a single extract expression.
 concat :: SExpr -> SExpr -> SExpr
 concat
   lhs@(E (Extract loff lwidth latom@(E (Var varLhs))))
@@ -122,7 +121,5 @@ extract expr off w = SExpr (width expr - w) $ Extract off w expr
 --
 -- ------------------------------------------------------------------------
 --
--- bvAdd :: SExpr -> SExpr -> SExpr
--- bvAdd x y =
---   assert (width x == width y) $
---     x {sexpr = SMT.bvAdd (sexpr x) (sexpr y)}
+bvAdd :: SExpr -> SExpr -> SExpr
+bvAdd x y = x {sexpr = Add x y}
