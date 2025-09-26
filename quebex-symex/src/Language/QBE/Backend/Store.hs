@@ -20,7 +20,7 @@ import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 import System.Random (StdGen, genWord64, initStdGen)
 
 -- | Concrete variable assignment.

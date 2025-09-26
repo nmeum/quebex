@@ -19,7 +19,7 @@ import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 parseProg :: String -> IO Program
 parseProg input =

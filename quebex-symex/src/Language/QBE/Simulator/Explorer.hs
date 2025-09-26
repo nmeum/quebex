@@ -16,7 +16,7 @@ import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, run)
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 import System.IO (Handle)
 
 logic :: String

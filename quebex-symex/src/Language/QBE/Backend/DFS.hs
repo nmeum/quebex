@@ -15,7 +15,7 @@ import Control.Applicative ((<|>))
 import Language.QBE.Backend.ExecTree (BTree (..), ExecTree, addTrace, mkTree)
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Backend.Tracer (Branch (..), ExecTrace, solveTrace)
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 -- The 'PathSel' encapsulates data for the Dynamic Symbolic Execution (DSE)
 -- algorithm. Specifically for path selection and incremental solving.

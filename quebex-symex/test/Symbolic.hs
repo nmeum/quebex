@@ -14,7 +14,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck

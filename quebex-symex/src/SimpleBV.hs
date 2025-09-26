@@ -11,6 +11,8 @@ module SimpleBV
     SMT.newLoggerWithHandle,
     SMT.newSolver,
     SMT.newSolverWithConfig,
+    SMT.solverLogger,
+    SMT.smtSolverLogger,
     SMT.setLogic,
     SMT.push,
     SMT.pop,
@@ -18,8 +20,11 @@ module SimpleBV
     SMT.check,
     SMT.Result (..),
     SMT.Value (..),
+    SMT.declare, -- TODO: remove
+    SMT.tBits, -- TODO: remove
     assert,
     sexprToVal,
+    getValues,
     toSMT,
     ite,
     and,
@@ -141,6 +146,14 @@ sexprToVal = SMT.sexprToVal . toSMT -- TODO: avoid toSMT
 
 assert :: SMT.Solver -> SExpr -> IO ()
 assert solver = SMT.assert solver . toSMT
+
+getValues :: SMT.Solver -> [SExpr] -> IO [(String, SMT.Value)]
+getValues solver exprs = do
+  map go <$> SMT.getExprs solver (map toSMT exprs)
+  where
+    go :: (SMT.SExpr, SMT.Value) -> (String, SMT.Value)
+    go (SMT.Atom name, value) = (name, value)
+    go _ = error "non-atomic variable in inputVars"
 
 ---------------------------------------------------------------------------
 

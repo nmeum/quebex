@@ -17,13 +17,7 @@ newtype Model = Model [(String, SMT.Value)]
 
 -- | Get a new 'Model' for a list of input variables that should be contained in it.
 getModel :: SMT.Solver -> [SMT.SExpr] -> IO Model
-getModel solver inputVars = do
-  lst <- SMT.getExprs solver inputVars >>= mapM go
-  pure $ Model lst
-  where
-    go :: (SMT.SExpr, SMT.Value) -> IO (String, SMT.Value)
-    go (SMT.Atom name, value) = pure (name, value)
-    go _ = error "non-atomic variable in inputVars"
+getModel solver inputVars = Model <$> SMT.getValues solver inputVars
 
 -- | Convert a model to a list of concrete variable assignments.
 toList :: Model -> [(String, DE.RegVal)]
