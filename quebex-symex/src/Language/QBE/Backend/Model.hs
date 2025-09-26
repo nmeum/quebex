@@ -9,7 +9,7 @@ module Language.QBE.Backend.Model
 where
 
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 -- Assignments returned by the Solver for a given query.
 newtype Model = Model [(String, SMT.Value)]

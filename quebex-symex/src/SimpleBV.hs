@@ -17,11 +17,16 @@ module SimpleBV
     SMT.popMany,
     SMT.check,
     SMT.Result (..),
+    SMT.Value (..),
+    assert,
+    sexprToVal,
     toSMT,
     ite,
+    and,
+    or,
     not,
     eq,
-    bvHex,
+    bvBin,
     bvAdd,
     bvAShr,
     bvLShr,
@@ -43,50 +48,45 @@ module SimpleBV
     concat,
     extract,
     const,
+    signExtend,
+    zeroExtend,
   )
 where
 
--- import Control.Exception (assert)
-
-import Control.Exception (assert)
 import Data.Bits (shiftL, shiftR, (.&.))
 import SimpleSMT qualified as SMT
-import Prelude hiding (concat, const, not)
-
--- TODO
-
--- * Tests for expression eliminiation
-
--- * Cover the whole API
-
--- * view patterns
+import Prelude hiding (and, concat, const, not, or)
 
 data Expr a
   = Var String
   | Int Integer
+  | And a a
+  | Or a a
   | Neg a
   | Not a
   | Eq a a
-  | Add a a
-  | AShr a a
-  | LShr a a
-  | And a a
-  | Mul a a
-  | Or a a
-  | SDiv a a
-  | SLeq a a
-  | SLt a a
-  | SRem a a
-  | Shl a a
-  | Sub a a
-  | UDiv a a
-  | ULeq a a
-  | ULt a a
-  | URem a a
-  | XOr a a
+  | BvAdd a a
+  | BvAShr a a
+  | BvLShr a a
+  | BvAnd a a
+  | BvMul a a
+  | BvOr a a
+  | BvSDiv a a
+  | BvSLeq a a
+  | BvSLt a a
+  | BvSRem a a
+  | BvShl a a
+  | BvSub a a
+  | BvUDiv a a
+  | BvULeq a a
+  | BvULt a a
+  | BvURem a a
+  | BvXOr a a
   | Concat a a
   | Ite a a a
   | Extract Int Int a
+  | SignExtend Integer a
+  | ZeroExtend Integer a
   deriving (Show, Eq)
 
 data SExpr
@@ -99,25 +99,27 @@ data SExpr
 -- TODO: view patterns
 toSMT :: SExpr -> SMT.SExpr
 toSMT (E (Var name)) = SMT.const name
-toSMT SExpr {width = w, sexpr = Int v} = SMT.bvHex w v
+toSMT SExpr {width = w, sexpr = Int v} = SMT.bvBin w v
+toSMT (E (Or lhs rhs)) = SMT.or (toSMT lhs) (toSMT rhs)
+toSMT (E (And lhs rhs)) = SMT.and (toSMT lhs) (toSMT rhs)
 toSMT (E (Not v)) = SMT.not (toSMT v)
 toSMT (E (Neg v)) = SMT.bvNeg (toSMT v)
 toSMT (E (Eq lhs rhs)) = SMT.eq (toSMT lhs) (toSMT rhs)
 toSMT (E (Concat lhs rhs)) = SMT.concat (toSMT lhs) (toSMT rhs)
 toSMT (E (Extract _off _width _expr)) = error "unimplemented"
-toSMT (E (Mul lhs rhs)) = SMT.bvMul (toSMT lhs) (toSMT rhs)
-toSMT (E (Or lhs rhs)) = SMT.bvOr (toSMT lhs) (toSMT rhs)
-toSMT (E (SDiv lhs rhs)) = SMT.bvSDiv (toSMT lhs) (toSMT rhs)
-toSMT (E (SLeq lhs rhs)) = SMT.bvSLeq (toSMT lhs) (toSMT rhs)
-toSMT (E (SLt lhs rhs)) = SMT.bvSLt (toSMT lhs) (toSMT rhs)
-toSMT (E (SRem lhs rhs)) = SMT.bvSRem (toSMT lhs) (toSMT rhs)
-toSMT (E (Shl lhs rhs)) = SMT.bvShl (toSMT lhs) (toSMT rhs)
-toSMT (E (Sub lhs rhs)) = SMT.bvSub (toSMT lhs) (toSMT rhs)
-toSMT (E (UDiv lhs rhs)) = SMT.bvUDiv (toSMT lhs) (toSMT rhs)
-toSMT (E (ULeq lhs rhs)) = SMT.bvULeq (toSMT lhs) (toSMT rhs)
-toSMT (E (ULt lhs rhs)) = SMT.bvULt (toSMT lhs) (toSMT rhs)
-toSMT (E (URem lhs rhs)) = SMT.bvURem (toSMT lhs) (toSMT rhs)
-toSMT (E (XOr lhs rhs)) = SMT.bvXOr (toSMT lhs) (toSMT rhs)
+toSMT (E (BvMul lhs rhs)) = SMT.bvMul (toSMT lhs) (toSMT rhs)
+toSMT (E (BvOr lhs rhs)) = SMT.bvOr (toSMT lhs) (toSMT rhs)
+toSMT (E (BvSDiv lhs rhs)) = SMT.bvSDiv (toSMT lhs) (toSMT rhs)
+toSMT (E (BvSLeq lhs rhs)) = SMT.bvSLeq (toSMT lhs) (toSMT rhs)
+toSMT (E (BvSLt lhs rhs)) = SMT.bvSLt (toSMT lhs) (toSMT rhs)
+toSMT (E (BvSRem lhs rhs)) = SMT.bvSRem (toSMT lhs) (toSMT rhs)
+toSMT (E (BvShl lhs rhs)) = SMT.bvShl (toSMT lhs) (toSMT rhs)
+toSMT (E (BvSub lhs rhs)) = SMT.bvSub (toSMT lhs) (toSMT rhs)
+toSMT (E (BvUDiv lhs rhs)) = SMT.bvUDiv (toSMT lhs) (toSMT rhs)
+toSMT (E (BvULeq lhs rhs)) = SMT.bvULeq (toSMT lhs) (toSMT rhs)
+toSMT (E (BvULt lhs rhs)) = SMT.bvULt (toSMT lhs) (toSMT rhs)
+toSMT (E (BvURem lhs rhs)) = SMT.bvURem (toSMT lhs) (toSMT rhs)
+toSMT (E (BvXOr lhs rhs)) = SMT.bvXOr (toSMT lhs) (toSMT rhs)
 
 boolWidth :: Int
 boolWidth = 1
@@ -131,19 +133,29 @@ const name width = SExpr width (Var name)
 -- declare :: SMT.Solver -> String -> SExpr -> IO SMT.SExpr
 -- declare solver name = SMT.declare solver name . sexpr
 
-bvHex :: Int -> Integer -> SExpr
-bvHex width value = SExpr width (Int value)
+bvBin :: Int -> Integer -> SExpr
+bvBin width value = SExpr width (Int value)
+
+sexprToVal :: SExpr -> SMT.Value
+sexprToVal = SMT.sexprToVal . toSMT -- TODO: avoid toSMT
+
+assert :: SMT.Solver -> SExpr -> IO ()
+assert solver = SMT.assert solver . toSMT
 
 ---------------------------------------------------------------------------
 
 ite :: SExpr -> SExpr -> SExpr -> SExpr
-ite cond ifT ifF =
-  assert (width ifT == width ifF) $
-    SExpr (width ifT) (Ite cond ifT ifF)
+ite cond ifT ifF = SExpr (width ifT) (Ite cond ifT ifF)
 
 not :: SExpr -> SExpr
 not (E (Not cond)) = cond
 not expr = expr {sexpr = Not expr}
+
+and :: SExpr -> SExpr -> SExpr
+and lhs rhs = lhs {sexpr = And lhs rhs}
+
+or :: SExpr -> SExpr -> SExpr
+or lhs rhs = lhs {sexpr = Or lhs rhs}
 
 eq' :: SExpr -> SExpr -> SExpr
 eq' lhs rhs = SExpr boolWidth $ Eq lhs rhs
@@ -206,7 +218,15 @@ extractIte expr off width = extractConst expr off width
 extract :: SExpr -> Int -> Int -> SExpr
 extract = extractIte
 
----------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+signExtend :: Integer -> SExpr -> SExpr
+signExtend n expr = SExpr (width expr + fromIntegral n) $ SignExtend n expr
+
+zeroExtend :: Integer -> SExpr -> SExpr
+zeroExtend n expr = SExpr (width expr + fromIntegral n) $ ZeroExtend n expr
+
+------------------------------------------------------------------------
 
 bvNeg :: SExpr -> SExpr
 bvNeg x = x {sexpr = Neg x}
@@ -214,52 +234,52 @@ bvNeg x = x {sexpr = Neg x}
 -- TODO: template-haskell
 
 bvAdd :: SExpr -> SExpr -> SExpr
-bvAdd x y = x {sexpr = Add x y}
+bvAdd x y = x {sexpr = BvAdd x y}
 
 bvAShr :: SExpr -> SExpr -> SExpr
-bvAShr x y = x {sexpr = AShr x y}
+bvAShr x y = x {sexpr = BvAShr x y}
 
 bvLShr :: SExpr -> SExpr -> SExpr
-bvLShr x y = x {sexpr = LShr x y}
+bvLShr x y = x {sexpr = BvLShr x y}
 
 bvAnd :: SExpr -> SExpr -> SExpr
-bvAnd x y = x {sexpr = And x y}
+bvAnd x y = x {sexpr = BvAnd x y}
 
 bvMul :: SExpr -> SExpr -> SExpr
-bvMul x y = x {sexpr = Mul x y}
+bvMul x y = x {sexpr = BvMul x y}
 
 bvOr :: SExpr -> SExpr -> SExpr
-bvOr x y = x {sexpr = Or x y}
+bvOr x y = x {sexpr = BvOr x y}
 
 bvSDiv :: SExpr -> SExpr -> SExpr
-bvSDiv x y = x {sexpr = SDiv x y}
+bvSDiv x y = x {sexpr = BvSDiv x y}
 
 bvSLeq :: SExpr -> SExpr -> SExpr
-bvSLeq x y = x {sexpr = SLeq x y}
+bvSLeq x y = x {sexpr = BvSLeq x y}
 
 bvSLt :: SExpr -> SExpr -> SExpr
-bvSLt x y = x {sexpr = SLt x y}
+bvSLt x y = x {sexpr = BvSLt x y}
 
 bvSRem :: SExpr -> SExpr -> SExpr
-bvSRem x y = x {sexpr = SRem x y}
+bvSRem x y = x {sexpr = BvSRem x y}
 
 bvShl :: SExpr -> SExpr -> SExpr
-bvShl x y = x {sexpr = Shl x y}
+bvShl x y = x {sexpr = BvShl x y}
 
 bvSub :: SExpr -> SExpr -> SExpr
-bvSub x y = x {sexpr = Sub x y}
+bvSub x y = x {sexpr = BvSub x y}
 
 bvUDiv :: SExpr -> SExpr -> SExpr
-bvUDiv x y = x {sexpr = UDiv x y}
+bvUDiv x y = x {sexpr = BvUDiv x y}
 
 bvULeq :: SExpr -> SExpr -> SExpr
-bvULeq x y = x {sexpr = ULeq x y}
+bvULeq x y = x {sexpr = BvULeq x y}
 
 bvULt :: SExpr -> SExpr -> SExpr
-bvULt x y = x {sexpr = ULt x y}
+bvULt x y = x {sexpr = BvULt x y}
 
 bvURem :: SExpr -> SExpr -> SExpr
-bvURem x y = x {sexpr = URem x y}
+bvURem x y = x {sexpr = BvURem x y}
 
 bvXOr :: SExpr -> SExpr -> SExpr
-bvXOr x y = x {sexpr = XOr x y}
+bvXOr x y = x {sexpr = BvXOr x y}

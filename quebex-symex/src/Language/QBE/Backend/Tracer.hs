@@ -20,7 +20,7 @@ import Control.Exception (throwIO)
 import Language.QBE.Backend (SolverError (UnknownResult), prefixLength)
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 -- Represents a branch condition in the executed code
 data Branch

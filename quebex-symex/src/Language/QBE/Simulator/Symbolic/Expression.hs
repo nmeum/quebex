@@ -19,9 +19,8 @@ import Data.Word (Word64, Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
-import Language.QBE.Simulator.Symbolic.Folding qualified as F
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 -- This types supports more than just the 'QBE.BaseType' to ease the
 -- implementation of the 'MEM.Storable' type class. Essentially, this
@@ -55,7 +54,7 @@ toSExpr :: BitVector -> SMT.SExpr
 toSExpr = sexpr
 
 symbolic :: String -> QBE.ExtType -> BitVector
-symbolic name = BitVector (SMT.const name)
+symbolic name ty = BitVector (SMT.const name $ QBE.extTypeBitSize ty) ty
 
 bitSize :: BitVector -> Int
 bitSize = QBE.extTypeBitSize . qtype
@@ -69,8 +68,8 @@ toCond isTrue BitVector {sexpr = s, qtype = ty} =
      in toCond' s zeroSExpr
   where
     toCond' lhs rhs
-      | isTrue = F.notExpr (F.eqExpr lhs rhs) -- /= 0
-      | otherwise = F.eqExpr lhs rhs -- == 0
+      | isTrue = SMT.not (SMT.eq lhs rhs) -- /= 0
+      | otherwise = SMT.eq lhs rhs -- == 0
 
 ------------------------------------------------------------------------
 
@@ -83,7 +82,7 @@ instance MEM.Storable BitVector BitVector where
       size = fromIntegral $ QBE.extTypeBitSize ty
 
       nthByte :: SMT.SExpr -> Int -> SMT.SExpr
-      nthByte expr n = F.extractExpr expr ((n - 1) * 8) 8
+      nthByte expr n = SMT.extract expr ((n - 1) * 8) 8
 
   fromBytes _ [] = Nothing
   fromBytes ty bytes@(BitVector {sexpr = s} : xs) =
@@ -114,7 +113,7 @@ instance MEM.Storable BitVector BitVector where
       concatBV :: SMT.SExpr -> BitVector -> SMT.SExpr
       concatBV acc byte =
         assert (qtype byte == QBE.Byte) $
-          F.concatExpr (sexpr byte) acc
+          SMT.concat (sexpr byte) acc
 
 ------------------------------------------------------------------------
 
@@ -167,13 +166,13 @@ instance E.ValueRepr BitVector where
       _ -> error "unrechable"
 
   wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 56 (F.extractExpr s 0 8)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 0 8)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 56 (F.extractExpr s 0 8)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 0 8)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.signExtend 48 (F.extractExpr s 0 16)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 0 16)) (QBE.Base QBE.Long)
   wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
-    Just $ BitVector (SMT.zeroExtend 48 (F.extractExpr s 0 16)) (QBE.Base QBE.Long)
+    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 0 16)) (QBE.Base QBE.Long)
   wordToLong QBE.SLSignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
     Just $ BitVector (SMT.signExtend 32 s) (QBE.Base QBE.Long)
   wordToLong QBE.SLUnsignedWord (BitVector {sexpr = s, qtype = QBE.Base QBE.Word}) =
@@ -182,7 +181,7 @@ instance E.ValueRepr BitVector where
 
   subType QBE.Word v@(BitVector {qtype = QBE.Base QBE.Word}) = Just v
   subType QBE.Word (BitVector {qtype = QBE.Base QBE.Long, sexpr = s}) =
-    Just $ BitVector (F.extractExpr s 0 32) (QBE.Base QBE.Word)
+    Just $ BitVector (SMT.extract s 0 32) (QBE.Base QBE.Word)
   subType QBE.Long v@(BitVector {qtype = QBE.Base QBE.Long}) = Just v
   subType QBE.Single v@(BitVector {qtype = QBE.Base QBE.Single}) = Just v
   subType QBE.Double v@(BitVector {qtype = QBE.Base QBE.Double}) = Just v
@@ -205,13 +204,13 @@ instance E.ValueRepr BitVector where
   shr = shiftOp SMT.bvLShr
   shl = shiftOp SMT.bvShl
 
-  eq = binaryBoolOp F.eqExpr
-  ne = binaryBoolOp (\lhs rhs -> F.notExpr $ F.eqExpr lhs rhs)
+  eq = binaryBoolOp SMT.eq
+  ne = binaryBoolOp (\lhs rhs -> SMT.not $ SMT.eq lhs rhs)
   sle = binaryBoolOp SMT.bvSLeq
   slt = binaryBoolOp SMT.bvSLt
   sge = binaryBoolOp (flip SMT.bvSLeq)
   sgt = binaryBoolOp (flip SMT.bvSLt)
   ule = binaryBoolOp SMT.bvULeq
   ult = binaryBoolOp SMT.bvULt
-  uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (F.eqExpr lhs rhs))
+  uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (SMT.eq lhs rhs))
   ugt = binaryBoolOp (flip SMT.bvULt)
