@@ -24,6 +24,7 @@ module SimpleBV
     SMT.tBits, -- TODO: remove
     assert,
     sexprToVal,
+    getValue,
     getValues,
     toSMT,
     ite,
@@ -154,6 +155,9 @@ sexprToVal = SMT.sexprToVal . toSMT -- TODO: avoid toSMT
 
 assert :: SMT.Solver -> SExpr -> IO ()
 assert solver = SMT.assert solver . toSMT
+
+getValue :: SMT.Solver -> SExpr -> IO SMT.Value
+getValue solver = SMT.getExpr solver . toSMT
 
 getValues :: SMT.Solver -> [SExpr] -> IO [(String, SMT.Value)]
 getValues solver exprs = do

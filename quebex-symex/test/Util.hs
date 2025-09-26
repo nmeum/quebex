@@ -43,8 +43,11 @@ parseAndExec funcName params input = do
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
+  let symbolic = SE.fromSExpr ty $ SMT.const name (QBE.baseTypeBitSize ty)
+
+  -- TODO: remove this
   let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
-  symbolic <- SE.fromSExpr ty <$> SMT.declare solver name bits
+  _ <- SMT.declare solver name bits
 
   let concrete = E.fromLit (QBE.Base ty) initCon
   pure $ CE.Concolic concrete (Just symbolic)

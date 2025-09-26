@@ -41,7 +41,7 @@ empty =
   -- TODO: Make seed configurable
   Store Map.empty Map.empty Map.empty <$> initStdGen
 
--- | Obtain symbolic values as a list of 'SimpleSMT' expressions.
+-- | Obtain symbolic values as a list of 'SimpleBV' expressions.
 sexprs :: Store -> [SMT.SExpr]
 sexprs = map SE.toSExpr . Map.elems . sValues
 
