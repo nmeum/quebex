@@ -101,30 +101,38 @@ data SExpr
   }
   deriving (Show, Eq)
 
--- TODO: view patterns
 toSMT :: SExpr -> SMT.SExpr
-toSMT (E (Var name)) = SMT.const name
-toSMT SExpr {width = w, sexpr = Int v} = SMT.bvBin w v
-toSMT (E (Or lhs rhs)) = SMT.or (toSMT lhs) (toSMT rhs)
-toSMT (E (And lhs rhs)) = SMT.and (toSMT lhs) (toSMT rhs)
-toSMT (E (Not v)) = SMT.not (toSMT v)
-toSMT (E (Neg v)) = SMT.bvNeg (toSMT v)
-toSMT (E (Eq lhs rhs)) = SMT.eq (toSMT lhs) (toSMT rhs)
-toSMT (E (Concat lhs rhs)) = SMT.concat (toSMT lhs) (toSMT rhs)
-toSMT (E (Extract _off _width _expr)) = error "unimplemented"
-toSMT (E (BvMul lhs rhs)) = SMT.bvMul (toSMT lhs) (toSMT rhs)
-toSMT (E (BvOr lhs rhs)) = SMT.bvOr (toSMT lhs) (toSMT rhs)
-toSMT (E (BvSDiv lhs rhs)) = SMT.bvSDiv (toSMT lhs) (toSMT rhs)
-toSMT (E (BvSLeq lhs rhs)) = SMT.bvSLeq (toSMT lhs) (toSMT rhs)
-toSMT (E (BvSLt lhs rhs)) = SMT.bvSLt (toSMT lhs) (toSMT rhs)
-toSMT (E (BvSRem lhs rhs)) = SMT.bvSRem (toSMT lhs) (toSMT rhs)
-toSMT (E (BvShl lhs rhs)) = SMT.bvShl (toSMT lhs) (toSMT rhs)
-toSMT (E (BvSub lhs rhs)) = SMT.bvSub (toSMT lhs) (toSMT rhs)
-toSMT (E (BvUDiv lhs rhs)) = SMT.bvUDiv (toSMT lhs) (toSMT rhs)
-toSMT (E (BvULeq lhs rhs)) = SMT.bvULeq (toSMT lhs) (toSMT rhs)
-toSMT (E (BvULt lhs rhs)) = SMT.bvULt (toSMT lhs) (toSMT rhs)
-toSMT (E (BvURem lhs rhs)) = SMT.bvURem (toSMT lhs) (toSMT rhs)
-toSMT (E (BvXOr lhs rhs)) = SMT.bvXOr (toSMT lhs) (toSMT rhs)
+toSMT expr =
+  case sexpr expr of
+    (Var name) -> SMT.const name
+    (Int v) -> SMT.bvBin (width expr) v
+    (Or lhs rhs) -> SMT.or (toSMT lhs) (toSMT rhs)
+    (Ite cond lhs rhs) -> SMT.ite (toSMT cond) (toSMT lhs) (toSMT rhs)
+    (And lhs rhs) -> SMT.and (toSMT lhs) (toSMT rhs)
+    (Not v) -> SMT.not (toSMT v)
+    (Neg v) -> SMT.bvNeg (toSMT v)
+    (SignExtend n v) -> SMT.signExtend n (toSMT v)
+    (ZeroExtend n v) -> SMT.zeroExtend n (toSMT v)
+    (Eq lhs rhs) -> SMT.eq (toSMT lhs) (toSMT rhs)
+    (Concat lhs rhs) -> SMT.concat (toSMT lhs) (toSMT rhs)
+    (Extract o w e) -> SMT.extract (toSMT e) (fromIntegral $ o + w - 1) (fromIntegral o)
+    (BvAnd lhs rhs) -> SMT.bvAnd (toSMT lhs) (toSMT rhs)
+    (BvAShr lhs rhs) -> SMT.bvAShr (toSMT lhs) (toSMT rhs)
+    (BvLShr lhs rhs) -> SMT.bvLShr (toSMT lhs) (toSMT rhs)
+    (BvAdd lhs rhs) -> SMT.bvAdd (toSMT lhs) (toSMT rhs)
+    (BvMul lhs rhs) -> SMT.bvMul (toSMT lhs) (toSMT rhs)
+    (BvOr lhs rhs) -> SMT.bvOr (toSMT lhs) (toSMT rhs)
+    (BvSDiv lhs rhs) -> SMT.bvSDiv (toSMT lhs) (toSMT rhs)
+    (BvSLeq lhs rhs) -> SMT.bvSLeq (toSMT lhs) (toSMT rhs)
+    (BvSLt lhs rhs) -> SMT.bvSLt (toSMT lhs) (toSMT rhs)
+    (BvSRem lhs rhs) -> SMT.bvSRem (toSMT lhs) (toSMT rhs)
+    (BvShl lhs rhs) -> SMT.bvShl (toSMT lhs) (toSMT rhs)
+    (BvSub lhs rhs) -> SMT.bvSub (toSMT lhs) (toSMT rhs)
+    (BvUDiv lhs rhs) -> SMT.bvUDiv (toSMT lhs) (toSMT rhs)
+    (BvULeq lhs rhs) -> SMT.bvULeq (toSMT lhs) (toSMT rhs)
+    (BvULt lhs rhs) -> SMT.bvULt (toSMT lhs) (toSMT rhs)
+    (BvURem lhs rhs) -> SMT.bvURem (toSMT lhs) (toSMT rhs)
+    (BvXOr lhs rhs) -> SMT.bvXOr (toSMT lhs) (toSMT rhs)
 
 boolWidth :: Int
 boolWidth = 1
