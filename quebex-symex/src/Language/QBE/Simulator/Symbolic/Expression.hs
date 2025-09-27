@@ -15,6 +15,7 @@ module Language.QBE.Simulator.Symbolic.Expression
 where
 
 import Control.Exception (assert)
+import Data.Bits (shiftL, (.&.))
 import Data.Word (Word64, Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
@@ -141,8 +142,9 @@ binaryBoolOp op lhs rhs = do
 
 instance E.ValueRepr BitVector where
   fromLit ty n =
-    let size = fromIntegral $ QBE.extTypeBitSize ty
-     in BitVector (SMT.bvLit size $ fromIntegral n)
+    let size = QBE.extTypeBitSize ty
+        mask = (1 `shiftL` size) - 1
+     in BitVector $ SMT.bvLit (fromIntegral size) $ fromIntegral (n .&. mask)
 
   fromFloat = error "symbolic floats currently unsupported"
   fromDouble = error "symbolic doubles currently unsupported"
