@@ -21,6 +21,10 @@ module SimpleBV
     SMT.Result (..),
     SMT.Value (..),
     pattern W,
+    pattern Byte,
+    pattern Half,
+    pattern Word,
+    pattern Long,
     width,
     const,
     declareBV,
@@ -144,6 +148,20 @@ pattern E expr <- SExpr {sexpr = expr, width = _}
 
 pattern W :: Int -> SExpr
 pattern W w <- SExpr {width = w}
+
+pattern Byte :: SExpr
+pattern Byte <- SExpr {width = 8}
+
+pattern Half :: SExpr
+pattern Half <- SExpr {width = 8}
+
+pattern Word :: SExpr
+pattern Word <- SExpr {width = 32}
+
+pattern Long :: SExpr
+pattern Long <- SExpr {width = 64}
+
+------------------------------------------------------------------------
 
 const :: String -> Int -> SExpr
 const name width = SExpr width (Var name)

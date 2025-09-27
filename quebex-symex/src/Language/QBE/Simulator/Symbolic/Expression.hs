@@ -118,7 +118,7 @@ toShiftAmount :: Word64 -> BitVector -> Maybe BitVector
 toShiftAmount size amount = amount `E.urem` E.fromLit (QBE.Base QBE.Word) size
 
 shiftOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
-shiftOp op value amount@(BitVector (SMT.W 32)) =
+shiftOp op value amount@(BitVector SMT.Word) =
   case bitSize value of
     32 -> toShiftAmount 32 amount >>= binaryOp op value
     64 -> do
@@ -154,24 +154,24 @@ instance E.ValueRepr BitVector where
       SMT.Bits _ n -> fromIntegral n
       _ -> error "unrechable"
 
-  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector s@(SMT.W 32)) =
+  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.signExtend 56 (SMT.extract s 0 8))
-  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector s@(SMT.W 32)) =
+  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 0 8))
-  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector s@(SMT.W 32)) =
+  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.signExtend 48 (SMT.extract s 0 16))
-  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector s@(SMT.W 32)) =
+  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 0 16))
-  wordToLong QBE.SLSignedWord (BitVector s@(SMT.W 32)) =
+  wordToLong QBE.SLSignedWord (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.signExtend 32 s)
-  wordToLong QBE.SLUnsignedWord (BitVector s@(SMT.W 32)) =
+  wordToLong QBE.SLUnsignedWord (BitVector s@SMT.Word) =
     Just $ BitVector (SMT.zeroExtend 32 s)
   wordToLong _ _ = Nothing
 
-  subType QBE.Word v@(BitVector (SMT.W 32)) = Just v
-  subType QBE.Word (BitVector s@(SMT.W 64)) =
+  subType QBE.Word v@(BitVector SMT.Word) = Just v
+  subType QBE.Word (BitVector s@SMT.Long) =
     Just $ BitVector (SMT.extract s 0 32)
-  subType QBE.Long v@(BitVector (SMT.W 64)) = Just v
+  subType QBE.Long v@(BitVector SMT.Long) = Just v
   subType _ _ = Nothing
 
   add = binaryOp SMT.bvAdd
