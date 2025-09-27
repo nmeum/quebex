@@ -58,7 +58,7 @@ finalize solver store@(Store {sValues = m, defined = defs}) = do
       }
   where
     declareSymbolic n v =
-      SMT.declare solver n $ SMT.tBits (fromIntegral $ SE.bitSize v)
+      SMT.declareBV solver n $ SE.bitSize v
 
 -- | Create a variable store from a 'Model'.
 setModel :: Store -> Model.Model -> Store

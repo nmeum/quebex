@@ -20,8 +20,8 @@ module SimpleBV
     SMT.check,
     SMT.Result (..),
     SMT.Value (..),
-    SMT.declare, -- TODO: remove
-    SMT.tBits, -- TODO: remove
+    const,
+    declareBV,
     assert,
     sexprToVal,
     getValue,
@@ -53,7 +53,6 @@ module SimpleBV
     bvXOr,
     concat,
     extract,
-    const,
     signExtend,
     zeroExtend,
   )
@@ -144,8 +143,10 @@ pattern E expr <- SExpr {sexpr = expr, width = _}
 const :: String -> Int -> SExpr
 const name width = SExpr width (Var name)
 
--- declare :: SMT.Solver -> String -> SExpr -> IO SMT.SExpr
--- declare solver name = SMT.declare solver name . sexpr
+declareBV :: SMT.Solver -> String -> Int -> IO SExpr
+declareBV solver name width = do
+  let bits = SMT.tBits $ fromIntegral width
+  SMT.declare solver name bits >> pure (const name width)
 
 bvBin :: Int -> Integer -> SExpr
 bvBin width value = SExpr width (Int value)
