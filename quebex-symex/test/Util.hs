@@ -19,7 +19,7 @@ import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import SimpleSMT qualified as SMT
+import SimpleBV qualified as SMT
 
 parseProg :: String -> IO Program
 parseProg input =
@@ -43,11 +43,9 @@ parseAndExec funcName params input = do
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
-  let bits = SMT.tBits $ fromIntegral (QBE.baseTypeBitSize ty)
-  symbolic <- SE.fromSExpr ty <$> SMT.declare solver name bits
-
+  symbolic <- SMT.declareBV solver name $ QBE.baseTypeBitSize ty
   let concrete = E.fromLit (QBE.Base ty) initCon
-  pure $ CE.Concolic concrete (Just symbolic)
+  pure $ CE.Concolic concrete (Just $ SE.fromSExpr symbolic)
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do

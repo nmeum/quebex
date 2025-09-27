@@ -37,6 +37,7 @@ library
       simple-smt
 
     exposed-modules:
+      SimpleBV,
       Language.QBE.Backend,
       Language.QBE.Backend.Model,
       Language.QBE.Backend.Store,
@@ -45,7 +46,6 @@ library
       Language.QBE.Backend.Tracer,
       Language.QBE.Simulator.Explorer,
       Language.QBE.Simulator.Symbolic.Unwind,
-      Language.QBE.Simulator.Symbolic.Folding,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.State,
       Language.QBE.Simulator.Concolic.Expression
@@ -86,6 +86,7 @@ test-suite quebex-symex-test
       Explorer,
       Symbolic,
       Concolic,
+      BV
 
     build-depends:
         base,
