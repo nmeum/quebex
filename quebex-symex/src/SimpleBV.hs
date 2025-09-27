@@ -185,6 +185,14 @@ and lhs rhs = lhs {sexpr = And lhs rhs}
 or :: SExpr -> SExpr -> SExpr
 or lhs rhs = lhs {sexpr = Or lhs rhs}
 
+signExtend :: Integer -> SExpr -> SExpr
+signExtend n expr = SExpr (width expr + fromIntegral n) $ SignExtend n expr
+
+zeroExtend :: Integer -> SExpr -> SExpr
+zeroExtend n expr = SExpr (width expr + fromIntegral n) $ ZeroExtend n expr
+
+------------------------------------------------------------------------
+
 eq' :: SExpr -> SExpr -> SExpr
 eq' lhs rhs = SExpr boolWidth $ Eq lhs rhs
 
@@ -248,18 +256,10 @@ extract = extractIte
 
 ------------------------------------------------------------------------
 
-signExtend :: Integer -> SExpr -> SExpr
-signExtend n expr = SExpr (width expr + fromIntegral n) $ SignExtend n expr
-
-zeroExtend :: Integer -> SExpr -> SExpr
-zeroExtend n expr = SExpr (width expr + fromIntegral n) $ ZeroExtend n expr
-
-------------------------------------------------------------------------
+-- TODO: Generate these using template-haskell.
 
 bvNeg :: SExpr -> SExpr
 bvNeg x = x {sexpr = Neg x}
-
--- TODO: template-haskell
 
 bvAdd :: SExpr -> SExpr -> SExpr
 bvAdd x y = x {sexpr = BvAdd x y}
