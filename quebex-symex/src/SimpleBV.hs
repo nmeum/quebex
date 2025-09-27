@@ -151,7 +151,9 @@ bvBin :: Int -> Integer -> SExpr
 bvBin width value = SExpr width (Int value)
 
 sexprToVal :: SExpr -> SMT.Value
-sexprToVal = SMT.sexprToVal . toSMT -- TODO: avoid toSMT
+sexprToVal (E (Var n)) = SMT.Other $ SMT.Atom n
+sexprToVal e@(E (Int i)) = SMT.Bits (width e) i
+sexprToVal _ = SMT.Other $ SMT.Atom "_"
 
 assert :: SMT.Solver -> SExpr -> IO ()
 assert solver = SMT.assert solver . toSMT
