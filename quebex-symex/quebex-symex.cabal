@@ -46,7 +46,6 @@ library
       Language.QBE.Backend.Tracer,
       Language.QBE.Simulator.Explorer,
       Language.QBE.Simulator.Symbolic.Unwind,
-      Language.QBE.Simulator.Symbolic.Folding,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.State,
       Language.QBE.Simulator.Concolic.Expression
