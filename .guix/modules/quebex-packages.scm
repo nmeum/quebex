@@ -35,7 +35,7 @@
      "This package provides a simple way to interact with an SMT solver process.")
     (license license:bsd-3)))
 
-;; TODO: submit this to the Guix repository.
+;; XXX: https://codeberg.org/guix/guix/pulls/2923
 (define-public ghc-lhs2tex
   (package
     (name "ghc-lhs2tex")
