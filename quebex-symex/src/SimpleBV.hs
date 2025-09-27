@@ -237,7 +237,7 @@ concat :: SExpr -> SExpr -> SExpr
 concat
   lhs@(E (Extract loff lwidth latom@(E (Var varLhs))))
   rhs@(E (Extract roff rwidth (E (Var varRhs))))
-    | varLhs == varRhs && (roff + rwidth) == loff = extract' latom roff (lwidth + rwidth)
+    | varLhs == varRhs && (roff + rwidth) == loff = extract latom roff (lwidth + rwidth)
     | otherwise = concat' lhs rhs
 concat lhs rhs = concat' lhs rhs
 
