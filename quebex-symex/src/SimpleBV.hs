@@ -38,7 +38,7 @@ module SimpleBV
     or,
     not,
     eq,
-    bvBin,
+    bvLit,
     bvAdd,
     bvAShr,
     bvLShr,
@@ -171,8 +171,8 @@ declareBV solver name width = do
   let bits = SMT.tBits $ fromIntegral width
   SMT.declare solver name bits >> pure (const name width)
 
-bvBin :: Int -> Integer -> SExpr
-bvBin width value = SExpr width (Int value)
+bvLit :: Int -> Integer -> SExpr
+bvLit width value = SExpr width (Int value)
 
 sexprToVal :: SExpr -> SMT.Value
 sexprToVal (E (Var n)) = SMT.Other $ SMT.Atom n

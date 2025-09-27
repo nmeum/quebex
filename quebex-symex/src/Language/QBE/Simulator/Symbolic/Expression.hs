@@ -27,13 +27,13 @@ newtype BitVector = BitVector SMT.SExpr
   deriving (Show, Eq)
 
 fromByte :: Word8 -> BitVector
-fromByte byte = BitVector (SMT.bvBin 8 $ fromIntegral byte)
+fromByte byte = BitVector (SMT.bvLit 8 $ fromIntegral byte)
 
 fromReg :: D.RegVal -> BitVector
-fromReg (D.VByte v) = BitVector (SMT.bvBin 8 $ fromIntegral v)
-fromReg (D.VHalf v) = BitVector (SMT.bvBin 16 $ fromIntegral v)
-fromReg (D.VWord v) = BitVector (SMT.bvBin 32 $ fromIntegral v)
-fromReg (D.VLong v) = BitVector (SMT.bvBin 64 $ fromIntegral v)
+fromReg (D.VByte v) = BitVector (SMT.bvLit 8 $ fromIntegral v)
+fromReg (D.VHalf v) = BitVector (SMT.bvLit 16 $ fromIntegral v)
+fromReg (D.VWord v) = BitVector (SMT.bvLit 32 $ fromIntegral v)
+fromReg (D.VLong v) = BitVector (SMT.bvLit 64 $ fromIntegral v)
 fromReg (D.VSingle _) = error "symbolic floats not supported"
 fromReg (D.VDouble _) = error "symbolic doubles not supported"
 
@@ -142,7 +142,7 @@ binaryBoolOp op lhs rhs = do
 instance E.ValueRepr BitVector where
   fromLit ty n =
     let size = fromIntegral $ QBE.extTypeBitSize ty
-     in BitVector (SMT.bvBin size $ fromIntegral n)
+     in BitVector (SMT.bvLit size $ fromIntegral n)
 
   fromFloat = error "symbolic floats currently unsupported"
   fromDouble = error "symbolic doubles currently unsupported"

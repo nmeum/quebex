@@ -24,8 +24,8 @@ foldingTests =
         do
           let cond = SMT.const "foo" 32 `SMT.eq` SMT.const "bar" 32
 
-          let ifT = SMT.bvBin 32 0xdeadbeef
-          let ifF = SMT.bvBin 32 0xbeefdead
+          let ifT = SMT.bvLit 32 0xdeadbeef
+          let ifF = SMT.bvLit 32 0xbeefdead
           let val = SMT.ite cond ifT ifF
 
           SMT.eq val ifT @?= cond
@@ -36,8 +36,8 @@ foldingTests =
           SMT.extract val 0 8 @?= val,
       testCase "Folding of constant extractions" $
         do
-          let val = SMT.bvBin 32 0xdeadbeef
-          SMT.extract val 16 16 @?= SMT.bvBin 16 0xdead,
+          let val = SMT.bvLit 32 0xdeadbeef
+          SMT.extract val 16 16 @?= SMT.bvLit 16 0xdead,
       testCase "Folding of identical nested extracts" $
         do
           let val = SMT.const "foobar" 64
@@ -49,13 +49,13 @@ foldingTests =
       testCase "Folding of ITE expressions" $
         do
           let cond = SMT.const "foo" 32 `SMT.eq` SMT.const "bar" 32
-          let val = SMT.ite cond (SMT.bvBin 32 0xdeadbeef) (SMT.bvBin 32 0xbeefdead)
+          let val = SMT.ite cond (SMT.bvLit 32 0xdeadbeef) (SMT.bvLit 32 0xbeefdead)
 
-          SMT.extract val 0 16 @?= SMT.ite cond (SMT.bvBin 16 0xbeef) (SMT.bvBin 16 0xdead),
+          SMT.extract val 0 16 @?= SMT.ite cond (SMT.bvLit 16 0xbeef) (SMT.bvLit 16 0xdead),
       testCase "Extract reduces size" $
         do
-          let val = SMT.bvBin 32 0xdeadbeef
-          SMT.extract val 8 8 @?= SMT.bvBin 8 0xbe
+          let val = SMT.bvLit 32 0xdeadbeef
+          SMT.extract val 8 8 @?= SMT.bvLit 8 0xbe
     ]
 
 bvTests :: TestTree
