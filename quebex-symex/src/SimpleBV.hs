@@ -20,6 +20,8 @@ module SimpleBV
     SMT.check,
     SMT.Result (..),
     SMT.Value (..),
+    pattern W,
+    width,
     const,
     declareBV,
     assert,
@@ -139,6 +141,9 @@ boolWidth = 1
 
 pattern E :: Expr SExpr -> SExpr
 pattern E expr <- SExpr {sexpr = expr, width = _}
+
+pattern W :: Int -> SExpr
+pattern W w <- SExpr {width = w}
 
 const :: String -> Int -> SExpr
 const name width = SExpr width (Var name)

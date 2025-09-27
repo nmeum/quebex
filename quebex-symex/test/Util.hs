@@ -45,7 +45,7 @@ unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concol
 unconstrained solver initCon name ty = do
   symbolic <- SMT.declareBV solver name $ QBE.baseTypeBitSize ty
   let concrete = E.fromLit (QBE.Base ty) initCon
-  pure $ CE.Concolic concrete (Just $ SE.fromSExpr ty symbolic)
+  pure $ CE.Concolic concrete (Just $ SE.fromSExpr symbolic)
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
