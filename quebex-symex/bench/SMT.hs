@@ -79,7 +79,8 @@ smtBench = do
   bgroup
     "SMT Complexity"
     [ benchWithEnv "prime-numbers.qbe",
-      benchWithEnv "bubble-sort.qbe"
+      benchWithEnv "bubble-sort.qbe",
+      benchWithEnv "insertion-sort-uchar.qbe"
     ]
   where
     benchSolver :: String -> String -> Benchmark

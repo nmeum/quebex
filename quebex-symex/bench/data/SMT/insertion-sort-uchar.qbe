@@ -1,0 +1,93 @@
+export
+function $insertionSort(l %.1, w %.3) {
+@start.1
+	%.2 =l alloc8 8
+	storel %.1, %.2
+	%.4 =l alloc4 4
+	storew %.3, %.4
+	%.5 =l alloc4 4
+	%.9 =l alloc4 4
+	%.12 =l alloc4 1
+@body.2
+	storew 1, %.5
+@for_cond.3
+	%.6 =w loadw %.5
+	%.7 =w loadw %.4
+	%.8 =w csltw %.6, %.7
+	jnz %.8, @for_body.4, @for_join.6
+@for_body.4
+	%.10 =w loadw %.5
+	%.11 =w sub %.10, 1
+	storew %.11, %.9
+	%.13 =l loadl %.2
+	%.14 =w loadw %.5
+	%.15 =l extsw %.14
+	%.16 =l mul %.15, 1
+	%.17 =l add %.13, %.16
+	%.18 =w loadub %.17
+	storeb %.18, %.12
+@while_cond.7
+	%.19 =w loadw %.9
+	%.20 =w csgew %.19, 0
+	jnz %.20, @logic_right.10, @logic_join.11
+@logic_right.10
+	%.21 =w loadub %.12
+	%.22 =w extub %.21
+	%.23 =l loadl %.2
+	%.24 =w loadw %.9
+	%.25 =l extsw %.24
+	%.26 =l mul %.25, 1
+	%.27 =l add %.23, %.26
+	%.28 =w loadub %.27
+	%.29 =w extub %.28
+	%.30 =w csltw %.22, %.29
+	%.31 =w cnew %.30, 0
+@logic_join.11
+	%.32 =w phi @while_cond.7 0, @logic_right.10 %.31
+	jnz %.32, @while_body.8, @while_join.9
+@while_body.8
+	%.33 =l loadl %.2
+	%.34 =w loadw %.9
+	%.35 =l extsw %.34
+	%.36 =l mul %.35, 1
+	%.37 =l add %.33, %.36
+	%.38 =w loadub %.37
+	%.39 =l loadl %.2
+	%.40 =w loadw %.9
+	%.41 =w add %.40, 1
+	%.42 =l extsw %.41
+	%.43 =l mul %.42, 1
+	%.44 =l add %.39, %.43
+	storeb %.38, %.44
+	%.45 =w loadw %.9
+	%.46 =w sub %.45, 1
+	storew %.46, %.9
+	jmp @while_cond.7
+@while_join.9
+	%.47 =w loadub %.12
+	%.48 =l loadl %.2
+	%.49 =w loadw %.9
+	%.50 =w add %.49, 1
+	%.51 =l extsw %.50
+	%.52 =l mul %.51, 1
+	%.53 =l add %.48, %.52
+	storeb %.47, %.53
+@for_cont.5
+	%.54 =w loadw %.5
+	%.55 =w add %.54, 1
+	storew %.55, %.5
+	jmp @for_cond.3
+@for_join.6
+	ret
+}
+data $.Lstring.3 = align 1 { b "array\000", }
+export
+function w $main() {
+@start.12
+	%.1 =l alloc4 7
+@body.13
+	%.2 =l extsw 7
+	call $quebex_symbolic_array(l %.1, l %.2, l 1, l $.Lstring.3)
+	call $insertionSort(l %.1, w 7)
+	ret 0
+}
