@@ -274,10 +274,36 @@ extractIte (E (Ite cond ifT@(E (Int _)) ifF@(E (Int _)))) off w =
    in SExpr w $ Ite cond (ex ifT) (ex ifF)
 extractIte expr off width = extractConst expr off width
 
+-- Remove ZeroExtend expression where we don't use the zero extended bytes
+-- because we extract below the extended size.
+extractZext :: SExpr -> Int -> Int -> SExpr
+extractZext expr@(E (ZeroExtend numZeros inner)) exOff exWidth
+  -- If we are only extracting the non-zero extended bytes...
+  | width inner >= exOff + exWidth = extractIte inner exOff exWidth
+  -- Consider: ((_ extract 31 0) ((_ zero_extend 56) byte))
+  | exWidth < fromIntegral numZeros && exOff == 0 =
+      SExpr exWidth $ ZeroExtend (numZeros - fromIntegral exWidth) inner
+  -- No folding...
+  | otherwise = extractIte expr exOff exWidth
+extractZext expr off w = extractIte expr off w
+
 extract :: SExpr -> Int -> Int -> SExpr
-extract = extractIte
+extract = extractZext
 
 ------------------------------------------------------------------------
+
+binOp' :: (SExpr -> SExpr -> Expr SExpr) -> SExpr -> SExpr -> SExpr
+binOp' op lhs rhs = lhs {sexpr = op lhs rhs}
+
+binOp :: (SExpr -> SExpr -> Expr SExpr) -> SExpr -> SExpr -> SExpr
+-- Consider: (bvslt ((_ zero_extend 24) byte0) ((_ zero_extend 24) byte1))
+-- TODO: The following only works if 'op' does not consider sign-bits. Otherwise,
+--       there is no semantic expression equivalence after this folding operation.
+-- binOp op lhs@(E (ZeroExtend _ lhsInner)) rhs@(E (ZeroExtend _ rhsInner)) =
+--   if width lhsInner == width rhsInner
+--     then binOp op lhsInner rhsInner
+--     else binOp' op lhs rhs
+binOp op lhs rhs = binOp' op lhs rhs
 
 -- TODO: Generate these using template-haskell.
 
@@ -285,52 +311,52 @@ bvNeg :: SExpr -> SExpr
 bvNeg x = x {sexpr = Neg x}
 
 bvAdd :: SExpr -> SExpr -> SExpr
-bvAdd x y = x {sexpr = BvAdd x y}
+bvAdd = binOp BvAdd
 
 bvAShr :: SExpr -> SExpr -> SExpr
-bvAShr x y = x {sexpr = BvAShr x y}
+bvAShr = binOp BvAShr
 
 bvLShr :: SExpr -> SExpr -> SExpr
-bvLShr x y = x {sexpr = BvLShr x y}
+bvLShr = binOp BvLShr
 
 bvAnd :: SExpr -> SExpr -> SExpr
-bvAnd x y = x {sexpr = BvAnd x y}
+bvAnd = binOp BvAnd
 
 bvMul :: SExpr -> SExpr -> SExpr
-bvMul x y = x {sexpr = BvMul x y}
+bvMul = binOp BvMul
 
 bvOr :: SExpr -> SExpr -> SExpr
-bvOr x y = x {sexpr = BvOr x y}
+bvOr = binOp BvOr
 
 bvSDiv :: SExpr -> SExpr -> SExpr
-bvSDiv x y = x {sexpr = BvSDiv x y}
+bvSDiv = binOp BvSDiv
 
 bvSLeq :: SExpr -> SExpr -> SExpr
-bvSLeq x y = x {sexpr = BvSLeq x y}
+bvSLeq = binOp BvSLeq
 
 bvSLt :: SExpr -> SExpr -> SExpr
-bvSLt x y = x {sexpr = BvSLt x y}
+bvSLt = binOp BvSLt
 
 bvSRem :: SExpr -> SExpr -> SExpr
-bvSRem x y = x {sexpr = BvSRem x y}
+bvSRem = binOp BvSRem
 
 bvShl :: SExpr -> SExpr -> SExpr
-bvShl x y = x {sexpr = BvShl x y}
+bvShl = binOp BvShl
 
 bvSub :: SExpr -> SExpr -> SExpr
-bvSub x y = x {sexpr = BvSub x y}
+bvSub = binOp BvSub
 
 bvUDiv :: SExpr -> SExpr -> SExpr
-bvUDiv x y = x {sexpr = BvUDiv x y}
+bvUDiv = binOp BvUDiv
 
 bvULeq :: SExpr -> SExpr -> SExpr
-bvULeq x y = x {sexpr = BvULeq x y}
+bvULeq = binOp BvULeq
 
 bvULt :: SExpr -> SExpr -> SExpr
-bvULt x y = x {sexpr = BvULt x y}
+bvULt = binOp BvULt
 
 bvURem :: SExpr -> SExpr -> SExpr
-bvURem x y = x {sexpr = BvURem x y}
+bvURem = binOp BvURem
 
 bvXOr :: SExpr -> SExpr -> SExpr
-bvXOr x y = x {sexpr = BvXOr x y}
+bvXOr = binOp BvXOr
