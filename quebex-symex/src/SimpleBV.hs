@@ -277,10 +277,14 @@ extractIte expr off width = extractConst expr off width
 -- Remove ZeroExtend expression where we don't use the zero extended bytes
 -- because we extract below the extended size.
 extractZext :: SExpr -> Int -> Int -> SExpr
-extractZext expr@(E (ZeroExtend _ inner)) off w =
-  if width inner >= off + w
-    then extractIte inner off w
-    else extractIte expr off w
+extractZext expr@(E (ZeroExtend numZeros inner)) exOff exWidth
+  -- If we are only extracting the non-zero extended bytes...
+  | width inner >= exOff + exWidth = extractIte inner exOff exWidth
+  -- Consider: ((_ extract 31 0) ((_ zero_extend 56) byte))
+  | exWidth < fromIntegral numZeros && exOff == 0 =
+      SExpr exWidth $ ZeroExtend (numZeros - fromIntegral exWidth) inner
+  -- No folding...
+  | otherwise = extractIte expr exOff exWidth
 extractZext expr off w = extractIte expr off w
 
 extract :: SExpr -> Int -> Int -> SExpr

@@ -60,9 +60,15 @@ foldingTests =
         do
           let val = SMT.zeroExtend 24 $ SMT.bvLit 8 0xff
           SMT.extract val 0 8 @?= SMT.bvLit 8 0xff
-          SMT.extract val 4 4 @?= SMT.bvLit 4 0xf
-          -- TODO: constant fold extractions of zeros.
-          -- SMT.extract val 8 8 @?= SMT.bvLit 8 0x0
+          SMT.extract val 4 4 @?= SMT.bvLit 4 0xf,
+      -- TODO: constant fold extractions of zeros.
+      -- SMT.extract val 8 8 @?= SMT.bvLit 8 0x0
+      testCase "Extraction including zero-extended bits" $
+        do
+          let lit = SMT.bvLit 8 0xab
+          let val = SMT.zeroExtend 56 lit
+          SMT.extract val 0 32 @?= SMT.zeroExtend 24 lit
+          SMT.extract val 0 64 @?= val
     ]
 
 bvTests :: TestTree
