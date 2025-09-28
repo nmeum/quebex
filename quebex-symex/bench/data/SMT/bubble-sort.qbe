@@ -81,39 +81,14 @@ function $bubble_sort(l %.1) {
 @while_join.5
 	ret
 }
+data $.Lstring.3 = align 1 { b "array\000", }
 export
-function w $entry(w %.1, w %.3, w %.5, w %.7) {
+function w $main() {
 @start.12
-	%.2 =l alloc4 4
-	storew %.1, %.2
-	%.4 =l alloc4 4
-	storew %.3, %.4
-	%.6 =l alloc4 4
-	storew %.5, %.6
-	%.8 =l alloc4 4
-	storew %.7, %.8
-	%.9 =l alloc4 16
+	%.1 =l alloc4 16
 @body.13
-	%.10 =w loadw %.2
-	%.11 =l extsw 0
-	%.12 =l mul %.11, 4
-	%.13 =l add %.9, %.12
-	storew %.10, %.13
-	%.14 =w loadw %.4
-	%.15 =l extsw 1
-	%.16 =l mul %.15, 4
-	%.17 =l add %.9, %.16
-	storew %.14, %.17
-	%.18 =w loadw %.6
-	%.19 =l extsw 2
-	%.20 =l mul %.19, 4
-	%.21 =l add %.9, %.20
-	storew %.18, %.21
-	%.22 =w loadw %.8
-	%.23 =l extsw 3
-	%.24 =l mul %.23, 4
-	%.25 =l add %.9, %.24
-	storew %.22, %.25
-	call $bubble_sort(l %.9)
+	%.2 =l extsw 4
+	call $quebex_symbolic_array(l %.1, l %.2, l 4, l $.Lstring.3)
+	call $bubble_sort(l %.1)
 	ret 0
 }

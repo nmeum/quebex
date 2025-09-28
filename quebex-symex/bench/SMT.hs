@@ -6,7 +6,6 @@ module SMT (smtBench) where
 
 import Control.Monad (when)
 import Criterion.Main
-import Data.Bifunctor (second)
 import Data.List (find)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
@@ -31,12 +30,12 @@ logPath :: FilePath
 logPath = "/tmp/quebex-symex-bench.smt2"
 
 entryFunc :: QBE.GlobalIdent
-entryFunc = QBE.GlobalIdent "entry"
+entryFunc = QBE.GlobalIdent "main"
 
 ------------------------------------------------------------------------
 
-exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
-exploreQBE filePath params = do
+exploreQBE :: FilePath -> IO [(ST.Assign, T.ExecTrace)]
+exploreQBE filePath = do
   content <- readFile filePath
   prog <- case parse filePath content of
     Right rt -> pure rt
@@ -52,12 +51,11 @@ exploreQBE filePath params = do
     explore' prog func handle = do
       engine <- newEngine <$> logSolver handle
       defEnv <- mkEnv prog 0 128
-      explore engine defEnv func $
-        map (second QBE.Base) params
+      explore engine defEnv func []
 
-getQueries :: String -> [(String, QBE.BaseType)] -> IO String
-getQueries name params = do
-  _ <- exploreQBE ("bench" </> "data" </> "SMT" </> name) params
+getQueries :: String -> IO String
+getQueries name = do
+  _ <- exploreQBE ("bench" </> "data" </> "SMT" </> name)
   -- XXX: Uncomment this to benchmark incremental solving instead.
   unwind logPath
 
@@ -80,12 +78,12 @@ smtBench :: Benchmark
 smtBench = do
   bgroup
     "SMT Complexity"
-    [ benchWithEnv "prime-numbers.qbe" [("a", QBE.Word)],
-      benchWithEnv "bubble-sort.qbe" [("a", QBE.Word), ("b", QBE.Word), ("c", QBE.Word), ("d", QBE.Word)]
+    [ benchWithEnv "prime-numbers.qbe",
+      benchWithEnv "bubble-sort.qbe"
     ]
   where
     benchSolver :: String -> String -> Benchmark
     benchSolver name queries = bench name $ nfIO (solveQueries queries)
 
-    benchWithEnv :: String -> [(String, QBE.BaseType)] -> Benchmark
-    benchWithEnv name params = env (getQueries name params) (benchSolver name)
+    benchWithEnv :: String -> Benchmark
+    benchWithEnv name = env (getQueries name) (benchSolver name)

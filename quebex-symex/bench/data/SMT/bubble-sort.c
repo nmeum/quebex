@@ -5,10 +5,13 @@
 
 // Taken from: https://github.com/TheAlgorithms/C/blob/f241de90e1691dc7cfcafcbecd89ef12db922e6b/sorting/bubble_sort_2.c
 
+#include <stddef.h>
 #include <stdbool.h>
 #include <assert.h>
 
 #define MAX 4
+
+extern void quebex_symbolic_array(void *, size_t, size_t, const char *);
 
 void bubble_sort(int* array_sort)
 {
@@ -40,15 +43,13 @@ void bubble_sort(int* array_sort)
     }
 }
 
-unsigned entry(int a, int b, int c, int d)
+int
+main(void)
 {
     int array[MAX];
 
-    array[0] = a;
-    array[1] = b;
-    array[2] = c;
-    array[3] = d;
-
+    quebex_symbolic_array(array, MAX, sizeof(int), "array");
     bubble_sort(array);
+
     return 0;
 }
