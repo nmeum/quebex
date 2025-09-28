@@ -52,13 +52,15 @@ For example, consider the following C program:
 
 ```C
 #include <stdio.h>
+#include <stddef.h>
 
-extern int quebex_symbolic_word(const char *name);
+extern void quebex_symbolic_array(void *ptr, size_t nelem, size_t elsiz, const char *name);
 
 int main(void) {
 	puts("<path>");
 
-	int a = quebex_symbolic_word("a");
+	int a;
+	quebex_symbolic_array(&a, 1, sizeof(a), "a");
 	if (a == 42) {
 		puts("you found the answer");
 	} else {
