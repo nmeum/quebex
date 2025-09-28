@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#define MAX 4
+#define MAX 6
 
 extern void quebex_symbolic_array(void *, size_t, size_t, const char *);
 

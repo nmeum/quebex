@@ -20,7 +20,7 @@ function $bubble_sort(l %.1) {
 	storew 0, %.9
 @for_cond.6
 	%.10 =w loadw %.9
-	%.11 =w sub 4, 1
+	%.11 =w sub 6, 1
 	%.12 =w csltw %.10, %.11
 	jnz %.12, @for_body.7, @for_join.9
 @for_body.7
@@ -85,9 +85,9 @@ data $.Lstring.3 = align 1 { b "array\000", }
 export
 function w $main() {
 @start.12
-	%.1 =l alloc4 16
+	%.1 =l alloc4 24
 @body.13
-	%.2 =l extsw 4
+	%.2 =l extsw 6
 	call $quebex_symbolic_array(l %.1, l %.2, l 4, l $.Lstring.3)
 	call $bubble_sort(l %.1)
 	ret 0
