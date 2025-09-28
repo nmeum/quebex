@@ -274,8 +274,17 @@ extractIte (E (Ite cond ifT@(E (Int _)) ifF@(E (Int _)))) off w =
    in SExpr w $ Ite cond (ex ifT) (ex ifF)
 extractIte expr off width = extractConst expr off width
 
+-- Remove ZeroExtend expression where we don't use the zero extended bytes
+-- because we extract below the extended size.
+extractZext :: SExpr -> Int -> Int -> SExpr
+extractZext expr@(E (ZeroExtend _ inner)) off w =
+  if width inner >= off + w
+    then extractIte inner off w
+    else extractIte expr off w
+extractZext expr off w = extractIte expr off w
+
 extract :: SExpr -> Int -> Int -> SExpr
-extract = extractIte
+extract = extractZext
 
 ------------------------------------------------------------------------
 
