@@ -119,7 +119,7 @@ These hooks can be enabled using:
 
 Further, a [Guix] environment for development purposes can be obtained using:
 
-	$ guix shell -L .guix/modules/ -m .guix/manifest.scm
+	$ guix time-machine -C .guix/channels.scm -- shell -L .guix/modules/ -m .guix/manifest.scm
 
 ### License
 
