@@ -25,11 +25,10 @@
         (packages->manifest
           (list
             cabal-install
-            ghc-lhs2tex
             coreutils
             hlint
             apply-refact
             reuse
             cproc
             git
-            ghc-lhs2tex))))
+            lhs2tex))))
