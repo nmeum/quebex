@@ -181,7 +181,12 @@ funcTests =
             i2 = Assign (LocalIdent "r") Word $ Neg (VLocal $ LocalIdent "r")
             b = Block {label = BlockIdent "s", phi = [], stmt = [i1, i2], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [] [b]
-         in parse "function $f() {\n@s\n%r =w neg 1\n%r =w neg %r\nhlt\n}" @?= Right f
+         in parse "function $f() {\n@s\n%r =w neg 1\n%r =w neg %r\nhlt\n}" @?= Right f,
+      testCase "cast instruction" $
+        let c = Assign (LocalIdent "r") Word $ Cast (VLocal $ LocalIdent "f")
+            b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "f")] [b]
+         in parse "function $f(s %f) {\n@s\n%r =w cast %f\nhlt\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

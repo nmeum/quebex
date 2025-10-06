@@ -249,6 +249,8 @@ data Instr
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
   | Ext SubLongType Value
+  | Cast Value
+  | Copy Value
   deriving (Show, Eq)
 
 data VolatileInstr

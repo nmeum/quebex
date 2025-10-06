@@ -830,6 +830,8 @@ instr =
       try $ binaryInstr Q.Shr "shr",
       try $ binaryInstr Q.Shl "shl",
       try $ unaryInstr Q.Neg "neg",
+      try $ unaryInstr Q.Cast "cast",
+      try $ unaryInstr Q.Copy "copy",
       try $ loadInstr,
       try $ allocInstr,
       try $ compareInstr,
@@ -1031,7 +1033,19 @@ convert a floating point into an integer and vice versa.
 
 \subsection{Cast and Copy}
 
-To-Do.
+The \texttt{cast} and \texttt{copy} instructions return the bits of their
+argument verbatim. However a cast will change an integer into a floating point
+of the same width and vice versa.
+
+Casts can be used to make bitwise operations on the representation of floating
+point numbers. For example the following program will compute the opposite of
+the single-precision floating point number \texttt{%f} into \texttt{%rs}.
+
+\begin{verbatim}
+%b0 =w cast %f
+%b1 =w xor 2147483648, %b0  # flip the msb
+%rs =s cast %b1
+\end{verbatim}
 
 \subsection{Call}
 \label{sec:call}
