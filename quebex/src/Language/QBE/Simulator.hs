@@ -133,6 +133,9 @@ execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
 execInstr retTy (QBE.Ext subLongTy value) = do
   v <- lookupValue QBE.Word value
   wordToLongE subLongTy v >>= subTypeE retTy
+execInstr retTy (QBE.Copy value) = do
+  lookupValue retTy value
+execInstr _retTy (QBE.Cast _value) = error "cast not implemented"
 {-# INLINEABLE execInstr #-}
 
 execStmt :: (Simulator m v) => QBE.Statement -> m ()

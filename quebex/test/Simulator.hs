@@ -803,7 +803,21 @@ blockTests =
               \ret %r\n\
               \}"
 
-          res @?= Just (D.VWord 2)
+          res @?= Just (D.VWord 2),
+      testCase "Copy instruction with subtyping" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $main() {\n\
+              \@start\n\
+              \%l =l copy 42\n\
+              \%w =w copy %l\n\
+              \ret %w\n\
+              \}"
+
+          res @?= Just (D.VWord 42)
     ]
 
 simTests :: TestTree
