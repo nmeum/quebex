@@ -176,10 +176,9 @@ The original QBE specification defines the syntax using a BNF grammar. In
 contrast, this document defines it using Parsec parser combinators. As such,
 this specification is less formal but more accurate as the parsing code is
 actually executable. Consequently, this specification also captures constructs
-omitted in the original specification (e.g., \nameref{sec:identifiers},
-\nameref{sec:statements}, or \nameref{sec:strlit}). Nonetheless, the formal
-language recognized by these combinators aims to be equivalent to the one of
-the BNF grammar.
+omitted in the original specification (e.g., \nameref{sec:identifiers}, or
+\nameref{sec:strlit}). Nonetheless, the formal language recognized by these
+combinators aims to be equivalent to the one of the BNF grammar.
 
 \subsection{Identifiers}
 \label{sec:identifiers}
@@ -782,6 +781,7 @@ by the parser. For example the start block in the example below jumps
 directly to the loop block.
 
 \subsection{Jumps}
+\label{sec:jumps}
 
 \begin{code}
 jumpInstr :: Parser Q.JumpInstr
@@ -886,12 +886,49 @@ made explicit by the instruction suffix.
 
 \subsection{Arithmetic and Bits}
 
-To-Do.
+\begin{quote}
+\begin{itemize}
+\item \texttt{add}, \texttt{sub}, \texttt{div}, \texttt{mul}
+\item \texttt{neg}
+\item \texttt{udiv}, \texttt{rem}, \texttt{urem}
+\item \texttt{or}, \texttt{xor}, \texttt{and}
+\item \texttt{sar}, \texttt{shr}, \texttt{shl}
+\end{itemize}
+\end{quote}
+
+The base arithmetic instructions in the first bullet are available for
+all types, integers and floating points.
+
+When \texttt{div} is used with word or long return type, the arguments are
+treated as signed. The unsigned integral division is available as \texttt{udiv}
+instruction. When the result of a division is not an integer, it is truncated
+towards zero.
+
+The signed and unsigned remainder operations are available as \texttt{rem} and
+\texttt{urem}. The sign of the remainder is the same as the one of the
+dividend. Its magnitude is smaller than the divisor one. These two instructions
+and \texttt{udiv} are only available with integer arguments and result.
+
+Bitwise OR, AND, and XOR operations are available for both integer
+types. Logical operations of typical programming languages can be
+implemented using \nameref{sec:comparisions} and \nameref{sec:jumps}.
+
+Shift instructions \texttt{sar}, \texttt{shr}, and \texttt{shl}, shift right or
+left their first operand by the amount from the second operand. The shifting
+amount is taken modulo the size of the result type. Shifting right can either
+preserve the sign of the value (using \texttt{sar}), or fill the newly freed
+bits with zeroes (using \texttt{shr}). Shifting left always fills the freed
+bits with zeroes.
+
+Remark that an arithmetic shift right (\texttt{sar}) is only equivalent to a
+division by a power of two for non-negative numbers. This is because the shift
+right "truncates" towards minus infinity, while the division truncates towards
+zero.
 
 \subsection{Memory}
 \label{sec:memory}
 
-To-Do.
+The following sections discuss instructions for interacting with values stored in memory.
 
 \subsubsection{Store instructions}
 
@@ -977,6 +1014,7 @@ temporaries can be used directly instead, because it is illegal to take the
 address of a variable.
 
 \subsection{Comparisons}
+\label{sec:comparisions}
 
 Comparison instructions return an integer value (either a word or a long), and
 compare values of arbitrary types. The returned value is 1 if the two operands
@@ -1009,7 +1047,10 @@ compareOp = choice
   , try $ bind "ugt" Q.CUgt ]
 \end{code}
 
-For example, \texttt{cod} (\texttt{I(dd,dd)}) compares two double-precision floating point numbers and returns 1 if the two floating points are not NaNs, or 0 otherwise. The \texttt{csltw} (\texttt{I(ww,ww)}) instruction compares two words representing signed numbers and returns 1 when the first argument is smaller than the second one.
+For example, \texttt{cod} compares two double-precision floating point numbers
+and returns 1 if the two floating points are not NaNs, or 0 otherwise. The
+\texttt{csltw} instruction compares two words representing signed numbers and
+returns 1 when the first argument is smaller than the second one.
 
 \subsection{Conversions}
 
@@ -1039,7 +1080,7 @@ of the same width and vice versa.
 
 Casts can be used to make bitwise operations on the representation of floating
 point numbers. For example the following program will compute the opposite of
-the single-precision floating point number \texttt{%f} into \texttt{%rs}.
+the single-precision floating point number \texttt{\%f} into \texttt{\%rs}.
 
 \begin{verbatim}
 %b0 =w cast %f
@@ -1184,8 +1225,8 @@ form is to insert a phi instruction.
 \end{verbatim}
 
 Phi instructions return one of their arguments depending on where the control
-came from. In the example, \texttt{\%y} is set to 1 if the \texttt{@ift} branch
-is taken, or it is set to 2 otherwise.
+came from. In the example, \texttt{\%y} is set to 1 if the
+\texttt{\textbackslash{}ift} branch is taken, or it is set to 2 otherwise.
 
 An important remark about phi instructions is that QBE assumes that if a
 variable is defined by a phi it respects all the SSA invariants. So it is
