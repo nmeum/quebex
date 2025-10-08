@@ -153,7 +153,7 @@ pattern Byte :: SExpr
 pattern Byte <- SExpr {width = 8}
 
 pattern Half :: SExpr
-pattern Half <- SExpr {width = 8}
+pattern Half <- SExpr {width = 16}
 
 pattern Word :: SExpr
 pattern Word <- SExpr {width = 32}
