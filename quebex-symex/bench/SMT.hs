@@ -50,7 +50,7 @@ exploreQBE filePath = do
   where
     explore' prog func handle = do
       engine <- newEngine <$> logSolver handle
-      defEnv <- mkEnv prog 0 128
+      defEnv <- mkEnv prog 0 128 (Just 0)
       explore engine defEnv func []
 
 getQueries :: String -> IO String

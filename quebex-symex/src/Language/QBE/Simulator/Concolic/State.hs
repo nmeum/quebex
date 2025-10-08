@@ -28,7 +28,7 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
-import System.Random (initStdGen)
+import System.Random (initStdGen, mkStdGen)
 
 data Env
   = Env
@@ -41,10 +41,15 @@ mkEnv ::
   Program ->
   MEM.Address ->
   MEM.Size ->
+  Maybe Int ->
   IO Env
-mkEnv prog memStart memSize = do
+mkEnv prog memStart memSize maySeed = do
   initEnv <- DS.mkEnv prog memStart memSize
-  Env initEnv T.newExecTrace . ST.empty <$> initStdGen
+  randGen <-
+    case maySeed of
+      Just sd -> pure $ mkStdGen sd
+      Nothing -> initStdGen
+  pure $ Env initEnv T.newExecTrace (ST.empty randGen)
 
 liftState ::
   (DS.SimState (CE.Concolic DE.RegVal) (CE.Concolic Word8)) a ->

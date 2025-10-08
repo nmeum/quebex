@@ -32,7 +32,7 @@ exploreQBE filePath params = do
     Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
 
   engine <- newEngine <$> defSolver
-  defEnv <- mkEnv prog 0 128
+  defEnv <- mkEnv prog 0 128 Nothing
   traces <-
     explore engine defEnv func $
       map (second QBE.Base) params

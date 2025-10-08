@@ -85,7 +85,7 @@ exploreFile opts = do
     Just x -> pure x
     Nothing -> throwIO $ UnknownFunction entryFunc
 
-  env <- mkEnv prog (optMemStart opts) (optMemSize opts)
+  env <- mkEnv prog (optMemStart opts) (optMemSize opts) Nothing
   if isJust (optLog opts) || isJust (optLogIncr opts)
     then do
       (logPath, logFile, isTemp) <- case optLogIncr opts of

@@ -38,7 +38,7 @@ parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO ST.Ex
 parseAndExec funcName params input = do
   prog <- parseProg input
   let func = findFunc prog funcName
-  env <- mkEnv prog 0 128
+  env <- mkEnv prog 0 128 Nothing
   fst <$> run env (execFunc func params)
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
@@ -50,6 +50,6 @@ unconstrained solver initCon name ty = do
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
   engine <- newEngine <$> defSolver
-  defEnv <- mkEnv prog 0 128
+  defEnv <- mkEnv prog 0 128 Nothing
   explore engine defEnv entry $
     map (second QBE.Base) params
