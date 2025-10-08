@@ -26,6 +26,7 @@ data Opts = Opts
     optMemSize :: MEM.Size,
     optLog :: Maybe FilePath,
     optLogIncr :: Maybe FilePath,
+    optSeed :: Maybe Int,
     optQBEFile :: FilePath
   }
 
@@ -61,6 +62,12 @@ optsParser =
               <> OPT.help "Output queries as an incremental SMT-LIB file"
           )
       )
+    <*> OPT.option
+      OPT.auto
+      ( OPT.long "random-seed"
+          <> OPT.short 'r'
+          <> OPT.help "Initial seed to for the random number generator"
+      )
     <*> OPT.argument OPT.str (OPT.metavar "FILE")
 
 ------------------------------------------------------------------------
@@ -85,7 +92,7 @@ exploreFile opts = do
     Just x -> pure x
     Nothing -> throwIO $ UnknownFunction entryFunc
 
-  env <- mkEnv prog (optMemStart opts) (optMemSize opts) Nothing
+  env <- mkEnv prog (optMemStart opts) (optMemSize opts) (optSeed opts)
   if isJust (optLog opts) || isJust (optLogIncr opts)
     then do
       (logPath, logFile, isTemp) <- case optLogIncr opts of
