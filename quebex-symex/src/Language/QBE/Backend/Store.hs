@@ -21,7 +21,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
-import System.Random (StdGen, genWord64, initStdGen)
+import System.Random (StdGen, genWord64)
 
 -- | Concrete variable assignment.
 type Assign = Map.Map String DE.RegVal
@@ -36,10 +36,8 @@ data Store
   }
 
 -- | Create a new (empty) store.
-empty :: IO Store
-empty =
-  -- TODO: Make seed configurable
-  Store Map.empty Map.empty Map.empty <$> initStdGen
+empty :: StdGen -> Store
+empty = Store Map.empty Map.empty Map.empty
 
 -- | Obtain symbolic values as a list of 'SimpleBV' expressions.
 sexprs :: Store -> [SMT.SExpr]

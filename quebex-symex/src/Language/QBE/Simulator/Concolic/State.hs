@@ -28,6 +28,7 @@ import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Simulator.State
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
+import System.Random (initStdGen)
 
 data Env
   = Env
@@ -43,7 +44,7 @@ mkEnv ::
   IO Env
 mkEnv prog memStart memSize = do
   initEnv <- DS.mkEnv prog memStart memSize
-  Env initEnv T.newExecTrace <$> ST.empty
+  Env initEnv T.newExecTrace . ST.empty <$> initStdGen
 
 liftState ::
   (DS.SimState (CE.Concolic DE.RegVal) (CE.Concolic Word8)) a ->
