@@ -62,11 +62,13 @@ optsParser =
               <> OPT.help "Output queries as an incremental SMT-LIB file"
           )
       )
-    <*> OPT.option
-      OPT.auto
-      ( OPT.long "random-seed"
-          <> OPT.short 'r'
-          <> OPT.help "Initial seed to for the random number generator"
+    <*> OPT.optional
+      ( OPT.option
+          OPT.auto
+          ( OPT.long "random-seed"
+              <> OPT.short 'r'
+              <> OPT.help "Initial seed to for the random number generator"
+          )
       )
     <*> OPT.argument OPT.str (OPT.metavar "FILE")
 
