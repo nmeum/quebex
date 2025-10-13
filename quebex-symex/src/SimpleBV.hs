@@ -235,9 +235,9 @@ concat' lhs rhs =
 -- Replaces continuous concat expressions with a single extract expression.
 concat :: SExpr -> SExpr -> SExpr
 concat
-  lhs@(E (Extract loff lwidth latom@(E (Var varLhs))))
-  rhs@(E (Extract roff rwidth (E (Var varRhs))))
-    | varLhs == varRhs && (roff + rwidth) == loff = extract latom roff (lwidth + rwidth)
+  lhs@(E (Extract loff lwidth latom@(E exprLhs)))
+  rhs@(E (Extract roff rwidth (E exprRhs)))
+    | exprLhs == exprRhs && (roff + rwidth) == loff = extract latom roff (lwidth + rwidth)
     | otherwise = concat' lhs rhs
 concat lhs rhs = concat' lhs rhs
 
