@@ -96,7 +96,7 @@ divProp ::
   BinaryInput ->
   Property
 divProp opSym opCon input@(BinaryInput _ _ rhs) =
-  (rhs > 0) ==> binaryProp opSym opCon input
+  (rhs /= 0) ==> binaryProp opSym opCon input
 
 opEquiv :: TestTree
 opEquiv =
