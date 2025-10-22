@@ -24,6 +24,7 @@ import Test.Tasty.QuickCheck
     elements,
     ioProperty,
     testProperty,
+    (==>)
   )
 
 getSolver :: IO SMT.Solver
@@ -80,13 +81,22 @@ binaryProp ::
   BinaryInput ->
   Property
 binaryProp opSym opCon (BinaryInput ty lhs rhs) = ioProperty $ do
-  eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
+  prop <- eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
+  pure $ (rhs > 0) ==> prop
   where
     mkS :: Word64 -> SE.BitVector
     mkS = E.fromLit (QBE.Base ty)
 
     mkC :: Word64 -> DE.RegVal
     mkC = E.fromLit (QBE.Base ty)
+
+divProp ::
+  (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
+  (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
+  BinaryInput ->
+  Property
+divProp opSym opCon input@(BinaryInput _ _ rhs) =
+  (rhs > 0) ==> binaryProp opSym opCon input
 
 opEquiv :: TestTree
 opEquiv =
@@ -95,15 +105,14 @@ opEquiv =
     [ testProperty "add" (binaryProp E.add E.add),
       testProperty "sub" (binaryProp E.sub E.sub),
       testProperty "mul" (binaryProp E.mul E.mul),
-      -- TODO: exclude divide-by-zero
-      -- testProperty "div" (binaryProp E.div E.div),
+      -- FIXME
+      -- testProperty "div" (divProp E.div E.div),
       testProperty "or" (binaryProp E.or E.or),
       testProperty "xor" (binaryProp E.xor E.xor),
       testProperty "and" (binaryProp E.and E.and),
-      -- TODO: exclude divide-by-zero
-      -- testProperty "urem" (binaryProp E.urem E.urem),
-      -- testProperty "srem" (binaryProp E.srem E.srem)
-      -- testProperty "udiv" (binaryProp E.udiv E.udiv)
+      testProperty "urem" (divProp E.urem E.urem),
+      testProperty "srem" (divProp E.srem E.srem),
+      testProperty "udiv" (divProp E.udiv E.udiv),
       testProperty "eq" (binaryProp E.eq E.eq),
       testProperty "ne" (binaryProp E.ne E.ne),
       testProperty "sle" (binaryProp E.sle E.sle),
