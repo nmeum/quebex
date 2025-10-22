@@ -44,24 +44,77 @@ eqConcrete _ _ = pure False
 
 ------------------------------------------------------------------------
 
-data InstrInput = InstrInput QBE.BaseType Word64
+data UnaryInput = UnaryInput QBE.BaseType Word64
   deriving (Show)
 
-instance Arbitrary InstrInput where
+instance Arbitrary UnaryInput where
   arbitrary = do
     t <- elements [QBE.Word, QBE.Long]
-    InstrInput t <$> arbitrary
+    UnaryInput t <$> arbitrary
 
 unaryProp ::
   (SE.BitVector -> Maybe SE.BitVector) ->
   (DE.RegVal -> Maybe DE.RegVal) ->
-  InstrInput ->
+  UnaryInput ->
   Property
-unaryProp opSym opCon (InstrInput ty val) = ioProperty $ do
+unaryProp opSym opCon (UnaryInput ty val) = ioProperty $ do
   eqConcrete (opSym $ E.fromLit (QBE.Base ty) val) (opCon $ E.fromLit (QBE.Base ty) val)
 
 negEquiv :: TestTree
 negEquiv = testProperty "neg" (unaryProp E.neg E.neg)
+
+------------------------------------------------------------------------
+
+data BinaryInput = BinaryInput QBE.BaseType Word64 Word64
+  deriving (Show)
+
+instance Arbitrary BinaryInput where
+  arbitrary = do
+    ty <- elements [QBE.Word, QBE.Long]
+    lhs <- arbitrary
+    BinaryInput ty lhs <$> arbitrary
+
+binaryProp ::
+  (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
+  (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
+  BinaryInput ->
+  Property
+binaryProp opSym opCon (BinaryInput ty lhs rhs) = ioProperty $ do
+  eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
+  where
+    mkS :: Word64 -> SE.BitVector
+    mkS = E.fromLit (QBE.Base ty)
+
+    mkC :: Word64 -> DE.RegVal
+    mkC = E.fromLit (QBE.Base ty)
+
+opEquiv :: TestTree
+opEquiv =
+  testGroup
+    "Operation equivalence"
+    [ testProperty "add" (binaryProp E.add E.add),
+      testProperty "sub" (binaryProp E.sub E.sub),
+      testProperty "mul" (binaryProp E.mul E.mul),
+      -- TODO: exclude divide-by-zero
+      -- testProperty "div" (binaryProp E.div E.div),
+      testProperty "or" (binaryProp E.or E.or),
+      testProperty "xor" (binaryProp E.xor E.xor),
+      testProperty "and" (binaryProp E.and E.and),
+      -- TODO: exclude divide-by-zero
+      -- testProperty "urem" (binaryProp E.urem E.urem),
+      -- testProperty "srem" (binaryProp E.srem E.srem)
+      -- testProperty "udiv" (binaryProp E.udiv E.udiv)
+      testProperty "eq" (binaryProp E.eq E.eq),
+      testProperty "ne" (binaryProp E.ne E.ne),
+      testProperty "sle" (binaryProp E.sle E.sle),
+      testProperty "slt" (binaryProp E.slt E.slt),
+      testProperty "sge" (binaryProp E.sge E.sge),
+      testProperty "sgt" (binaryProp E.sgt E.sgt),
+      testProperty "ule" (binaryProp E.ule E.ule),
+      testProperty "ult" (binaryProp E.ult E.ult),
+      testProperty "uge" (binaryProp E.uge E.uge),
+      testProperty "ugt" (binaryProp E.ugt E.ugt)
+    ]
 
 ------------------------------------------------------------------------
 
@@ -103,7 +156,7 @@ equivTests :: TestTree
 equivTests =
   testGroup
     "QuickCheck-based equivalence tests"
-    [shiftEquiv, negEquiv]
+    [shiftEquiv, negEquiv, opEquiv]
 
 storeTests :: TestTree
 storeTests =
