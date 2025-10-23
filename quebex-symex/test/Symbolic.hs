@@ -24,7 +24,7 @@ import Test.Tasty.QuickCheck
     elements,
     ioProperty,
     testProperty,
-    (==>)
+    (==>),
   )
 
 getSolver :: IO SMT.Solver
@@ -80,9 +80,9 @@ binaryProp ::
   (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
   BinaryInput ->
   Property
-binaryProp opSym opCon (BinaryInput ty lhs rhs) = ioProperty $ do
-  prop <- eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
-  pure $ (rhs > 0) ==> prop
+binaryProp opSym opCon (BinaryInput ty lhs rhs) =
+  ioProperty $
+    eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
   where
     mkS :: Word64 -> SE.BitVector
     mkS = E.fromLit (QBE.Base ty)
