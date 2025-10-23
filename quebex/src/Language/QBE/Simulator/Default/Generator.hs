@@ -89,7 +89,7 @@ decOperators :: [(Name, Transformer)]
 decOperators =
   [ (mkName "srem'", applySignedOp (mkName "rem")),
     (mkName "urem'", applyOp (mkName "rem")),
-    (mkName "udiv'", applyOp (mkName "div")),
+    (mkName "udiv'", applyOp (mkName "quot")),
     (mkName "or'", applyOp (mkName ".|.")),
     (mkName "xor'", applyOp (mkName "Data.Bits.xor")),
     (mkName "and'", applyOp (mkName ".&."))
