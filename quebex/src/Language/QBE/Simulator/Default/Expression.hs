@@ -147,10 +147,10 @@ neg' _ = Nothing
 div' :: RegVal -> RegVal -> Maybe RegVal
 div' (VWord lhs) (VWord rhs) =
   (Just . VWord . fromIntegral) $
-    (fromIntegral lhs :: Int32) `div` (fromIntegral rhs :: Int32)
+    (fromIntegral lhs :: Int32) `quot` (fromIntegral rhs :: Int32)
 div' (VLong lhs) (VLong rhs) =
   (Just . VLong . fromIntegral) $
-    (fromIntegral lhs :: Int64) `div` (fromIntegral rhs :: Int64)
+    (fromIntegral lhs :: Int64) `quot` (fromIntegral rhs :: Int64)
 div' (VSingle lhs) (VSingle rhs) = (Just . VSingle) $ lhs / rhs
 div' (VDouble lhs) (VDouble rhs) = (Just . VDouble) $ lhs / rhs
 div' _ _ = Nothing

@@ -105,8 +105,7 @@ opEquiv =
     [ testProperty "add" (binaryProp E.add E.add),
       testProperty "sub" (binaryProp E.sub E.sub),
       testProperty "mul" (binaryProp E.mul E.mul),
-      -- FIXME
-      -- testProperty "div" (divProp E.div E.div),
+      testProperty "div" (divProp E.div E.div),
       testProperty "or" (binaryProp E.or E.or),
       testProperty "xor" (binaryProp E.xor E.xor),
       testProperty "and" (binaryProp E.and E.and),
