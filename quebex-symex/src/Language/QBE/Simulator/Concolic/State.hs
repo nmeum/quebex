@@ -88,7 +88,7 @@ makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
   values <-
     mapM
       (\n -> makeConcolic (name ++ show n) vlty)
-      [0 .. E.toWord64 numElem]
+      [1 .. E.toWord64 numElem]
 
   arrayAddr <- toAddress arrayPtr
   liftState (DS.storeValues arrayAddr values) >> pure Nothing
