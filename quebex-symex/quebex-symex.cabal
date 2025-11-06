@@ -45,7 +45,6 @@ library
       Language.QBE.Backend.DFS,
       Language.QBE.Backend.Tracer,
       Language.QBE.Simulator.Explorer,
-      Language.QBE.Simulator.Symbolic.Unwind,
       Language.QBE.Simulator.Symbolic.Expression,
       Language.QBE.Simulator.Concolic.State,
       Language.QBE.Simulator.Concolic.Expression
@@ -58,6 +57,7 @@ benchmark quebex-symex
     main-is:          Main.hs
 
     other-modules:
+      SMTUnwind,
       SMT,
       Exec
 
