@@ -319,19 +319,19 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 0xdeadbeef),
-      -- testCase "Invalid subtyping with subword function parameters" $
-      --   do
-      --     res <-
-      --       parseAndExec'
-      --         (QBE.GlobalIdent "subword")
-      --         [D.VWord 0xff]
-      --         "function $subword(ub %val) {\n\
-      --         \@start\n\
-      --         \%val =w add %val, 1\n\
-      --         \ret\n\
-      --         \}"
-      --
-      --     res @?= Left TypingError,
+      testCase "Subtyping with subword function parameters" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "subword")
+              [D.VWord 0xff]
+              "function $subword(ub %val) {\n\
+              \@start\n\
+              \%val =w add %val, 1\n\
+              \ret\n\
+              \}"
+
+          res @?= Right Nothing,
       testCase "Jump to unknown block within function" $
         do
           res <-
