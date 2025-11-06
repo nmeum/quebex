@@ -111,7 +111,7 @@ toSMT :: SExpr -> SMT.SExpr
 toSMT expr =
   case sexpr expr of
     (Var name) -> SMT.const name
-    (Int v) -> SMT.bvHex (width expr) v
+    (Int v) -> SMT.List [SMT.Atom "_", SMT.Atom ("bv" ++ show v), SMT.Atom $ show (width expr)]
     (Or lhs rhs) -> SMT.or (toSMT lhs) (toSMT rhs)
     (Ite cond lhs rhs) -> SMT.ite (toSMT cond) (toSMT lhs) (toSMT rhs)
     (And lhs rhs) -> SMT.and (toSMT lhs) (toSMT rhs)
