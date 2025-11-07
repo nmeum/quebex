@@ -45,7 +45,7 @@ addExpr expr =
   modify (\s -> s {exprs = exprs s ++ [expr]})
 
 getAsserts :: State UnwindEnv [SMT.SExpr]
-getAsserts = gets (concat . assertStack)
+getAsserts = gets (concat . reverse . assertStack)
 
 completeQuery :: State UnwindEnv ()
 completeQuery =
