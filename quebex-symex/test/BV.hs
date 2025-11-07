@@ -20,6 +20,12 @@ foldingTests =
           let b2 = SMT.extract val 8 8
 
           SMT.concat b2 b1 @?= SMT.extract val 0 16,
+      testCase "Concat with zeros" $
+        do
+          let lhs = SMT.bvLit 8 0x0
+          let rhs = SMT.const "foo" 8
+
+          SMT.concat lhs rhs @?= SMT.zeroExtend 8 rhs,
       testCase "Folding of ite-based equalities" $
         do
           let cond = SMT.const "foo" 32 `SMT.eq` SMT.const "bar" 32

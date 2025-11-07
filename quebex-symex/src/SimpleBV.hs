@@ -232,14 +232,19 @@ concat' :: SExpr -> SExpr -> SExpr
 concat' lhs rhs =
   SExpr (width lhs + width rhs) $ Concat lhs rhs
 
+-- Replace 0 concats with zero extension: (concat (_ bv0 8) buf6)
+concatZeros :: SExpr -> SExpr -> SExpr
+concatZeros lhs@(E (Int 0)) rhs = zeroExtend (fromIntegral $ width lhs) rhs
+concatZeros lhs rhs = concat' lhs rhs
+
 -- Replaces continuous concat expressions with a single extract expression.
 concat :: SExpr -> SExpr -> SExpr
 concat
   lhs@(E (Extract loff lwidth latom@(E exprLhs)))
   rhs@(E (Extract roff rwidth (E exprRhs)))
     | exprLhs == exprRhs && (roff + rwidth) == loff = extract latom roff (lwidth + rwidth)
-    | otherwise = concat' lhs rhs
-concat lhs rhs = concat' lhs rhs
+    | otherwise = concatZeros lhs rhs
+concat lhs rhs = concatZeros lhs rhs
 
 extract' :: SExpr -> Int -> Int -> SExpr
 extract' expr off w = SExpr w $ Extract off w expr
