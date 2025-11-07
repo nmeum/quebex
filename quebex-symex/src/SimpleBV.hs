@@ -274,6 +274,16 @@ extractIte (E (Ite cond ifT@(E (Int _)) ifF@(E (Int _)))) off w =
    in SExpr w $ Ite cond (ex ifT) (ex ifF)
 extractIte expr off width = extractConst expr off width
 
+extractZeros ::
+  SExpr ->
+  Int ->
+  Int ->
+  SExpr
+extractZeros expr@(E (ZeroExtend extBits inner)) exOff exWidth
+  | exOff >= width inner && extBits > 0 = bvLit exWidth 0 -- only extracting zeros
+  | otherwise = extractIte expr exOff exWidth
+extractZeros outer exOff exWidth = extractIte outer exOff exWidth
+
 extractExt' ::
   (Integer -> SExpr -> Expr SExpr) ->
   SExpr ->
@@ -284,12 +294,12 @@ extractExt' ::
   SExpr
 extractExt' cons outer extBits inner exOff exWidth
   -- If we are only extracting the non-extended bytes...
-  | width inner >= exOff + exWidth = extractIte inner exOff exWidth
+  | width inner >= exOff + exWidth = extractZeros inner exOff exWidth
   -- Consider: ((_ extract 31 0) ((_ zero_extend 56) byte))
   | exWidth < fromIntegral extBits && exOff == 0 =
       SExpr exWidth $ cons (extBits - fromIntegral exWidth) inner
   -- No folding...
-  | otherwise = extractIte outer exOff exWidth
+  | otherwise = extractZeros outer exOff exWidth
 
 -- Remove ZeroExtend and SignExtend expression where we don't use
 -- the extended bits because we extract below the extended size.
