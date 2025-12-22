@@ -216,11 +216,6 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
 
 ------------------------------------------------------------------------
 
-run :: (E.ValueRepr v, MEM.Storable v b) => Program -> SimState v b a -> IO a
-run prog state = do
-  emptyEnv <- liftIO $ mkEnv prog 0x0 memSize
-  fst <$> runStateT state emptyEnv
-  where
-    -- TODO: Don't hardcode the empty state.
-    memSize = 1024 * 1024 * 10
-{-# SPECIALIZE run :: Program -> SimState D.RegVal Word8 a -> IO a #-}
+run :: (E.ValueRepr v, MEM.Storable v b) => Env v b -> SimState v b a -> IO a
+run env state = fst <$> runStateT state env
+{-# SPECIALIZE run :: Env D.RegVal Word8 -> SimState D.RegVal Word8 a -> IO a #-}

@@ -10,7 +10,7 @@ import Data.Word (Word8)
 import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
-import Language.QBE.Simulator.Default.State (SimState, run)
+import Language.QBE.Simulator.Default.State (SimState, mkEnv, run)
 import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
@@ -26,7 +26,8 @@ parseAndExec' funcName params input = do
     Just x -> pure x
     Nothing -> fail $ "Unknown function: " ++ show funcName
 
-  try $ run prog (execFunc func params :: SimState D.RegVal Word8 (Maybe D.RegVal))
+  env <- mkEnv prog 0 (1024 * 1024)
+  try $ run env (execFunc func params :: SimState D.RegVal Word8 (Maybe D.RegVal))
 
 parseAndExec :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Maybe D.RegVal)
 parseAndExec funcName params input = do
