@@ -386,8 +386,12 @@ bvULt = binOp BvULt
 bvURem :: SExpr -> SExpr -> SExpr
 -- Fold constant bvURem operations which are emitted a lot in our generated
 -- SMT-LIB because of QBE's "shift-value modulo bitsize"-semantics.
-bvURem v@(E (Int lhs)) (E (Int rhs)) =
-  SExpr (width v) (Int $ lhs `rem` rhs)
+bvURem vlhs@(E (Int lhs)) (E (Int rhs)) =
+  SExpr (width vlhs) $
+    -- XXX: On urem-by-zero, SMT-LIB returns the lhs.
+    if rhs == 0
+      then Int lhs
+      else Int $ lhs `rem` rhs
 bvURem lhs rhs = binOp BvURem lhs rhs
 
 bvXOr :: SExpr -> SExpr -> SExpr
