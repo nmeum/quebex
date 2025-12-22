@@ -607,9 +607,9 @@ follow a letter, they initialize multiple fields of the same size.
 allocSize :: Parser Q.AllocSize
 allocSize =
   choice
-    [ bind "4" Q.AlignWord,
-      bind "8" Q.AlignLong,
-      bind "16" Q.AlignLongLong
+    [ bind "4" Q.AllocWord,
+      bind "8" Q.AllocLong,
+      bind "16" Q.AllocLongLong
     ]
 \end{code}
 

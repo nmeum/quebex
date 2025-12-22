@@ -113,15 +113,15 @@ data Linkage
   deriving (Show, Eq)
 
 data AllocSize
-  = AlignWord
-  | AlignLong
-  | AlignLongLong
+  = AllocWord
+  | AllocLong
+  | AllocLongLong
   deriving (Show, Eq)
 
 getSize :: AllocSize -> Int
-getSize AlignWord = 4
-getSize AlignLong = 8
-getSize AlignLongLong = 16
+getSize AllocWord = 4
+getSize AllocLong = 8
+getSize AllocLongLong = 16
 
 data TypeDef
   = TypeDef
