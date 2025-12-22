@@ -38,6 +38,14 @@ data RegVal
   | VDouble Double
   deriving (Show, Eq)
 
+bitSize :: RegVal -> Int
+bitSize (VByte _) = 8
+bitSize (VHalf _) = 16
+bitSize (VWord _) = 32
+bitSize (VLong _) = 64
+bitSize (VSingle _) = 32
+bitSize (VDouble _) = 64
+
 fromBits :: Int -> Integer -> Maybe RegVal
 fromBits 08 = Just . VHalf . fromIntegral
 fromBits 16 = Just . VHalf . fromIntegral
@@ -56,10 +64,10 @@ shiftInstr shiftOp val (VWord amount) = val `shiftOp` amount
 shiftInstr _ _ _ = Nothing
 
 toShiftAmount :: Word32 -> Word32 -> Int
-toShiftAmount bitSize amount =
+toShiftAmount valBitSize amount =
   -- From the QBE specification: "The shifting amount
   -- is taken modulo the size of the result type."
-  let s = fromIntegral $ amount `mod` bitSize
+  let s = fromIntegral $ amount `mod` valBitSize
    in assert (s > 0) s
 
 shiftSar :: RegVal -> Word32 -> Maybe RegVal
