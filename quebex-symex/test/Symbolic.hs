@@ -6,6 +6,7 @@
 module Symbolic (exprTests) where
 
 import Data.Functor ((<&>))
+import Data.Int (Int64)
 import Data.Maybe (fromJust)
 import Data.Word (Word32, Word64)
 import Language.QBE.Simulator.Default.Expression qualified as DE
@@ -74,20 +75,26 @@ instance Arbitrary BinaryInput where
     lhs <- arbitrary
     BinaryInput ty lhs <$> arbitrary
 
-binaryProp ::
+binaryEq ::
   (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
   (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
   BinaryInput ->
-  Property
-binaryProp opSym opCon (BinaryInput ty lhs rhs) =
-  ioProperty $
-    eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
+  IO Bool
+binaryEq opSym opCon (BinaryInput ty lhs rhs) =
+  eqConcrete (opSym (mkS lhs) (mkS rhs)) (opCon (mkC lhs) (mkC rhs))
   where
     mkS :: Word64 -> SE.BitVector
     mkS = E.fromLit (QBE.Base ty)
 
     mkC :: Word64 -> DE.RegVal
     mkC = E.fromLit (QBE.Base ty)
+
+binaryProp ::
+  (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
+  (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
+  BinaryInput ->
+  Property
+binaryProp opSym opCon input = ioProperty $ binaryEq opSym opCon input
 
 opEquiv :: TestTree
 opEquiv =
@@ -154,8 +161,24 @@ shiftEquiv =
 equivTests :: TestTree
 equivTests =
   testGroup
-    "QuickCheck-based equivalence tests"
-    [shiftEquiv, negEquiv, opEquiv]
+    "Equivalence tests for symbolic and default expression interpreter"
+    [ shiftEquiv,
+      negEquiv,
+      opEquiv,
+      -- Occurs when the most-negative integer is divided by -1.
+      testCase "Signed division overflow on div" $
+        do
+          let input =
+                BinaryInput QBE.Long 0x8000000000000000 $
+                  fromIntegral (-1 :: Int64)
+          binaryEq E.div E.div input >>= assertBool "signed-div-overflow",
+      testCase "Signed division overflow on srem" $
+        do
+          let input =
+                BinaryInput QBE.Long 0x8000000000000000 $
+                  fromIntegral (-1 :: Int64)
+          binaryEq E.srem E.srem input >>= assertBool "signed-srem-overflow"
+    ]
 
 storeTests :: TestTree
 storeTests =

@@ -157,6 +157,28 @@ withZeroDiv defVal op lhs rhs
   | E.toWord64 rhs == 0 = defVal
   | otherwise = op lhs rhs
 
+-- Signed division overflow occurs when the most-negative integer is divided by -1.
+withSDivOverflow ::
+  Maybe RegVal ->
+  (RegVal -> RegVal -> Maybe RegVal) ->
+  RegVal ->
+  RegVal ->
+  Maybe RegVal
+withSDivOverflow defVal op lhs rhs
+  | E.toWord64 lhs == mostNeg && E.toWord64 rhs == minusOne = defVal
+  | otherwise = op lhs rhs
+  where
+    numBits :: Int
+    numBits =
+      assert (bitSize lhs == bitSize rhs) $
+        bitSize lhs
+
+    minusOne :: Word64
+    minusOne = (2 ^ numBits) - 1
+
+    mostNeg :: Word64
+    mostNeg = 2 ^ (numBits - 1)
+
 -- We could also add support for unary operators to the generator. However,
 -- presently there is only one unary operator so it isn't worth it.
 neg' :: RegVal -> Maybe RegVal
@@ -218,10 +240,10 @@ instance E.ValueRepr RegVal where
   -- symbolic executor, we use the behavior mandated by SMT-LIB here.
   --
   -- TODO: Move this into the Expression abstraction (just like overshift handling).
-  div lhs = withZeroDiv (maxValue lhs) div' lhs
+  div lhs = withZeroDiv (maxValue lhs) (withSDivOverflow (Just lhs) div') lhs
   udiv lhs = withZeroDiv (maxValue lhs) udiv' lhs
   urem lhs = withZeroDiv (Just lhs) urem' lhs
-  srem lhs = withZeroDiv (Just lhs) srem' lhs
+  srem lhs = withZeroDiv (Just lhs) (withSDivOverflow (fromBits (bitSize lhs) 0) srem') lhs
 
   add = add'
   sub = sub'
