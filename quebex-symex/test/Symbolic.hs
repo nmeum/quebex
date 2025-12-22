@@ -1,7 +1,6 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
-{-# OPTIONS_GHC -Wno-x-partial #-}
 
 module Symbolic (exprTests) where
 
