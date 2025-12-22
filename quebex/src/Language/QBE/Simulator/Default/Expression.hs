@@ -141,6 +141,22 @@ instance MEM.Storable RegVal Word8 where
 -- TODO: Insert the generated code directly into the instance declaration.
 generateOperators
 
+maxValue :: RegVal -> Maybe RegVal
+maxValue val =
+  let bitSiz = bitSize val
+      maxVal = (2 ^ bitSiz) - 1
+   in fromBits bitSiz maxVal
+
+withZeroDiv ::
+  Maybe RegVal ->
+  (RegVal -> RegVal -> Maybe RegVal) ->
+  RegVal ->
+  RegVal ->
+  Maybe RegVal
+withZeroDiv defVal op lhs rhs
+  | E.toWord64 rhs == 0 = defVal
+  | otherwise = op lhs rhs
+
 -- We could also add support for unary operators to the generator. However,
 -- presently there is only one unary operator so it isn't worth it.
 neg' :: RegVal -> Maybe RegVal
@@ -196,13 +212,20 @@ instance E.ValueRepr RegVal where
   subType QBE.Double v@(VDouble _) = Just v
   subType _ _ = Nothing
 
+  -- This is needed to align the behavior of quebex/ and quebex-symex/ on
+  -- division-by-zero. QBE does not explicitly mandate a specific behavior
+  -- for this edge case. Therefore, in order to avoid extra branches in the
+  -- symbolic executor, we use the behavior mandated by SMT-LIB here.
+  --
+  -- TODO: Move this into the Expression abstraction (just like overshift handling).
+  div lhs = withZeroDiv (maxValue lhs) div' lhs
+  udiv lhs = withZeroDiv (maxValue lhs) udiv' lhs
+  urem lhs = withZeroDiv (Just lhs) urem' lhs
+  srem lhs = withZeroDiv (Just lhs) srem' lhs
+
   add = add'
   sub = sub'
   mul = mul'
-  div = div'
-  urem = urem'
-  srem = srem'
-  udiv = udiv'
   or = or'
   xor = xor'
   and = and'
