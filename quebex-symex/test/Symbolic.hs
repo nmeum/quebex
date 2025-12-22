@@ -24,7 +24,6 @@ import Test.Tasty.QuickCheck
     elements,
     ioProperty,
     testProperty,
-    (==>),
   )
 
 getSolver :: IO SMT.Solver
@@ -90,14 +89,6 @@ binaryProp opSym opCon (BinaryInput ty lhs rhs) =
     mkC :: Word64 -> DE.RegVal
     mkC = E.fromLit (QBE.Base ty)
 
-divProp ::
-  (SE.BitVector -> SE.BitVector -> Maybe SE.BitVector) ->
-  (DE.RegVal -> DE.RegVal -> Maybe DE.RegVal) ->
-  BinaryInput ->
-  Property
-divProp opSym opCon input@(BinaryInput _ _ rhs) =
-  (rhs /= 0) ==> binaryProp opSym opCon input
-
 opEquiv :: TestTree
 opEquiv =
   testGroup
@@ -105,13 +96,13 @@ opEquiv =
     [ testProperty "add" (binaryProp E.add E.add),
       testProperty "sub" (binaryProp E.sub E.sub),
       testProperty "mul" (binaryProp E.mul E.mul),
-      testProperty "div" (divProp E.div E.div),
+      testProperty "div" (binaryProp E.div E.div),
       testProperty "or" (binaryProp E.or E.or),
       testProperty "xor" (binaryProp E.xor E.xor),
       testProperty "and" (binaryProp E.and E.and),
-      testProperty "urem" (divProp E.urem E.urem),
-      testProperty "srem" (divProp E.srem E.srem),
-      testProperty "udiv" (divProp E.udiv E.udiv),
+      testProperty "urem" (binaryProp E.urem E.urem),
+      testProperty "srem" (binaryProp E.srem E.srem),
+      testProperty "udiv" (binaryProp E.udiv E.udiv),
       testProperty "eq" (binaryProp E.eq E.eq),
       testProperty "ne" (binaryProp E.ne E.ne),
       testProperty "sle" (binaryProp E.sle E.sle),
