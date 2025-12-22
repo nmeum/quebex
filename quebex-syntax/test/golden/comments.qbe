@@ -1,0 +1,28 @@
+# foo
+
+# bar
+#
+
+ 
+
+## test
+
+# foo #
+
+  # foo
+		# bar
+
+	# baz
+
+#  
+
+function w $main() { # foo
+@start
+	# blaaa
+	hlt 	  # something
+}
+
+#test
+
+
+  # test

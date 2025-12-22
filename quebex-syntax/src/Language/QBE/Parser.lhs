@@ -33,7 +33,13 @@
 
 \ignore{
 \begin{code}
-module Language.QBE.Parser (dataDef, typeDef, funcDef) where
+module Language.QBE.Parser
+  ( skipInitComments,
+    dataDef,
+    typeDef,
+    funcDef,
+  )
+where
 
 import Data.Char (chr)
 import Data.Word (Word64)
@@ -255,6 +261,10 @@ wsNL p = p <* skipNoCode (skipMany blankNL)
 
 wsNL1 :: Parser a -> Parser a
 wsNL1 p = p <* skipNoCode (skipMany1 blankNL)
+
+-- Only intended to be used to skip comments at the start of a file.
+skipInitComments :: Parser ()
+skipInitComments = skipNoCode (skipMany blankNL)
 \end{code}
 }
 

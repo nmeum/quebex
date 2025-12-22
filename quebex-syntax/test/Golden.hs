@@ -72,5 +72,6 @@ goldenTests =
       runTest "value-global",
       runTest "bubble-sort",
       runTest "phi-instructions",
-      runTest "data"
+      runTest "data",
+      runTest "comments"
     ]

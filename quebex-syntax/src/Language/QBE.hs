@@ -11,7 +11,7 @@ module Language.QBE
 where
 
 import Data.Maybe (mapMaybe)
-import Language.QBE.Parser (dataDef, funcDef, typeDef)
+import Language.QBE.Parser (dataDef, funcDef, skipInitComments, typeDef)
 import Language.QBE.Types (DataDef, FuncDef, TypeDef)
 import Text.ParserCombinators.Parsec
   ( ParseError,
@@ -47,4 +47,6 @@ globalFuncs = mapMaybe globalFuncs'
     globalFuncs' _ = Nothing
 
 parse :: SourceName -> String -> Either ParseError Program
-parse = Text.ParserCombinators.Parsec.parse (many parseDef <* eof)
+parse =
+  Text.ParserCombinators.Parsec.parse
+    (skipInitComments *> many parseDef <* eof)
