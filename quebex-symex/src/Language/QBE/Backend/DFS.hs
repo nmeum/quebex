@@ -37,8 +37,6 @@ trackTrace (PathSel tree t) trace =
 -- the tested software. This function updates the metadata in the execution
 -- tree and thus returns a new execution tree, even if no satisfiable
 -- assignment was found.
---
--- TODO: Can we get by without passing 'inputVars` here again?
 findUnexplored :: SMT.Solver -> [SMT.SExpr] -> PathSel -> IO (Maybe Model.Model, PathSel)
 findUnexplored solver inputVars tracer@(PathSel tree oldTrace) = do
   case negateBranch tree of
