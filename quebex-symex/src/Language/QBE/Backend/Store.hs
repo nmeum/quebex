@@ -21,7 +21,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
-import System.Random (StdGen, genWord64)
+import System.Random (StdGen, genWord64R)
 
 -- | Concrete variable assignment.
 type Assign = Map.Map String DE.RegVal
@@ -79,7 +79,7 @@ getConcolic store@Store {randGen = rand} name ty =
       case Map.lookup name (cValues store) of
         Just cv -> (cv, rand)
         Nothing ->
-          -- TODO: The generator should consider the bounds of QBE.BaseType.
-          let (rv, nr) = genWord64 rand
+          let maxValue = (2 ^ QBE.extTypeBitSize ty) - 1
+              (rv, nr) = genWord64R maxValue rand
               conValue = E.fromLit ty rv
            in (conValue, nr)
