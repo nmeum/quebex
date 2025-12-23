@@ -60,7 +60,6 @@ liftState toLift = do
   modify (\ps -> ps {envBase = s})
   pure a
 
--- TODO: Use QBE.ExtType here
 makeConcolic :: String -> QBE.ExtType -> StateT Env IO (CE.Concolic DE.RegVal)
 makeConcolic name ty = do
   st <- gets envStore
