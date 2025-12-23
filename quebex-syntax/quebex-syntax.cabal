@@ -34,7 +34,8 @@ library
     build-depends:
       base,
       parsec,
-      containers
+      containers,
+      exceptions
 
 test-suite quebex-syntax-test
     import:           warnings

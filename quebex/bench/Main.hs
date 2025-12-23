@@ -7,7 +7,8 @@ module Main (main) where
 import Control.Monad (void)
 import Criterion.Main (Benchmarkable, bench, bgroup, defaultMain, nfIO)
 import Data.Word (Word32, Word64, Word8)
-import Language.QBE.Simulator (execFunc, parseAndFind)
+import Language.QBE (parseAndFind)
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, mkEnv, run)
 import Language.QBE.Types qualified as QBE

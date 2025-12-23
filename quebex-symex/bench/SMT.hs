@@ -6,9 +6,9 @@ module SMT (smtBench) where
 
 import Control.Monad (when)
 import Criterion.Main
+import Language.QBE (parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
-import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE

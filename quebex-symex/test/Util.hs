@@ -6,10 +6,11 @@ module Util where
 
 import Data.Bifunctor (second)
 import Data.Word (Word64)
+import Language.QBE (parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
-import Language.QBE.Simulator (execFunc, parseAndFind)
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Concolic.State (mkEnv, run)
 import Language.QBE.Simulator.Default.Expression qualified as DE

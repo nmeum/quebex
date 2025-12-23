@@ -7,7 +7,8 @@ module Exec (execBench) where
 import Control.Monad (void)
 import Criterion.Main (Benchmark, Benchmarkable, bench, bgroup, nfIO)
 import Data.Word (Word64, Word8)
-import Language.QBE.Simulator (execFunc, parseAndFind)
+import Language.QBE (parseAndFind)
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State (SimState, mkEnv, run)

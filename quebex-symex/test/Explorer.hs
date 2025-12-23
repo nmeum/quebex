@@ -8,10 +8,9 @@ import Data.Bifunctor (second)
 import Data.List (sort)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
-import Language.QBE (Program)
+import Language.QBE (Program, parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
-import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)

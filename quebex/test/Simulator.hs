@@ -6,6 +6,7 @@ module Simulator (simTests) where
 
 import Control.Monad.Catch (try)
 import Data.Word (Word8)
+import Language.QBE (parseAndFind)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, mkEnv, run)

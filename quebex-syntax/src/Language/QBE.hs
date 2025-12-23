@@ -7,12 +7,16 @@ module Language.QBE
     Definition (..),
     globalFuncs,
     Language.QBE.parse,
+    ExecError (..),
+    parseAndFind,
   )
 where
 
+import Control.Monad.Catch (Exception, MonadThrow, throwM)
+import Data.List (find)
 import Data.Maybe (mapMaybe)
 import Language.QBE.Parser (dataDef, funcDef, skipInitComments, typeDef)
-import Language.QBE.Types (DataDef, FuncDef, TypeDef)
+import Language.QBE.Types (DataDef, FuncDef, GlobalIdent, TypeDef, fName)
 import Text.ParserCombinators.Parsec
   ( ParseError,
     Parser,
@@ -50,3 +54,32 @@ parse :: SourceName -> String -> Either ParseError Program
 parse =
   Text.ParserCombinators.Parsec.parse
     (skipInitComments *> many parseDef <* eof)
+
+------------------------------------------------------------------------
+
+data ExecError
+  = ESyntaxError ParseError
+  | EUnknownEntry GlobalIdent
+  deriving (Show)
+
+instance Exception ExecError
+
+-- | Utility function for the common task of parsing an input as a QBE
+-- 'Program' and, within that program, finding the entry function. If the
+-- function doesn't exist or a the input is invalid an exception is thrown.
+parseAndFind ::
+  (MonadThrow m) =>
+  GlobalIdent ->
+  String ->
+  m (Program, FuncDef)
+parseAndFind entryIdent input = do
+  prog <- case Language.QBE.parse "" input of -- TODO: file name
+    Right rt -> pure rt
+    Left err -> throwM $ ESyntaxError err
+
+  let funcs = globalFuncs prog
+  func <- case find (\f -> fName f == entryIdent) funcs of
+    Just x -> pure x
+    Nothing -> throwM $ EUnknownEntry entryIdent
+
+  pure (prog, func)

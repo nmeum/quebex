@@ -5,7 +5,7 @@
 module Golden (goldenTests) where
 
 import Data.Bifunctor (second)
-import Language.QBE.Simulator (parseAndFind)
+import Language.QBE (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Types qualified as QBE

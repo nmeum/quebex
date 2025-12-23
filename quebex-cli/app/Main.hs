@@ -4,9 +4,9 @@
 
 module Main (main) where
 
+import Language.QBE (parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
-import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
 import Language.QBE.Simulator.Memory qualified as MEM

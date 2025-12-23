@@ -5,8 +5,8 @@
 module Analysis (analTests) where
 
 import Data.Map qualified as Map
+import Language.QBE (parseAndFind)
 import Language.QBE.Analysis.CFG qualified as CFG
-import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
