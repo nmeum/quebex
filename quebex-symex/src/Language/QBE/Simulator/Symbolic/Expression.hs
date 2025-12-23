@@ -6,7 +6,6 @@ module Language.QBE.Simulator.Symbolic.Expression
   ( BitVector,
     fromByte,
     fromReg,
-    fromSExpr,
     toSExpr,
     symbolic,
     bitSize,
@@ -37,10 +36,6 @@ fromReg (D.VWord v) = BitVector (SMT.bvLit 32 $ fromIntegral v)
 fromReg (D.VLong v) = BitVector (SMT.bvLit 64 $ fromIntegral v)
 fromReg (D.VSingle _) = error "symbolic floats not supported"
 fromReg (D.VDouble _) = error "symbolic doubles not supported"
-
--- TODO: remove
-fromSExpr :: SMT.SExpr -> BitVector
-fromSExpr = BitVector
 
 toSExpr :: BitVector -> SMT.SExpr
 toSExpr (BitVector s) = s
@@ -131,7 +126,7 @@ shiftOp _ _ _ = Nothing -- Shift amount must always be a Word.
 binaryBoolOp :: (SMT.SExpr -> SMT.SExpr -> SMT.SExpr) -> BitVector -> BitVector -> Maybe BitVector
 binaryBoolOp op lhs rhs = do
   bv <- binaryOp op lhs rhs
-  return $ fromSExpr (SMT.ite (toSExpr bv) trueValue falseValue)
+  return $ BitVector (SMT.ite (toSExpr bv) trueValue falseValue)
   where
     -- TODO: Declare these as constants.
     trueValue :: SMT.SExpr
