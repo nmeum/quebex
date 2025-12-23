@@ -7,3 +7,10 @@ packages:
   quebex-symex/
   quebex-cli/
   quebex/
+
+-- Ensure that benchmarks and tests are always build to catch API breakage.
+tests: True
+benchmarks: True
+
+-- Don't build Haddock documentation , just not the focus for now.
+documentation: False
