@@ -1,0 +1,6 @@
+function w $main() {
+@start
+	%val =w add 0, 0
+	%val.1 =w add 0, +5
+	ret %val
+}

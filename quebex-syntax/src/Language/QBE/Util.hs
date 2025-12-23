@@ -11,6 +11,7 @@ import Language.QBE.Numbers
     hexnum,
     octnum,
     sign,
+    signMinus,
   )
 import Text.ParserCombinators.Parsec
   ( Parser,
@@ -26,8 +27,7 @@ bind str val = val <$ string str
 
 decNumber :: Parser Word64
 decNumber = do
-  -- TODO: QBE probably doesn't support a '+' sign prefix
-  s <- sign
+  s <- signMinus
   s <$> decimal
 
 octNumber :: Parser Word64

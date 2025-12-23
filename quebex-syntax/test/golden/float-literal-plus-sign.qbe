@@ -1,0 +1,6 @@
+function w $main() {
+@start
+	%val =s add 0, 0
+	%val.1 =s add 0, s_+4.2
+	hlt
+}

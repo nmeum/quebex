@@ -100,6 +100,11 @@ fractionValue base =
 
 -- * integers and naturals
 
+-- | parse a negative or a positive number (returning 'negate' or 'id').
+-- positive numbers are NOT allowed to be prefixed by a plus sign.
+signMinus :: (Num a, Stream s m Char) => ParsecT s u m (a -> a)
+signMinus = (char '-' >> return negate) <|> return id
+
 -- | parse an optional plus or minus sign, returning 'negate' or 'id'
 sign :: (Num a, Stream s m Char) => ParsecT s u m (a -> a)
 sign = (char '-' >> return negate) <|> (optional (char '+') >> return id)
