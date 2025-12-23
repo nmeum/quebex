@@ -17,6 +17,7 @@ module Language.QBE.Backend.Tracer
 where
 
 import Control.Exception (throwIO)
+import Control.Monad (when)
 import Language.QBE.Backend (SolverError (UnknownResult), prefixLength)
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
@@ -77,8 +78,11 @@ solveTrace solver inputVars oldTrace newTrace = do
   -- incremental solving capabilities.
   let prefix = prefixLength newTrace oldTrace
   let toDrop = length oldTrace - prefix
-  -- TODO: Don't pop if toDrop is zero.
-  SMT.popMany solver $ fromIntegral toDrop
+
+  -- Micro optimization: When we don't have anything to drop, then
+  -- don't call .popMany thereby avoiding communication with the solver.
+  when (toDrop /= 0) $
+    SMT.popMany solver (fromIntegral toDrop)
 
   -- Only enforce new constraints, i.e. those beyond the common prefix.
   assertTrace (drop prefix newTrace)
