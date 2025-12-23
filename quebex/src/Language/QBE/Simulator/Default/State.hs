@@ -12,7 +12,7 @@ import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import Language.QBE (Definition (DefData), Program, globalFuncs)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.Funcs (lookupSimFunc)
@@ -156,9 +156,8 @@ loadData dataDef = do
           }
     )
   where
-    -- TODO
-    maxAlign :: Word64
-    maxAlign = 4
+    -- The alignment of an aggregate type is the maximum alignment the members.
+    maxAlign = maximum $ map QBE.objAlign (QBE.objs dataDef)
 {-# SPECIALIZE loadData :: QBE.DataDef -> StateT (Env D.RegVal Word8) IO () #-}
 
 ------------------------------------------------------------------------

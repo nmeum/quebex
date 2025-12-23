@@ -159,6 +159,10 @@ data DataObj
   | OZeroFill Word64
   deriving (Show, Eq)
 
+objAlign :: DataObj -> Word64
+objAlign (OZeroFill _) = 1 :: Word64
+objAlign (OItem ty _) = fromIntegral $ extTypeByteSize ty
+
 data DataItem
   = DSymOff GlobalIdent Word64
   | DString String
