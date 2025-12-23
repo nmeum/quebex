@@ -4,18 +4,15 @@
 
 module Main (main) where
 
-import Control.Exception (Exception, throwIO)
-import Data.List (find)
-import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.IO (IOMode (WriteMode), withFile)
-import Text.Parsec (ParseError)
 
 data Opts = Opts
   { optMemStart :: MEM.Address,
@@ -61,25 +58,10 @@ optsParser =
 
 ------------------------------------------------------------------------
 
-data ExecError
-  = SyntaxError ParseError
-  | UnknownFunction QBE.GlobalIdent
-  deriving (Show)
-
-instance Exception ExecError
-
 exploreFile :: Opts -> IO [(ST.Assign, T.ExecTrace)]
 exploreFile opts = do
   let filePath = optQBEFile opts
-  content <- readFile filePath
-  prog <- case parse filePath content of
-    Right rt -> pure rt
-    Left err -> throwIO $ SyntaxError err
-
-  let funcs = globalFuncs prog
-  func <- case find (\f -> QBE.fName f == entryFunc) funcs of
-    Just x -> pure x
-    Nothing -> throwIO $ UnknownFunction entryFunc
+  (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
   env <- mkEnv prog (optMemStart opts) (optMemSize opts) (optSeed opts)
   case optLog opts of

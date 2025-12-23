@@ -5,8 +5,7 @@
 module Golden (goldenTests) where
 
 import Data.Bifunctor (second)
-import Data.List (find)
-import Language.QBE (globalFuncs, parse)
+import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
 import Language.QBE.Types qualified as QBE
@@ -21,18 +20,11 @@ entryFunc = QBE.GlobalIdent "entry"
 
 exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO Result
 exploreQBE filePath params = do
-  content <- readFile filePath
-  prog <- case parse filePath content of
-    Right rt -> pure rt
-    Left err -> fail $ "Parsing error: " ++ show err
-
-  let funcs = globalFuncs prog
-  func <- case find (\f -> QBE.fName f == entryFunc) funcs of
-    Just x -> pure x
-    Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
+  (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
   engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
+
   traces <-
     explore engine defEnv func $
       map (second QBE.Base) params

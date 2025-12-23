@@ -33,6 +33,7 @@ library
       quebex-syntax,
       containers,
       exceptions,
+      parsec,
       mtl
 
     exposed-modules:
@@ -53,9 +54,6 @@ benchmark quebex
     type:             exitcode-stdio-1.0
     hs-source-dirs:   bench
     main-is:          Main.hs
-
-    other-modules:
-      Exec
 
     build-depends:
       base,

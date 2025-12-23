@@ -5,29 +5,25 @@
 module Simulator (simTests) where
 
 import Control.Monad.Catch (try)
-import Data.List (find)
 import Data.Word (Word8)
-import Language.QBE (globalFuncs, parse)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
-import Language.QBE.Simulator.Default.State (SimState, mkEnv, run)
+import Language.QBE.Simulator.Default.State (Env, mkEnv, run)
 import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 
-parseAndExec' :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Either EvalError (Maybe D.RegVal))
+parseAndExec' ::
+  QBE.GlobalIdent ->
+  [D.RegVal] ->
+  String ->
+  IO (Either EvalError (Maybe D.RegVal))
 parseAndExec' funcName params input = do
-  prog <- case parse "" input of
-    Left e -> fail $ "Unexpected parsing error: " ++ show e
-    Right r -> pure r
+  (prog, entry) <- parseAndFind funcName input
 
-  func <- case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
-    Just x -> pure x
-    Nothing -> fail $ "Unknown function: " ++ show funcName
-
-  env <- mkEnv prog 0 (1024 * 1024)
-  try $ run env (execFunc func params :: SimState D.RegVal Word8 (Maybe D.RegVal))
+  env <- mkEnv prog 0 128 :: IO (Env D.RegVal Word8)
+  try $ run env (execFunc entry params)
 
 parseAndExec :: QBE.GlobalIdent -> [D.RegVal] -> String -> IO (Maybe D.RegVal)
 parseAndExec funcName params input = do

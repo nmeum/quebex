@@ -9,16 +9,19 @@ module Language.QBE.Simulator
     execStmt,
     execBlock,
     execFunc,
+    ExecError (..),
+    parseAndFind,
   )
 where
 
 import Control.Monad (void, when)
-import Control.Monad.Catch (throwM)
+import Control.Monad.Catch (Exception, MonadThrow, throwM)
 import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Map qualified as Map
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
+import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State
 import Language.QBE.Simulator.Error
@@ -26,6 +29,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory (addrOverlap)
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
+import Text.Parsec (ParseError)
 
 -- Execution of a BasicBlock can either return (with an optional return
 -- value) or it can jump to another BasicBlock which will then be executed.
@@ -236,3 +240,32 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName QBE.Variadic = error "variadic parameters not supported"
 {-# SPECIALIZE execFunc :: QBE.FuncDef -> [DE.RegVal] -> SimState DE.RegVal Word8 (Maybe DE.RegVal) #-}
 {-# INLINEABLE execFunc #-}
+
+------------------------------------------------------------------------
+
+data ExecError
+  = ESyntaxError ParseError
+  | EUnknownEntry QBE.GlobalIdent
+  deriving (Show)
+
+instance Exception ExecError
+
+-- | Utility function for the common task of parsing an input as a QBE
+-- 'Program' and, within that program, finding the entry function. If the
+-- function doesn't exist or a the input is invalid an exception is thrown.
+parseAndFind ::
+  (MonadThrow m) =>
+  QBE.GlobalIdent ->
+  String ->
+  m (Program, QBE.FuncDef)
+parseAndFind entryIdent input = do
+  prog <- case parse "" input of -- TODO: file name
+    Right rt -> pure rt
+    Left err -> throwM $ ESyntaxError err
+
+  let funcs = globalFuncs prog
+  func <- case find (\f -> QBE.fName f == entryIdent) funcs of
+    Just x -> pure x
+    Nothing -> throwM $ EUnknownEntry entryIdent
+
+  pure (prog, func)

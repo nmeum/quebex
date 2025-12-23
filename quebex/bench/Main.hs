@@ -4,10 +4,26 @@
 
 module Main (main) where
 
-import Criterion.Main
-import Data.Word (Word32)
-import Exec (exec)
+import Control.Monad (void)
+import Criterion.Main (Benchmarkable, bench, bgroup, defaultMain, nfIO)
+import Data.Word (Word32, Word64, Word8)
+import Language.QBE.Simulator (execFunc, parseAndFind)
 import Language.QBE.Simulator.Default.Expression qualified as D
+import Language.QBE.Simulator.Default.State (Env, mkEnv, run)
+import Language.QBE.Types qualified as QBE
+
+exec :: [D.RegVal] -> String -> IO ()
+exec params input = do
+  (prog, func) <- parseAndFind entryFunc input
+
+  env <- mkEnv prog 0 memSize :: IO (Env D.RegVal Word8)
+  void $ run env (execFunc func params)
+  where
+    memSize :: Word64
+    memSize = 1024 * 1024 * 10
+
+    entryFunc :: QBE.GlobalIdent
+    entryFunc = QBE.GlobalIdent "entry"
 
 bubbleSort :: Word32 -> Benchmarkable
 bubbleSort inputSize =

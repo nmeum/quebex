@@ -6,10 +6,9 @@ module SMT (smtBench) where
 
 import Control.Monad (when)
 import Criterion.Main
-import Data.List (find)
-import Language.QBE (globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.Simulator (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (explore, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
@@ -36,15 +35,7 @@ entryFunc = QBE.GlobalIdent "main"
 
 exploreQBE :: FilePath -> IO [(ST.Assign, T.ExecTrace)]
 exploreQBE filePath = do
-  content <- readFile filePath
-  prog <- case parse filePath content of
-    Right rt -> pure rt
-    Left err -> fail $ "Parsing error: " ++ show err
-
-  let funcs = globalFuncs prog
-  func <- case find (\f -> QBE.fName f == entryFunc) funcs of
-    Just x -> pure x
-    Nothing -> fail $ "Unable to find entry function: " ++ show entryFunc
+  (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
   withFile logPath WriteMode (explore' prog func)
   where

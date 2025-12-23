@@ -5,13 +5,11 @@
 module Util where
 
 import Data.Bifunctor (second)
-import Data.List (find)
 import Data.Word (Word64)
-import Language.QBE (Program, globalFuncs, parse)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
-import Language.QBE.Simulator (execFunc)
+import Language.QBE.Simulator (execFunc, parseAndFind)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Concolic.State (mkEnv, run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
@@ -21,25 +19,12 @@ import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 
-parseProg :: String -> IO Program
-parseProg input =
-  case parse "" input of
-    Left e -> fail $ "Unexpected parsing error: " ++ show e
-    Right r -> pure r
-
-findFunc :: Program -> QBE.GlobalIdent -> QBE.FuncDef
-findFunc prog funcName =
-  case find (\f -> QBE.fName f == funcName) (globalFuncs prog) of
-    Just x -> x
-    Nothing -> error $ "Unknown function: " ++ show funcName
-
--- TODO: Code duplication with quebex/test/Simulator.hs
 parseAndExec :: QBE.GlobalIdent -> [CE.Concolic DE.RegVal] -> String -> IO ST.ExecTrace
 parseAndExec funcName params input = do
-  prog <- parseProg input
-  let func = findFunc prog funcName
+  (prog, entry) <- parseAndFind funcName input
+
   env <- mkEnv prog 0 128 Nothing
-  fst <$> run env (execFunc func params)
+  fst <$> run env (execFunc entry params)
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do
@@ -47,8 +32,10 @@ unconstrained solver initCon name ty = do
   let concrete = E.fromLit (QBE.Base ty) initCon
   pure $ CE.Concolic concrete (Just $ SE.fromSExpr symbolic)
 
-explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
-explore' prog entry params = do
+explore' :: String -> String -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
+explore' input funcName params = do
+  (prog, entry) <- parseAndFind (QBE.GlobalIdent funcName) input
+
   engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
   explore engine defEnv entry $
