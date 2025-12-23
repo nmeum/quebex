@@ -105,7 +105,6 @@ loadItem ::
 loadItem addr QBE.Byte (QBE.DString str) = do
   storeValues addr $ E.fromString str
 loadItem addr ty (QBE.DSymOff ident off) = do
-  -- TODO: Support recursive DataDef's (e.g., `data $c = { l $c }`).
   globals <- gets envSyms
   case Map.lookup ident globals of
     Nothing -> throwM (Err.UnknownVariable $ show ident)
@@ -145,16 +144,18 @@ loadData dataDef = do
         MEM.alignAddr startAddr $
           fromMaybe maxAlign (QBE.align dataDef)
 
-  newAddr <- foldM loadObj addr $ QBE.objs dataDef
   let symName = QBE.name dataDef
+      newSyms = Map.insert symName addr . envSyms
+   in -- Insert address into the Env before loading the object
+      -- itself. Thereby, allowing objects to refer to themselves
+      -- by address (e.g., `data $c = { l -1, l $c }`).
+      --
+      -- XXX: If loadObj throws an exception we (ideally) want to
+      -- catch that and remove the address from 'envSyms` again.
+      modify (\e -> e {envSyms = newSyms e})
 
-  modify
-    ( \e ->
-        e
-          { envSyms = Map.insert symName addr (envSyms e),
-            envDataPtr = newAddr
-          }
-    )
+  newAddr <- foldM loadObj addr $ QBE.objs dataDef
+  modify (\e -> e {envDataPtr = newAddr})
   where
     -- The alignment of an aggregate type is the maximum alignment the members.
     maxAlign = maximum $ map QBE.objAlign (QBE.objs dataDef)

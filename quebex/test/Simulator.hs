@@ -550,6 +550,23 @@ blockTests =
               \ret %res\n\
               \}"
           res @?= Just (D.VSingle $ 2.3 + 4.2),
+      testCase "Recursive data definition" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $c = { l -1, l $c }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%ptr.1 =l add $c, 0\n\
+              \%ptr.2 =l add $c, 8\n\
+              \%field =l loadl %ptr.2\n\
+              \%ptrEq =w ceql %field, %ptr.1\n\
+              \ret %ptrEq\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
       testCase "Subtyping with load instruction" $
         do
           res <-
