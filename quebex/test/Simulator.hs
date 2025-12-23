@@ -567,6 +567,25 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 1),
+      testCase "Data definition with maximum struct member alignment" $
+        do
+          res <-
+            -- The maximum alignment of a struct member for the struct
+            -- referenced by `$ptr` is 8 (the long member). Therefore,
+            -- the struct must be allocated on a 8-Byte-aligned address.
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $fill = { w 0 }\n\
+              \data $ptr = { b 255, w 2342, l 1337, b 255 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%p =l urem $ptr, 8\n\
+              \%correctAlign =w ceql %p, 0\n\
+              \ret %correctAlign\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
       testCase "Subtyping with load instruction" $
         do
           res <-
