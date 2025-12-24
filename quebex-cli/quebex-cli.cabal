@@ -33,6 +33,18 @@ library
     exposed-modules:
       Language.QBE.CmdLine
 
+executable quebex
+    import:               warnings, opts
+    main-is:              Main.hs
+    hs-source-dirs:       app/quebex
+    default-language:     GHC2021
+    build-depends:
+      base,
+      quebex,
+      quebex-cli,
+      quebex-syntax,
+      optparse-applicative
+
 executable quebex-symex
     import:               warnings, opts
     main-is:              Main.hs
@@ -44,4 +56,4 @@ executable quebex-symex
       quebex-cli,
       quebex-symex,
       quebex-syntax,
-      optparse-applicative >=0.17.0.0
+      optparse-applicative
