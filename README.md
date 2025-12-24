@@ -27,9 +27,34 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 Proof of concept, not much to see here yet.
 Come back later!
 
+### Architecture
+
+This project provides a formal, yet executable, description of the QBE intermediate language.
+The syntax is specified using [literate Haskell][literate programming] and [parser combinators] in the `quebex-syntax` library.
+The language semantics are expressed in a modular way by distinguishing abstract and actual semantics.
+Abstract semantics of the QBE language are described in terms of a `Simulator` monad (i.e., an [abstract monad]).
+This monad must then be instantiated, whereby actual semantics are specified.
+Presently, the following instantiations are supported:
+
+1. Concrete semantics, provided by `Language.QBE.Simulator.Default.State`.
+   This is useful for simulation of the QBE intermediate language.
+2. [Symbolic][symbolic execution] (more specifically [concolic][concolic testing]) semantics, provided by `Language.QBE.Simulator.Concolic.State`.
+   This is intended for automated software testing.
+
+The abstract description of the QBE semantics, in terms of the `Simulator` monad, and its concrete instantiation are provided by the `quebex` library.
+The symbolic semantics are implemented by a separate `quebex-symex` library.
+Additional semantics can be implemented by building on top of these existing Haskell libraries.
+
+Further, executable programs are provided by the `quebex-cli` library.
+Presently the following program components are available:
+
+1. `quebex`: A simulator for QBE programs built on top of the concrete semantics.
+2. `quebex-symex`: An automated software testing tool facilitating the symbolic semantics.
+
+These program components can be used directly on QBE input programs.
+
 ### Installation
 
-The framework consists of several components.
 After cloning the repository, individual components can be installed using `cabal install`.
 However, presently specific GHC versions are required; therefore, installation using [Guix] is recommended.
 For example, in order to install the `quebex-cli` component using Guix:
@@ -38,15 +63,15 @@ For example, in order to install the `quebex-cli` component using Guix:
 $ guix time-machine -C .guix/channels.scm -- install -L .guix/modules/ quebex-cli
 ```
 
-Afterwards, if Guix is configured correctly, `quebex-cli` should be available in your `$PATH`.
-The following section demonstrates usage of `quebex-cli`.
+Afterwards, if Guix is configured correctly, the aforementioned program components (`quebex` and `quebex-symex`) should be available in your `$PATH`.
+The following section demonstrates usage of `quebex-symex`.
 
-### Demonstration
+### Demonstration: Symbolic Execution
 
 This framework is primarily *intended to be used as a library*, allowing the implementation of both static and dynamic analysis techniques based on QBE.
 Presently, it focuses on dynamic analysis, and sufficient documentation of the library interface is lacking.
 Nonetheless, it is already capable of executing QBE representations of medium-complexity C code (e.g., as emitted by [cproc]).
-To experiment with the current capabilities, a command-line tool called `quebex-cli` is available that provides a frontend to quebex's [symbolic execution] library.
+To experiment with the current capabilities, a command-line tool called `quebex-symex` is available that provides a frontend to quebex's [symbolic execution] library.
 Symbolic execution is a dynamic software analysis technique that explores reachable program paths based on a symbolic input variable.
 For example, consider the following C program:
 
@@ -81,7 +106,7 @@ $ cproc -emit-qbe example.c
 The resulting QBE representation (`example.qbe`) can be symbolically executed using quebex:
 
 ```
-$ quebex-cli example.qbe
+$ quebex-symex example.qbe
 ```
 
 This will yield the following output:
@@ -98,7 +123,7 @@ Amount of paths: 2
 ```
 
 This tells us that quebex found two paths through our program based on the symbolic variable `a`.
-In the future, it will be possible to obtain test inputs for each path in a standardized format using `quebex-cli`, which can then be used to automatically [generate high-coverage tests][KLEE OSDI].
+In the future, it will be possible to obtain test inputs for each path in a standardized format using `quebex-symex`, which can then be used to automatically [generate high-coverage tests][KLEE OSDI].
 However, for now the focus is on improving the library, not the command-line interface.
 
 ### Design Goals
@@ -144,3 +169,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 [REUSE Specification]: https://reuse.software/spec-3.3/
 [Guix]: https://guix.gnu.org
 [symbolic execution]: https://en.wikipedia.org/wiki/Symbolic_execution
+[concolic testing]: https://en.wikipedia.org/wiki/Concolic_testing
+[literate programming]: https://en.wikipedia.org/wiki/Literate_programming
+[parser combinators]: https://en.wikipedia.org/wiki/Parser_combinator
+[abstract monad]: https://doi.org/10.1145/3607833
