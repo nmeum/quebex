@@ -34,23 +34,24 @@ Unfortunately, there is basically no documentation for the API and the provided 
 ### Architecture
 
 This project provides a formal, yet executable, description of the QBE intermediate language.
+Currently, it targets [v1.2 of the QBE specification][QBE v1.2].
 The syntax is specified using [literate Haskell][literate programming] and [parser combinators] in the `quebex-syntax` library.
 The language semantics are expressed in a modular way by distinguishing abstract and actual semantics.
-Abstract semantics of the QBE language are described in terms of a `Simulator` monad (i.e., an [abstract monad]).
-This monad must then be instantiated, whereby actual semantics are specified.
+*Abstract semantics* of the QBE language are described in terms of a `Simulator` monad (i.e., an [abstract monad]).
+This monad must then be instantiated, whereby *actual semantics* are specified.
 Presently, the following instantiations are supported:
 
 1. Concrete semantics, provided by `Language.QBE.Simulator.Default.State`.
    This is useful for simulation of the QBE intermediate language.
 2. [Symbolic][symbolic execution] (more specifically [concolic][concolic testing]) semantics, provided by `Language.QBE.Simulator.Concolic.State`.
-   This is intended for automated software testing.
+   This is intended for automated software testing using [symbolic execution].
 
 The abstract description of the QBE semantics, in terms of the `Simulator` monad, and its concrete instantiation are provided by the `quebex` library.
 The symbolic semantics are implemented by a separate `quebex-symex` library.
 Additional semantics can be implemented by building on top of these existing Haskell libraries.
 
-Further, executable programs are provided by the `quebex-cli` library.
-Presently the following program components are available:
+Further, executable programs are provided by the `quebex-cli` component.
+Presently the following executable program components are available:
 
 1. `quebex`: A simulator for QBE programs built on top of the concrete semantics.
 2. `quebex-symex`: An automated software testing tool facilitating the symbolic semantics.
@@ -190,6 +191,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 
 [QBE]: https://c9x.me/compile/
 [QBE vs LLVM]: https://c9x.me/compile/doc/llvm.html
+[QBE v1.2]: https://c9x.me/compile/doc/il-v1.2.html
 [LLVM]: https://llvm.org/
 [KLEE]: https://klee-se.org
 [KLEE LLVM]: https://klee-se.org/build/build-llvm13/
