@@ -69,7 +69,7 @@ $ guix time-machine -C .guix/channels.scm -- install -L .guix/modules/ quebex-cl
 ```
 
 Afterwards, if Guix is configured correctly, the aforementioned program components (`quebex` and `quebex-symex`) should be available in your `$PATH`.
-The following section demonstrates usage of `quebex-symex`.
+The following section demonstrates usage of these components.
 
 ### Demonstration
 
