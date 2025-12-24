@@ -357,7 +357,7 @@ blockTests =
               \}"
 
           res @?= Left (UnknownFunction $ QBE.GlobalIdent "bar"),
-      testCase "Arithemtics with single-precision float" $
+      testCase "Arithmetic with single-precision float" $
         do
           res <-
             parseAndExec
@@ -370,7 +370,7 @@ blockTests =
               \}"
 
           res @?= Just (D.VSingle 2.3),
-      testCase "Arithemtics with double-precision float" $
+      testCase "Arithmetic with double-precision float" $
         do
           res <-
             parseAndExec
@@ -383,9 +383,9 @@ blockTests =
               \}"
 
           res @?= Just (D.VDouble 2.3),
-      testCase "Arithemtics with float literal" $
+      testCase "Arithmetic with float literal" $
         do
-          res <-
+          res1 <-
             parseAndExec
               (QBE.GlobalIdent "addFloatAndLit")
               [D.VSingle 4.2]
@@ -395,8 +395,25 @@ blockTests =
               \ret %v\n\
               \}"
 
-          res @?= Just (D.VSingle 5.2),
-      testCase "Invalid mixed float arithmetics" $
+          -- This returns 4.2, not 5.2 because the 1 is interpreted
+          -- as a bitwise representation of an IEEE floating point.
+          --
+          -- QBE itself also treats it in this way.
+          res1 @?= Just (D.VSingle 4.2)
+
+          -- The following works because it uses the single literal.
+          res2 <-
+            parseAndExec
+              (QBE.GlobalIdent "addFloatAndLit")
+              [D.VSingle 4.2]
+              "function s $addFloatAndLit(s %f) {\n\
+              \@start\n\
+              \%v =s add %f, s_1.0\n\
+              \ret %v\n\
+              \}"
+
+          res2 @?= Just (D.VSingle 5.2),
+      testCase "Invalid mixed float arithmetic" $
         do
           res <-
             parseAndExec'

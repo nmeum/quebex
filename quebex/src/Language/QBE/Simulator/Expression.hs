@@ -9,6 +9,7 @@ import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
 class ValueRepr v where
+  -- TODO: rename fromLit to fromInt
   fromLit :: QBE.ExtType -> Word64 -> v
   fromFloat :: Float -> v
   fromDouble :: Double -> v

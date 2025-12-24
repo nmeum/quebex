@@ -206,8 +206,8 @@ instance E.ValueRepr RegVal where
   fromLit QBE.HalfWord n = VHalf $ fromIntegral n
   fromLit (QBE.Base QBE.Long) n = VLong n
   fromLit (QBE.Base QBE.Word) n = VWord $ fromIntegral n
-  fromLit (QBE.Base QBE.Single) n = VSingle $ fromIntegral n
-  fromLit (QBE.Base QBE.Double) n = VDouble $ fromIntegral n
+  fromLit (QBE.Base QBE.Single) n = VSingle $ castWord32ToFloat (fromIntegral n)
+  fromLit (QBE.Base QBE.Double) n = VDouble $ castWord64ToDouble n
 
   toWord64 (VByte v) = fromIntegral v
   toWord64 (VHalf v) = fromIntegral v
