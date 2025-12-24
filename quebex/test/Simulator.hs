@@ -6,6 +6,7 @@ module Simulator (simTests) where
 
 import Control.Monad.Catch (try)
 import Data.Word (Word8)
+import GHC.Float (castDoubleToWord64, castFloatToWord32)
 import Language.QBE (parseAndFind)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
@@ -868,7 +869,65 @@ blockTests =
               \ret %w\n\
               \}"
 
-          res @?= Just (D.VWord 42)
+          res @?= Just (D.VWord 42),
+      testCase "Cast from single to word" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $main() {\n\
+              \@start\n\
+              \%s =s add s_0.0, s_4.2\n\
+              \%w =w cast %s\n\
+              \ret %w\n\
+              \}"
+
+          let ftow = castFloatToWord32 4.2
+          res @?= Just (D.VWord ftow),
+      testCase "Cast from double to long" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function l $main() {\n\
+              \@start\n\
+              \%d =d add d_0.0, d_4.2\n\
+              \%l =l cast %d\n\
+              \ret %l\n\
+              \}"
+
+          let dtol = castDoubleToWord64 4.2
+          res @?= Just (D.VLong dtol),
+      testCase "Cast from word to single" $
+        do
+          let ftow = castFloatToWord32 4.2
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "cast")
+              [D.VWord ftow]
+              "function s $cast(w %w) {\n\
+              \@start\n\
+              \%s =s cast %w\n\
+              \ret %s\n\
+              \}"
+
+          res @?= Just (D.VSingle 4.2),
+      testCase "Cast from long to double" $
+        do
+          let dtol = castDoubleToWord64 4.2342
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "cast")
+              [D.VLong dtol]
+              "function d $cast(l %l) {\n\
+              \@start\n\
+              \%d =d cast %l\n\
+              \ret %d\n\
+              \}"
+
+          res @?= Just (D.VDouble 4.2342)
     ]
 
 simTests :: TestTree

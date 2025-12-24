@@ -135,7 +135,20 @@ execInstr retTy (QBE.Ext subLongTy value) = do
   wordToLongE subLongTy v >>= subTypeE retTy
 execInstr retTy (QBE.Copy value) = do
   lookupValue retTy value
-execInstr _retTy (QBE.Cast _value) = error "cast not implemented"
+execInstr retTy (QBE.Cast value) = do
+  -- We must deduce the value type to use for lookup from
+  -- the return type as manadated by the cast type string.
+  let valueType =
+        case retTy of
+          QBE.Word -> QBE.Single
+          QBE.Long -> QBE.Double
+          QBE.Single -> QBE.Word
+          QBE.Double -> QBE.Long
+
+  -- TODO: Consider adding an explicit operation for casting
+  -- of floating points to the expression language abstraction.
+  v <- lookupValue valueType value
+  pure (E.fromLit (QBE.Base retTy) $ E.toWord64 v)
 {-# INLINEABLE execInstr #-}
 
 execStmt :: (Simulator m v) => QBE.Statement -> m ()
