@@ -24,8 +24,12 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 
 ### Status
 
-Proof of concept, not much to see here yet.
-Come back later!
+I currently consider this a vertical prototype.
+A lot of the desired functionality is already there, but not fully developed.
+Presently, it covers the majority of QBE features needed for medium-complexity QBE programs (e.g., as emitted by [cproc]).
+Notably, proper support for floating points, unions, and variadic functions is missing.
+In terms of analysis features, the implementation presently focuses on dynamic analysis techniques (primarily [symbolic execution]).
+Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very basic.
 
 ### Architecture
 
