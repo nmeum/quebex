@@ -4,7 +4,6 @@
 
 module Main (main) where
 
-import Language.QBE (parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.CmdLine qualified as CMD
@@ -45,8 +44,7 @@ optsParser =
 
 exploreFile :: Opts -> IO [(ST.Assign, T.ExecTrace)]
 exploreFile opts@Opts {optBase = base} = do
-  let filePath = CMD.optQBEFile base
-  (prog, func) <- readFile filePath >>= parseAndFind entryFunc
+  (prog, func) <- CMD.parseEntryFile $ CMD.optQBEFile base
 
   env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
@@ -57,9 +55,6 @@ exploreFile opts@Opts {optBase = base} = do
   where
     params :: [(String, QBE.ExtType)]
     params = []
-
-    entryFunc :: QBE.GlobalIdent
-    entryFunc = QBE.GlobalIdent "main"
 
     exploreWithHandle env func handle = do
       engine <- newEngine <$> logSolver handle

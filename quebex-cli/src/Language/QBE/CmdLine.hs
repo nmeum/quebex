@@ -3,9 +3,17 @@
 --
 -- SPDX-License-Identifier: MIT AND GPL-3.0-only
 
-module Language.QBE.CmdLine (BasicArgs (..), basicArgs) where
+module Language.QBE.CmdLine
+  ( BasicArgs (..),
+    basicArgs,
+    entryFunc,
+    parseEntryFile,
+  )
+where
 
+import Language.QBE (Program, parseAndFind)
 import Language.QBE.Simulator.Memory qualified as MEM
+import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 
 -- | t'BasicArgs' can be combined/extended with additional parsers using
@@ -37,3 +45,14 @@ basicArgs =
           <> OPT.help "Size of the memory region"
       )
     <*> OPT.argument OPT.str (OPT.metavar "FILE")
+
+------------------------------------------------------------------------
+
+-- | Name of the entry function.
+entryFunc :: QBE.GlobalIdent
+entryFunc = QBE.GlobalIdent "main"
+
+-- | Parse a file and find the 'entryFunc'.
+parseEntryFile :: FilePath -> IO (Program, QBE.FuncDef)
+parseEntryFile filePath =
+  readFile filePath >>= parseAndFind entryFunc
