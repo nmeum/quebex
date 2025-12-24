@@ -66,13 +66,47 @@ $ guix time-machine -C .guix/channels.scm -- install -L .guix/modules/ quebex-cl
 Afterwards, if Guix is configured correctly, the aforementioned program components (`quebex` and `quebex-symex`) should be available in your `$PATH`.
 The following section demonstrates usage of `quebex-symex`.
 
-### Demonstration: Symbolic Execution
+### Demonstration
 
 This framework is primarily *intended to be used as a library*, allowing the implementation of both static and dynamic analysis techniques based on QBE.
-Presently, it focuses on dynamic analysis, and sufficient documentation of the library interface is lacking.
+Presently, it focuses on dynamic analysis, and sufficient documentation of the library interface is still lacking.
 Nonetheless, it is already capable of executing QBE representations of medium-complexity C code (e.g., as emitted by [cproc]).
-To experiment with the current capabilities, a command-line tool called `quebex-symex` is available that provides a frontend to quebex's [symbolic execution] library.
-Symbolic execution is a dynamic software analysis technique that explores reachable program paths based on a symbolic input variable.
+In order to experiment with the current capabilities, the following subsections demonstrate utilization of the aforementioned program components.
+
+#### Concrete Execution
+
+Consider the following "Hello, World!" program:
+
+```C
+#include <stdio.h>
+
+int main(void) {
+	puts("Hello, World!");
+	return 0;
+}
+```
+
+In order to concretly execute this program using `quebex`, we need to obtain an equivalent representation in QBE.
+To this end, we can invoke the [cproc] compiler as follows:
+
+```
+$ cproc -emit-qbe hello.c
+```
+
+The resulting QBE file can then be executed with the concrete semantics using:
+
+```
+$ quebex hello.qbe
+Hello, World!
+```
+
+Note that `quebex` is only able to invoke the `puts(3)` function because it intercepts its execution, providing a "simulated" version of it.
+Presently, only a limited amount of standard library functions are intercepted in this way.
+As such, interactions with the file system or more complex output functions (e.g. `printf(3)`) are currently not supported.
+
+#### Symbolic Execution
+
+[Symbolic execution][symbolic execution] is a dynamic software analysis technique that explores reachable program paths based on a symbolic input variable.
 For example, consider the following C program:
 
 ```C
