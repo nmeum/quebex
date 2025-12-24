@@ -40,6 +40,7 @@ float = do
   _ <- skipSpace
   s <- sign
   -- TODO: Support infininty and NaN
+  -- TODO: Also parse `1.0`, `1.`, and `1` (check qbe's parser)
   (decimal <|> hexnum) >>= fractExponent . s
   where
     -- See musl's isspace(3) implementation.
