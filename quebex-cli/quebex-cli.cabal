@@ -20,6 +20,19 @@ common warnings
 common opts
     ghc-options: -fspecialise-aggressively
 
+library
+    import:           warnings, opts
+    hs-source-dirs:   src
+    default-language: GHC2021
+
+    build-depends:
+      base,
+      quebex,
+      optparse-applicative >=0.17.0.0
+
+    exposed-modules:
+      Language.QBE.CmdLine
+
 executable quebex-symex
     import:               warnings, opts
     main-is:              Main.hs
@@ -28,6 +41,7 @@ executable quebex-symex
     build-depends:
       base,
       quebex,
+      quebex-cli,
       quebex-symex,
       quebex-syntax,
       optparse-applicative >=0.17.0.0

@@ -7,38 +7,23 @@ module Main (main) where
 import Language.QBE (parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
+import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
-import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.IO (IOMode (WriteMode), withFile)
 
 data Opts = Opts
-  { optMemStart :: MEM.Address,
-    optMemSize :: MEM.Size,
-    optLog :: Maybe FilePath,
+  { optLog :: Maybe FilePath,
     optSeed :: Maybe Int,
-    optQBEFile :: FilePath
+    optBase :: CMD.BasicArgs
   }
 
 optsParser :: OPT.Parser Opts
 optsParser =
   Opts
-    <$> OPT.option
-      OPT.auto
-      ( OPT.long "memory-start"
-          <> OPT.short 'm'
-          <> OPT.value 0x0
-      )
-    <*> OPT.option
-      OPT.auto
-      ( OPT.long "memory-size"
-          <> OPT.short 's'
-          <> OPT.value (1024 * 1024) -- 1 MB RAM
-          <> OPT.help "Size of the memory region"
-      )
-    <*> OPT.optional
+    <$> OPT.optional
       ( OPT.strOption
           ( OPT.long "dump-smt2"
               <> OPT.short 'd'
@@ -54,16 +39,16 @@ optsParser =
               <> OPT.help "Initial seed to for the random number generator"
           )
       )
-    <*> OPT.argument OPT.str (OPT.metavar "FILE")
+    <*> CMD.basicArgs
 
 ------------------------------------------------------------------------
 
 exploreFile :: Opts -> IO [(ST.Assign, T.ExecTrace)]
-exploreFile opts = do
-  let filePath = optQBEFile opts
+exploreFile opts@Opts {optBase = base} = do
+  let filePath = CMD.optQBEFile base
   (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
-  env <- mkEnv prog (optMemStart opts) (optMemSize opts) (optSeed opts)
+  env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
     Just fn -> withFile fn WriteMode (exploreWithHandle env func)
     Nothing -> do
