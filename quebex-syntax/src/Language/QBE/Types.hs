@@ -253,7 +253,7 @@ data Instr
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
   | Ext SubLongType Value
-  | Truncd Value
+  | TruncDouble Value
   | Cast Value
   | Copy Value
   deriving (Show, Eq)

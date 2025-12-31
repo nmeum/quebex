@@ -1080,7 +1080,7 @@ extInstr = do
 truncInstr :: Parser Q.Instr
 truncInstr = do
   _ <- ws1 $ string "truncd"
-  ws val <&> Q.Truncd
+  ws val <&> Q.TruncDouble
 \end{code}
 
 Conversion operations change the representation of a value, possibly modifying
