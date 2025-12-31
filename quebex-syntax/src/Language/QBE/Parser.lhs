@@ -845,7 +845,8 @@ instr =
       try $ loadInstr,
       try $ allocInstr,
       try $ compareInstr,
-      try $ extInstr
+      try $ extInstr,
+      try $ truncInstr
     ]
 \end{code}
 
@@ -1075,6 +1076,16 @@ extInstr = do
   _ <- string "ext"
   ty <- ws1 subLongType
   ws val <&> Q.Ext ty
+
+floatType :: Parser Q.FloatType
+floatType = bind "s" Q.FLSingle
+    <|> bind "d" Q.FLDouble
+
+truncInstr :: Parser Q.Instr
+truncInstr = do
+  _ <- string "trunc"
+  ty <- ws1 floatType
+  ws val <&> Q.TruncFloat ty
 \end{code}
 
 Conversion operations change the representation of a value, possibly modifying
