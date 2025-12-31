@@ -220,11 +220,6 @@ data SubLongType
   | SLUnsignedWord
   deriving (Show, Eq)
 
-data FloatType
-  = FLSingle
-  | FLDouble
-  deriving (Show, Eq)
-
 -- TODO: Distinict types for floating point comparison?
 data CmpOp
   = CEq
@@ -258,7 +253,7 @@ data Instr
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
   | Ext SubLongType Value
-  | TruncFloat FloatType Value
+  | Truncd Value
   | Cast Value
   | Copy Value
   deriving (Show, Eq)

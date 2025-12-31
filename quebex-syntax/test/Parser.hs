@@ -188,7 +188,7 @@ funcTests =
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "f")] [b]
          in parse "function $f(s %f) {\n@s\n%r =w cast %f\nhlt\n}" @?= Right f,
       testCase "trunc instruction" $
-        let c = Assign (LocalIdent "r") Single $ TruncFloat FLDouble (VLocal $ LocalIdent "d")
+        let c = Assign (LocalIdent "r") Single $ Truncd (VLocal $ LocalIdent "d")
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Double) (LocalIdent "d")] [b]
          in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f

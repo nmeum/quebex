@@ -1079,13 +1079,8 @@ extInstr = do
 
 truncInstr :: Parser Q.Instr
 truncInstr = do
-  _ <- string "trunc"
-  ty <- ws1 floatType
-  ws val <&> Q.TruncFloat ty
- where
-  floatType :: Parser Q.FloatType
-  floatType = bind "s" Q.FLSingle
-      <|> bind "d" Q.FLDouble
+  _ <- ws1 $ string "truncd"
+  ws val <&> Q.Truncd
 \end{code}
 
 Conversion operations change the representation of a value, possibly modifying
