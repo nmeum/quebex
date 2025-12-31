@@ -1066,26 +1066,26 @@ returns 1 when the first argument is smaller than the second one.
 \subsection{Conversions}
 
 \begin{code}
-subLongType :: Parser Q.SubLongType
-subLongType = try (Q.SLSubWord <$> subWordType)
-  <|> bind "sw" Q.SLSignedWord
-  <|> bind "uw" Q.SLUnsignedWord
-
 extInstr :: Parser Q.Instr
 extInstr = do
   _ <- string "ext"
   ty <- ws1 subLongType
   ws val <&> Q.Ext ty
-
-floatType :: Parser Q.FloatType
-floatType = bind "s" Q.FLSingle
-    <|> bind "d" Q.FLDouble
+ where
+  subLongType :: Parser Q.SubLongType
+  subLongType = try (Q.SLSubWord <$> subWordType)
+    <|> bind "sw" Q.SLSignedWord
+    <|> bind "uw" Q.SLUnsignedWord
 
 truncInstr :: Parser Q.Instr
 truncInstr = do
   _ <- string "trunc"
   ty <- ws1 floatType
   ws val <&> Q.TruncFloat ty
+ where
+  floatType :: Parser Q.FloatType
+  floatType = bind "s" Q.FLSingle
+      <|> bind "d" Q.FLDouble
 \end{code}
 
 Conversion operations change the representation of a value, possibly modifying
