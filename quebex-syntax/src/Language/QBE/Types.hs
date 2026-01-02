@@ -256,7 +256,11 @@ data Instr
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
-  | Ext SubLongType Value
+  | -- TODO: Integrate Ext and ExtSingle into a single constructor.
+    -- Requires refactoring SubLongType, which requires refactoring
+    -- 'wordToLong' from the expression abstraction.
+    Ext SubLongType Value
+  | ExtSingle Value
   | TruncDouble Value
   | Cast Value
   | Copy Value

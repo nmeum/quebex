@@ -191,7 +191,12 @@ funcTests =
         let c = Assign (LocalIdent "r") Single $ TruncDouble (VLocal $ LocalIdent "d")
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Double) (LocalIdent "d")] [b]
-         in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f
+         in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f,
+      testCase "exts instruction" $
+        let c = Assign (LocalIdent "d") Double $ ExtSingle (VLocal $ LocalIdent "s")
+            b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s")] [b]
+         in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

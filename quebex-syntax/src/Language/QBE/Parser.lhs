@@ -1069,13 +1069,22 @@ returns 1 when the first argument is smaller than the second one.
 extInstr :: Parser Q.Instr
 extInstr = do
   _ <- string "ext"
-  ty <- ws1 subLongType
-  ws val <&> Q.Ext ty
+  (try extInt) <|> extFloat
  where
   subLongType :: Parser Q.SubLongType
   subLongType = try (Q.SLSubWord <$> subWordType)
     <|> bind "sw" Q.SLSignedWord
     <|> bind "uw" Q.SLUnsignedWord
+
+  extInt :: Parser Q.Instr
+  extInt = do
+    ty <- ws1 subLongType
+    ws val <&> Q.Ext ty
+
+  extFloat :: Parser Q.Instr
+  extFloat = do
+    _ <- ws1 $ char 's'
+    ws val <&> Q.ExtSingle
 
 truncInstr :: Parser Q.Instr
 truncInstr = do
