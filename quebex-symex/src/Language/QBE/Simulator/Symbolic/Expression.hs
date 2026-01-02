@@ -119,7 +119,7 @@ shiftOp op value amount@(BitVector SMT.Word) =
     32 -> toShiftAmount 32 amount >>= binaryOp op value
     64 -> do
       shiftAmount <- toShiftAmount 64 amount
-      E.wordToLong QBE.SLUnsignedWord shiftAmount >>= binaryOp op value
+      E.extend (QBE.Base QBE.Long) False shiftAmount >>= binaryOp op value
     _ -> Nothing
 shiftOp _ _ _ = Nothing -- Shift amount must always be a Word.
 
@@ -151,25 +151,26 @@ instance E.ValueRepr BitVector where
       SMT.Bits _ n -> fromIntegral n
       _ -> error "unrechable"
 
-  wordToLong (QBE.SLSubWord QBE.SignedByte) (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.signExtend 56 (SMT.extract s 0 8))
-  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.zeroExtend 56 (SMT.extract s 0 8))
-  wordToLong (QBE.SLSubWord QBE.SignedHalf) (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.signExtend 48 (SMT.extract s 0 16))
-  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.zeroExtend 48 (SMT.extract s 0 16))
-  wordToLong QBE.SLSignedWord (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.signExtend 32 s)
-  wordToLong QBE.SLUnsignedWord (BitVector s@SMT.Word) =
-    Just $ BitVector (SMT.zeroExtend 32 s)
-  wordToLong _ _ = Nothing
+  getType v = case bitSize v of
+    08 -> QBE.Byte
+    16 -> QBE.HalfWord
+    32 -> QBE.Base QBE.Word
+    64 -> QBE.Base QBE.Long
+    _ -> error "unreachable"
 
-  subType QBE.Word v@(BitVector SMT.Word) = Just v
-  subType QBE.Word (BitVector s@SMT.Long) =
-    Just $ BitVector (SMT.extract s 0 32)
-  subType QBE.Long v@(BitVector SMT.Long) = Just v
-  subType _ _ = Nothing
+  extend extTy isSigned val@(BitVector s)
+    | QBE.extTypeBitSize extTy <= bitSize val = Nothing
+    | otherwise = Just $ BitVector (extFunc targetSize s)
+    where
+      targetSize :: Integer
+      targetSize = fromIntegral $ QBE.extTypeBitSize extTy - bitSize val
+
+      extFunc :: Integer -> SMT.SExpr -> SMT.SExpr
+      extFunc = if isSigned then SMT.signExtend else SMT.zeroExtend
+
+  extract extTy val@(BitVector s)
+    | QBE.extTypeBitSize extTy > bitSize val = Nothing
+    | otherwise = Just $ BitVector (SMT.extract s 0 $ QBE.extTypeBitSize extTy)
 
   add = binaryOp SMT.bvAdd
   sub = binaryOp SMT.bvSub

@@ -206,7 +206,7 @@ valueReprTests :: TestTree
 valueReprTests =
   testGroup
     "Symbolic ValueRepr Tests"
-    [ testCase "Create from literal and add" $
+    [ testCase "create from literal and add" $
         do
           s <- getSolver
 
@@ -215,45 +215,46 @@ valueReprTests =
 
           expr <- SMT.getValue s (SE.toSExpr $ fromJust $ v1 `E.add` v2)
           expr @?= SMT.Bits 32 0xff,
-      testCase "Add incompatible values" $
+      testCase "add incompatible values" $
         do
           let v1 = E.fromLit (QBE.Base QBE.Word) 0xffffffff :: SE.BitVector
           let v2 = E.fromLit (QBE.Base QBE.Long) 0xff :: SE.BitVector
 
           -- Note: E.add doesn't do subtyping if invoked directly
           (v1 `E.add` v2) @?= Nothing,
-      testCase "Subtyping" $
+      testCase "extend" $
         do
           s <- getSolver
 
-          let v1 = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
-          let v2 = E.fromLit (QBE.Base QBE.Long) 0xff :: SE.BitVector
+          let v1 = E.fromLit QBE.Byte 0xff :: SE.BitVector
+              ext1 = fromJust $ E.extend QBE.HalfWord False v1
+          ext1Val <- SMT.getValue s (SE.toSExpr ext1)
+          ext1Val @?= SMT.Bits 16 0x00ff
 
-          let v1sub = fromJust $ E.subType QBE.Word v1
-          v1sub' <- SMT.getValue s (SE.toSExpr v1sub)
-          v1sub' @?= SMT.Bits 32 0xdeadbeef
+          let v2 = E.fromLit QBE.Byte 0xab :: SE.BitVector
+              ext2 = fromJust $ E.extend (QBE.Base QBE.Word) True v2
+          ext2Val <- SMT.getValue s (SE.toSExpr ext2)
+          ext2Val @?= SMT.Bits 32 0xffffffab
 
-          let v2sub = fromJust $ E.subType QBE.Word v2
-          v2sub' <- SMT.getValue s (SE.toSExpr v2sub)
-          v2sub' @?= SMT.Bits 32 0xff
-
-          let subtypedAddExpr = v1sub `E.add` v2sub
-          expr <- SMT.getValue s (SE.toSExpr (fromJust subtypedAddExpr))
-
-          expr @?= SMT.Bits 32 0xdeadbfee,
-      testCase "Extend subwords" $
+          let v3 = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
+          E.extend (QBE.Base QBE.Word) True v3 @?= Nothing
+          E.extend QBE.Byte True v3 @?= Nothing,
+      testCase "extract" $
         do
           s <- getSolver
 
           let value = E.fromLit (QBE.Base QBE.Word) 0xdeadbeef :: SE.BitVector
 
-          -- let sext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.SignedByte) value
-          -- sextVal <- SMT.getValue s (SE.toSExpr sext)
-          -- sextVal @?= SMT.Bits 64 0xffffffffffffffef
+          let ex1 = fromJust $ E.extract QBE.Byte value
+          ex1Val <- SMT.getValue s (SE.toSExpr ex1)
+          ex1Val @?= SMT.Bits 8 0xef
 
-          let zext = fromJust $ E.wordToLong (QBE.SLSubWord QBE.UnsignedByte) value
-          zextVal <- SMT.getValue s (SE.toSExpr zext)
-          zextVal @?= SMT.Bits 64 0xef
+          let ex2 = fromJust $ E.extract QBE.HalfWord value
+          ex2Val <- SMT.getValue s (SE.toSExpr ex2)
+          ex2Val @?= SMT.Bits 16 0xbeef
+
+          E.extract (QBE.Base QBE.Word) value @?= Just value
+          E.extract (QBE.Base QBE.Long) value @?= Nothing
     ]
 
 exprTests :: TestTree

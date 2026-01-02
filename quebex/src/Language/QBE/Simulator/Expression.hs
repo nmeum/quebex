@@ -8,15 +8,28 @@ import Data.Char (chr, ord)
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
+-- | Generic expression abstraction operating on values of type 'QBE.ExtType'.
+-- Values are either fixed-size bitvectors (8-, 16, 32-, or 64-bit) or
+-- single-precision or double-precision floating point values.
 class ValueRepr v where
   -- TODO: rename fromLit to fromInt
   fromLit :: QBE.ExtType -> Word64 -> v
   fromFloat :: Float -> v
   fromDouble :: Double -> v
   toWord64 :: v -> Word64
+  getType :: v -> QBE.ExtType
 
-  wordToLong :: QBE.SubLongType -> v -> Maybe v
-  subType :: QBE.BaseType -> v -> Maybe v
+  -- | Extend a value to the given 'QBE.ExtType'. The 'Bool' is true if
+  -- the value should be sign-extended, otherwise it is zero-extended.
+  -- If the 'v' is a float or if the current size exceeds (or is equal to)
+  -- the size of 'QBE.ExtType', then 'Nothing' is returned.
+  extend :: QBE.ExtType -> Bool -> v -> Maybe v
+
+  -- | Extract the least significant bits of a 'v'. The bits to extract
+  -- are deduced from the given 'ExtType'. Returns 'Nothing' if the
+  -- 'ExtType' is a float type, if the value is a float, or if the size
+  -- of 'ExtType' exceeds the size of 'v'.
+  extract :: QBE.ExtType -> v -> Maybe v
 
   add :: v -> v -> Maybe v
   sub :: v -> v -> Maybe v

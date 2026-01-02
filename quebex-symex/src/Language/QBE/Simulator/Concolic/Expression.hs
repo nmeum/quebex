@@ -89,6 +89,10 @@ instance E.ValueRepr (Concolic D.RegVal) where
   fromFloat fl = Concolic (E.fromFloat fl) Nothing
   fromDouble d = Concolic (E.fromDouble d) Nothing
   toWord64 Concolic {concrete = c} = E.toWord64 c
+  getType Concolic {concrete = c} = E.getType c
+
+  extend ty s = unaryOp (E.extend ty s) (E.extend ty s)
+  extract ty = unaryOp (E.extract ty) (E.extract ty)
 
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub
@@ -117,6 +121,3 @@ instance E.ValueRepr (Concolic D.RegVal) where
   ult = binaryOp E.ult E.ult
   uge = binaryOp E.uge E.uge
   ugt = binaryOp E.ugt E.ugt
-
-  wordToLong ty = unaryOp (E.wordToLong ty) (E.wordToLong ty)
-  subType ty = unaryOp (E.subType ty) (E.subType ty)

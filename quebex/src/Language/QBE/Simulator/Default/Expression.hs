@@ -219,20 +219,38 @@ instance E.ValueRepr RegVal where
   fromFloat = VSingle
   fromDouble = VDouble
 
-  wordToLong (QBE.SLSubWord QBE.SignedByte) (VWord b) = Just $ VLong (fromIntegral (fromIntegral b :: Int8))
-  wordToLong (QBE.SLSubWord QBE.UnsignedByte) (VWord b) = Just $ VLong (fromIntegral b)
-  wordToLong (QBE.SLSubWord QBE.SignedHalf) (VWord h) = Just $ VLong (fromIntegral (fromIntegral h :: Int16))
-  wordToLong (QBE.SLSubWord QBE.UnsignedHalf) (VWord h) = Just $ VLong (fromIntegral h)
-  wordToLong QBE.SLSignedWord (VWord w) = Just $ VLong (fromIntegral (fromIntegral w :: Int32))
-  wordToLong QBE.SLUnsignedWord (VWord w) = Just $ VLong (fromIntegral w)
-  wordToLong _ _ = Nothing
+  getType (VByte _) = QBE.Byte
+  getType (VHalf _) = QBE.HalfWord
+  getType (VWord _) = QBE.Base QBE.Word
+  getType (VLong _) = QBE.Base QBE.Long
+  getType (VSingle _) = QBE.Base QBE.Single
+  getType (VDouble _) = QBE.Base QBE.Double
 
-  subType QBE.Word v@(VWord _) = Just v
-  subType QBE.Word (VLong l) = Just $ VWord (fromIntegral $ l .&. 0xffffffff)
-  subType QBE.Long v@(VLong _) = Just v
-  subType QBE.Single v@(VSingle _) = Just v
-  subType QBE.Double v@(VDouble _) = Just v
-  subType _ _ = Nothing
+  extend extTy isSigned val
+    | QBE.extTypeBitSize extTy <= bitSize val = Nothing
+    | otherwise =
+        E.fromLit extTy
+          <$> case (isSigned, val) of
+            (True, VByte v) -> Just $ fromIntegral (fromIntegral v :: Int8)
+            (True, VHalf v) -> Just $ fromIntegral (fromIntegral v :: Int16)
+            (True, VWord v) -> Just $ fromIntegral (fromIntegral v :: Int32)
+            (True, VLong v) -> Just $ fromIntegral (fromIntegral v :: Int64)
+            (False, VByte v) -> Just $ fromIntegral (fromIntegral v :: Word8)
+            (False, VHalf v) -> Just $ fromIntegral (fromIntegral v :: Word16)
+            (False, VWord v) -> Just $ fromIntegral (fromIntegral v :: Word32)
+            (False, VLong v) -> Just $ fromIntegral (fromIntegral v :: Word64)
+            _ -> Nothing
+
+  extract (QBE.Base QBE.Single) _ = Nothing
+  extract (QBE.Base QBE.Double) _ = Nothing
+  extract _ (VSingle _) = Nothing
+  extract _ (VDouble _) = Nothing
+  extract extTy v
+    | QBE.extTypeBitSize extTy > bitSize v = Nothing
+    | otherwise =
+        let word = E.toWord64 v
+            mask = (2 ^ QBE.extTypeBitSize extTy) - 1
+         in Just $ E.fromLit extTy (word .&. mask)
 
   -- This is needed to align the behavior of quebex/ and quebex-symex/ on
   -- division-by-zero. QBE does not explicitly mandate a specific behavior
