@@ -249,7 +249,7 @@ instance E.ValueRepr RegVal where
     | QBE.extTypeBitSize extTy > bitSize v = Nothing
     | otherwise =
         let word = E.toWord64 v
-            mask = (2 ^ QBE.extTypeBitSize extTy) - 1
+            mask = (2 `unsafeShiftL` (QBE.extTypeBitSize extTy - 1)) - 1
          in Just $ E.fromLit extTy (word .&. mask)
 
   -- This is needed to align the behavior of quebex/ and quebex-symex/ on

@@ -65,21 +65,17 @@ liftMaybe e Nothing = throwM e
 liftMaybe _ (Just r) = pure r
 {-# INLINE liftMaybe #-}
 
-extractE :: (Simulator m v) => QBE.ExtType -> v -> m v
-extractE ty v = liftMaybe TypingError $ E.extract ty v
-{-# INLINE extractE #-}
-
-extendE :: (Simulator m v) => QBE.ExtType -> Bool -> v -> m v
-extendE ty s v = liftMaybe TypingError $ E.extend ty s v
-{-# INLINE extendE #-}
-
 -- See https://c9x.me/compile/doc/il-v1.2.html#Subtyping
 subType :: (Simulator m v) => QBE.BaseType -> v -> m v
-subType baseTy v
-  | E.getType v == QBE.Base baseTy = pure v
-  | E.getType v == QBE.Base QBE.Long && baseTy == QBE.Word =
-      extractE (QBE.Base QBE.Word) v
-  | otherwise = throwM TypingError
+subType baseTy v = liftMaybe TypingError $ subType' baseTy (E.getType v)
+  where
+    subType' QBE.Word (QBE.Base QBE.Word) = Just v
+    subType' QBE.Word (QBE.Base QBE.Long) =
+      E.extract (QBE.Base QBE.Word) v
+    subType' QBE.Long (QBE.Base QBE.Long) = Just v
+    subType' QBE.Single (QBE.Base QBE.Single) = Just v
+    subType' QBE.Double (QBE.Base QBE.Double) = Just v
+    subType' _ _ = Nothing
 {-# INLINEABLE subType #-}
 
 runBinary ::

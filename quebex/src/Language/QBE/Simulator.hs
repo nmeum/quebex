@@ -139,7 +139,9 @@ execInstr retTy (QBE.Ext subLongTy value) = do
         QBE.SLSubWord QBE.UnsignedHalf -> (False, QBE.HalfWord)
         QBE.SLSignedWord -> (True, QBE.Base QBE.Word)
         QBE.SLUnsignedWord -> (False, QBE.Base QBE.Word)
-  extractE extTy v >>= extendE (QBE.Base retTy) isSigned
+  liftMaybe
+    TypingError
+    (E.extract extTy v >>= E.extend (QBE.Base retTy) isSigned)
 execInstr retTy (QBE.Copy value) = do
   lookupValue retTy value
 execInstr retTy (QBE.Cast value) = do
