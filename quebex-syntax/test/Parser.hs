@@ -196,7 +196,41 @@ funcTests =
         let c = Assign (LocalIdent "d") Double $ ExtSingle (VLocal $ LocalIdent "s")
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s")] [b]
-         in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f
+         in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f,
+      testCase "float to int conversions" $
+        let c1 = Assign (LocalIdent "w.1") Word (SToInt True (VLocal $ LocalIdent "s"))
+            c2 = Assign (LocalIdent "w.2") Word (SToInt False (VLocal $ LocalIdent "s"))
+            c3 = Assign (LocalIdent "w.3") Word (DToInt True (VLocal $ LocalIdent "d"))
+            c4 = Assign (LocalIdent "w.4") Word (DToInt False (VLocal $ LocalIdent "d"))
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c1, c2, c3, c4], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s"), Regular (ABase Double) (LocalIdent "d")] [b]
+         in parse
+              "function $f(s %s, d %d) { \n\
+              \@start\n\
+              \%w.1 =w stosi %s\n\
+              \%w.2 =w stoui %s\n\
+              \%w.3 =w dtosi %d\n\
+              \%w.4 =w dtoui %d\n\
+              \hlt\n\
+              \}"
+              @?= Right f,
+      testCase "int to float conversions" $
+        let c1 = Assign (LocalIdent "f.1") Single (WToFloat True (VLocal $ LocalIdent "w"))
+            c2 = Assign (LocalIdent "f.2") Single (WToFloat False (VLocal $ LocalIdent "w"))
+            c3 = Assign (LocalIdent "f.3") Double (LToFloat True (VLocal $ LocalIdent "l"))
+            c4 = Assign (LocalIdent "f.4") Double (LToFloat False (VLocal $ LocalIdent "l"))
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c1, c2, c3, c4], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Word) (LocalIdent "w"), Regular (ABase Long) (LocalIdent "l")] [b]
+         in parse
+              "function $f(w %w, l %l) { \n\
+              \@start\n\
+              \%f.1 =s swtof %w\n\
+              \%f.2 =s uwtof %w\n\
+              \%f.3 =d sltof %l\n\
+              \%f.4 =d ultof %l\n\
+              \hlt\n\
+              \}"
+              @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

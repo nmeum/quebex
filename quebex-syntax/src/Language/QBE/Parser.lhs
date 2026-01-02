@@ -175,6 +175,10 @@ binaryInstr conc keyword = do
 -- Can only appear in data and type definitions and hence allows newlines.
 alignAny :: Parser Word64
 alignAny = (ws1 (string "align")) >> wsNL decNumber
+
+-- Returns true if it is signed.
+signageChar :: Parser Bool
+signageChar = (char 's' <|> char 'u') <&> (== 's')
 \end{code}
 }
 
@@ -846,7 +850,9 @@ instr =
       try $ allocInstr,
       try $ compareInstr,
       try $ extInstr,
-      try $ truncInstr
+      try $ truncInstr,
+      try $ fromFloatInstr,
+      try $ toFloatInstr
     ]
 \end{code}
 
@@ -1065,26 +1071,39 @@ returns 1 when the first argument is smaller than the second one.
 
 \subsection{Conversions}
 
+Conversion operations change the representation of a value, possibly modifying
+it if the target type cannot hold the value of the source type. Conversions can
+extend the precision of a temporary (e.g., from signed 8-bit to 32-bit), or
+convert a floating point into an integer and vice versa.
+
 \begin{code}
+subLongType :: Parser Q.SubLongType
+subLongType = try (Q.SLSubWord <$> subWordType)
+  <|> bind "sw" Q.SLSignedWord
+  <|> bind "uw" Q.SLUnsignedWord
+
 extInstr :: Parser Q.Instr
 extInstr = do
   _ <- string "ext"
   (try extInt) <|> extFloat
- where
-  subLongType :: Parser Q.SubLongType
-  subLongType = try (Q.SLSubWord <$> subWordType)
-    <|> bind "sw" Q.SLSignedWord
-    <|> bind "uw" Q.SLUnsignedWord
 
-  extInt :: Parser Q.Instr
-  extInt = do
-    ty <- ws1 subLongType
-    ws val <&> Q.Ext ty
+extInt :: Parser Q.Instr
+extInt = do
+  ty <- ws1 subLongType
+  ws val <&> Q.Ext ty
+\end{code}
 
-  extFloat :: Parser Q.Instr
-  extFloat = do
-    _ <- ws1 $ char 's'
-    ws val <&> Q.ExtSingle
+Extending the precision of a temporary is done using the \texttt{ext} family of
+instructions. Because QBE types do not specify the signedness (like in LLVM),
+extension instructions exist to sign-extend and zero-extend a value. For
+example, \texttt{extsb} takes a word argument and sign-extends the 8
+least-significant bits to a full word or long, depending on the return type.
+
+\begin{code}
+extFloat :: Parser Q.Instr
+extFloat = do
+  _ <- ws1 $ char 's'
+  ws val <&> Q.ExtSingle
 
 truncInstr :: Parser Q.Instr
 truncInstr = do
@@ -1092,10 +1111,35 @@ truncInstr = do
   ws val <&> Q.TruncDouble
 \end{code}
 
-Conversion operations change the representation of a value, possibly modifying
-it if the target type cannot hold the value of the source type. Conversions can
-extend the precision of a temporary (e.g., from signed 8-bit to 32-bit), or
-convert a floating point into an integer and vice versa.
+The instructions \texttt{exts} (extend single) and \texttt{truncd} (truncate
+double) are provided to change the precision of a floating point value. When
+the double argument of truncd cannot be represented as a single-precision
+floating point, it is truncated towards zero.
+
+\begin{code}
+fromFloatInstr :: Parser Q.Instr
+fromFloatInstr = do
+  conc <- floatType <* string "to"
+  isSigned <- signageChar
+  _ <- ws1 $ char 'i'
+  ws val <&> conc isSigned
+ where
+  floatType = bind "d" Q.DToInt <|> bind "s" Q.SToInt
+
+toFloatInstr :: Parser Q.Instr
+toFloatInstr = do
+  isSigned <- signageChar
+  conc <- bind "w" Q.WToFloat <|> bind "l" Q.LToFloat
+  _ <- ws1 $ string "tof"
+  ws val <&> conc isSigned
+\end{code}
+
+Converting between signed integers and floating points is done using
+\texttt{stosi} (single to signed integer), \texttt{stoui} (single to unsigned
+integer), \texttt{dtosi} (double to signed integer), \texttt{dtoui} (double to
+unsigned integer), \texttt{swtof} (signed word to float), \texttt{uwtof}
+(unsigned word to float), \texttt{sltof} (signed long to float) and
+\texttt{ultof} (unsigned long to float).
 
 \subsection{Cast and Copy}
 

@@ -261,6 +261,10 @@ data Instr
     -- 'wordToLong' from the expression abstraction.
     Ext SubLongType Value
   | ExtSingle Value
+  | SToInt Bool Value
+  | DToInt Bool Value
+  | WToFloat Bool Value
+  | LToFloat Bool Value
   | TruncDouble Value
   | Cast Value
   | Copy Value
