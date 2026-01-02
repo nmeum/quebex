@@ -67,6 +67,8 @@ test-suite quebex-test
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
+    -- Prevent GHGC from optimizing float2Double calls.
+    ghc-options:      -O0
 
     other-modules:
       Analysis,
