@@ -65,13 +65,18 @@ liftMaybe e Nothing = throwM e
 liftMaybe _ (Just r) = pure r
 {-# INLINE liftMaybe #-}
 
-subTypeE :: (Simulator m v) => QBE.BaseType -> v -> m v
-subTypeE ty v = liftMaybe TypingError $ E.subType ty v
-{-# INLINEABLE subTypeE #-}
-
-wordToLongE :: (Simulator m v) => QBE.SubLongType -> v -> m v
-wordToLongE ty v = liftMaybe InvaldSubWordExtension $ E.wordToLong ty v
-{-# INLINEABLE wordToLongE #-}
+-- See https://c9x.me/compile/doc/il-v1.2.html#Subtyping
+subType :: (Simulator m v) => QBE.BaseType -> v -> m v
+subType baseTy v = liftMaybe TypingError $ subType' baseTy (E.getType v)
+  where
+    subType' QBE.Word (QBE.Base QBE.Word) = Just v
+    subType' QBE.Word (QBE.Base QBE.Long) =
+      E.extract (QBE.Base QBE.Word) v
+    subType' QBE.Long (QBE.Base QBE.Long) = Just v
+    subType' QBE.Single (QBE.Base QBE.Single) = Just v
+    subType' QBE.Double (QBE.Base QBE.Double) = Just v
+    subType' _ _ = Nothing
+{-# INLINEABLE subType #-}
 
 runBinary ::
   (Simulator m v) =>
@@ -81,7 +86,7 @@ runBinary ::
   v ->
   m v
 runBinary ty op lhs rhs =
-  liftMaybe TypingError (op lhs rhs >>= E.subType ty)
+  liftMaybe TypingError (op lhs rhs) >>= subType ty
 {-# INLINEABLE runBinary #-}
 
 modifyFrame :: (Simulator m v) => (StackFrame v -> StackFrame v) -> m ()
@@ -119,18 +124,18 @@ lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit (QBE.Base ty) v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
-  subTypeE ty (E.fromFloat v)
+  subType ty (E.fromFloat v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
-  subTypeE ty (E.fromDouble v)
+  subType ty (E.fromDouble v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
   v <- lookupSymbol k >>= maybeLookup (show k)
-  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
+  subType ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VConst (QBE.Thread k)) = do
   v <- lookupSymbol k >>= maybeLookup (show k)
-  subTypeE ty (E.fromLit (QBE.Base QBE.Long) v)
+  subType ty (E.fromLit (QBE.Base QBE.Long) v)
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
-  subTypeE ty v
+  subType ty v
 {-# INLINEABLE lookupValue #-}
 
 lookupFunc :: (Simulator m v) => QBE.Value -> m (SomeFunc m v)

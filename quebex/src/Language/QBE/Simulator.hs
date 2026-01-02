@@ -119,7 +119,7 @@ execInstr retTy (QBE.Shl lhs rhs) = execShift retTy E.shl lhs rhs
 execInstr retTy (QBE.Load ty addrVal) = do
   addr <- lookupValue QBE.Long addrVal >>= toAddress
   val <- readMemory ty addr
-  subTypeE retTy val
+  subType retTy val
 execInstr QBE.Long (QBE.Alloc align sizeValue) = do
   size <- lookupValue QBE.Long sizeValue
   stackAlloc size (fromIntegral $ QBE.getSize align)
@@ -132,7 +132,16 @@ execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
   runBinary retTy exprOp v1 v2
 execInstr retTy (QBE.Ext subLongTy value) = do
   v <- lookupValue QBE.Word value
-  wordToLongE subLongTy v >>= subTypeE retTy
+  let (isSigned, extTy) = case subLongTy of
+        QBE.SLSubWord QBE.SignedByte -> (True, QBE.Byte)
+        QBE.SLSubWord QBE.UnsignedByte -> (False, QBE.Byte)
+        QBE.SLSubWord QBE.SignedHalf -> (True, QBE.HalfWord)
+        QBE.SLSubWord QBE.UnsignedHalf -> (False, QBE.HalfWord)
+        QBE.SLSignedWord -> (True, QBE.Base QBE.Word)
+        QBE.SLUnsignedWord -> (False, QBE.Base QBE.Word)
+  liftMaybe
+    TypingError
+    (E.extract extTy v >>= E.extend (QBE.Base retTy) isSigned)
 execInstr retTy (QBE.Copy value) = do
   lookupValue retTy value
 execInstr retTy (QBE.Cast value) = do
@@ -176,7 +185,7 @@ execStmt (QBE.Call ret toCall params) = do
         Nothing -> throwM AssignedVoidReturnValue
         Just (ident, abity) -> do
           let baseTy = QBE.abityToBase abity
-          subTyped <- subTypeE baseTy retVal
+          subTyped <- subType baseTy retVal
           modifyFrame (storeLocal ident subTyped)
 {-# INLINEABLE execStmt #-}
 
