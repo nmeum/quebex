@@ -226,6 +226,7 @@ instance E.ValueRepr RegVal where
   getType (VSingle _) = QBE.Base QBE.Single
   getType (VDouble _) = QBE.Base QBE.Double
 
+  -- TODO: Consider replacing Nothing cases with assert as this on the hot path.
   extend extTy isSigned val
     | QBE.extTypeBitSize extTy <= bitSize val = Nothing
     | otherwise =
@@ -241,6 +242,7 @@ instance E.ValueRepr RegVal where
             (False, VLong v) -> Just $ fromIntegral (fromIntegral v :: Word64)
             _ -> Nothing
 
+  -- TODO: Consider replacing Nothing cases with assert as this on the hot path.
   extract (QBE.Base QBE.Single) _ = Nothing
   extract (QBE.Base QBE.Double) _ = Nothing
   extract _ (VSingle _) = Nothing
