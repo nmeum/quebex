@@ -214,6 +214,10 @@ loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
 loadByteSize (LBase Double) = 8
 
+-- TODO: Consider removing this as it is only used by
+-- the Ext instruction and instead provide multiple
+-- Ext constructors where an additional type indicates
+-- if the value is signed/unsigned.
 data SubLongType
   = SLSubWord SubWordType
   | SLSignedWord
