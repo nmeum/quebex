@@ -19,6 +19,11 @@ class ValueRepr v where
   toWord64 :: v -> Word64
   getType :: v -> QBE.ExtType
 
+  floatToInt :: QBE.ExtType -> Bool -> v -> Maybe v
+  intToFloat :: QBE.ExtType -> Bool -> v -> Maybe v
+  extendFloat :: v -> Maybe v
+  truncFloat :: v -> Maybe v
+
   -- | Extend a value to the given 'QBE.ExtType'. The 'Bool' is true if
   -- the value should be sign-extended, otherwise it is zero-extended.
   -- If the 'v' is a float or if the current size exceeds (or is equal to)

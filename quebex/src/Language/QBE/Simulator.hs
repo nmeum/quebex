@@ -142,8 +142,28 @@ execInstr retTy (QBE.Ext subLongTy value) = do
   liftMaybe
     TypingError
     (E.extract extTy v >>= E.extend (QBE.Base retTy) isSigned)
+execInstr QBE.Single (QBE.ExtSingle value) = do
+  v <- lookupValue QBE.Single value
+  liftMaybe TypingError $ E.extendFloat v
+execInstr _ (QBE.ExtSingle _) = throwM TypingError
+execInstr QBE.Double (QBE.TruncDouble value) = do
+  v <- lookupValue QBE.Double value
+  liftMaybe TypingError $ E.truncFloat v
+execInstr _ (QBE.TruncDouble _) = throwM TypingError
 execInstr retTy (QBE.Copy value) = do
   lookupValue retTy value
+execInstr retTy (QBE.SToInt isSigned value) = do
+  v <- lookupValue QBE.Single value
+  liftMaybe TypingError $ E.floatToInt (QBE.Base retTy) isSigned v
+execInstr retTy (QBE.DToInt isSigned value) = do
+  v <- lookupValue QBE.Double value
+  liftMaybe TypingError $ E.floatToInt (QBE.Base retTy) isSigned v
+execInstr retTy (QBE.WToFloat isSigned value) = do
+  v <- lookupValue QBE.Word value
+  liftMaybe TypingError $ E.intToFloat (QBE.Base retTy) isSigned v
+execInstr retTy (QBE.LToFloat isSigned value) = do
+  v <- lookupValue QBE.Long value
+  liftMaybe TypingError $ E.intToFloat (QBE.Base retTy) isSigned v
 execInstr retTy (QBE.Cast value) = do
   -- We must deduce the value type to use for lookup from
   -- the return type as manadated by the cast type string.
