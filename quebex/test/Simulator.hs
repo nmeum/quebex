@@ -1013,7 +1013,50 @@ blockTests =
               \ret %ret\n\
               \}"
 
-          res @?= Just (D.VLong 4)
+          res @?= Just (D.VLong 4),
+      testCase "Compare double to NaN" $
+        do
+          let exec lhs rhs =
+                parseAndExec
+                  (QBE.GlobalIdent "isNaN")
+                  [D.VDouble lhs, D.VDouble rhs]
+                  "function w $isNaN(d %lhs, d %rhs) {\n\
+                  \@start\n\
+                  \%ret =w cod %lhs, %rhs\n\
+                  \ret %ret\n\
+                  \}"
+
+          res0 <- exec 0 0
+          res0 @?= Just (D.VWord 1)
+
+          res1 <- exec 0 (read "NaN")
+          res1 @?= Just (D.VWord 0)
+
+          res2 <- exec (read "NaN") 0
+          res2 @?= Just (D.VWord 0),
+      testCase "Compare single equality" $
+        do
+          let exec lhs rhs =
+                parseAndExec
+                  (QBE.GlobalIdent "eq")
+                  [D.VSingle lhs, D.VSingle rhs]
+                  "function w $eq(s %lhs, s %rhs) {\n\
+                  \@start\n\
+                  \%ret =w ceqs %lhs, %rhs\n\
+                  \ret %ret\n\
+                  \}"
+
+          res0 <- exec 0 0
+          res0 @?= Just (D.VWord 1)
+
+          res1 <- exec 0 23.42
+          res1 @?= Just (D.VWord 0)
+
+          res2 <- exec 42.1 0
+          res2 @?= Just (D.VWord 0)
+
+          res3 <- exec 42.2323 42.2323
+          res3 @?= Just (D.VWord 1)
     ]
 
 simTests :: TestTree

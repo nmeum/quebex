@@ -4,7 +4,7 @@
 
 module Language.QBE.Simulator.Expression where
 
-import Data.Char (chr, ord)
+import Data.Char qualified as C
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
 
@@ -64,11 +64,18 @@ class ValueRepr v where
   uge :: v -> v -> Maybe v
   ugt :: v -> v -> Maybe v
 
+  -- Ordered: no operand is a NaN.
+  ord :: v -> v -> Maybe v
+
+  -- Unordered: At least one operand is a NaN
+  unord :: v -> v -> Maybe v
+  unord lhs rhs = ord lhs rhs >>= neg
+
 fromString :: (ValueRepr v) => String -> [v]
-fromString = map (\c -> fromLit QBE.Byte (fromIntegral $ ord c))
+fromString = map (\c -> fromLit QBE.Byte (fromIntegral $ C.ord c))
 
 toString :: (ValueRepr v) => [v] -> String
-toString = map (\b -> chr (fromIntegral $ toWord64 b))
+toString = map (\b -> C.chr (fromIntegral $ toWord64 b))
 
 boolToValue :: (ValueRepr v) => Bool -> v
 boolToValue True = fromLit (QBE.Base QBE.Long) 1
@@ -86,3 +93,14 @@ compareExpr QBE.CUlt = ult
 compareExpr QBE.CUge = uge
 compareExpr QBE.CUgt = ugt
 {-# INLINE compareExpr #-}
+
+compareFloatExpr :: (ValueRepr v) => QBE.FloatCmpOp -> (v -> v -> Maybe v)
+compareFloatExpr QBE.FEq = eq
+compareFloatExpr QBE.FNe = ne
+compareFloatExpr QBE.FLe = sle
+compareFloatExpr QBE.FLt = slt
+compareFloatExpr QBE.FGe = sge
+compareFloatExpr QBE.FGt = sgt
+compareFloatExpr QBE.FOrd = ord
+compareFloatExpr QBE.FUnord = unord
+{-# INLINE compareFloatExpr #-}

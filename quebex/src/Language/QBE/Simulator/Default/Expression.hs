@@ -60,6 +60,10 @@ fromBits 32 = Just . VWord . fromIntegral
 fromBits 64 = Just . VLong . fromIntegral
 fromBits _ = const Nothing
 
+fromBool :: Bool -> RegVal
+fromBool True = VLong 1
+fromBool False = VLong 0
+
 ------------------------------------------------------------------------
 
 shiftInstr ::
@@ -348,3 +352,9 @@ instance E.ValueRepr RegVal where
   ult = ult'
   uge = uge'
   ugt = ugt'
+
+  ord (VSingle lhs) (VSingle rhs) =
+    Just . fromBool $ not (isNaN lhs || isNaN rhs)
+  ord (VDouble lhs) (VDouble rhs) =
+    Just . fromBool $ not (isNaN lhs || isNaN rhs)
+  ord _ _ = Nothing

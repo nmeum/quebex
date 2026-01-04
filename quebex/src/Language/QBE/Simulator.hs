@@ -130,6 +130,13 @@ execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
 
   let exprOp = E.compareExpr cmpOp
   runBinary retTy exprOp v1 v2
+execInstr retTy (QBE.CompareFloat floatArg cmpOp lhs rhs) = do
+  let cmpTy = QBE.f2BaseType floatArg
+  v1 <- lookupValue cmpTy lhs
+  v2 <- lookupValue cmpTy rhs
+
+  let exprOp = E.compareFloatExpr cmpOp
+  runBinary retTy exprOp v1 v2
 -- exts is only valid with a double return type.
 execInstr QBE.Double (QBE.Ext QBE.ExtSingle value) = do
   v <- lookupValue QBE.Single value
