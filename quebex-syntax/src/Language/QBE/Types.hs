@@ -258,6 +258,17 @@ data CmpOp
   | CUgt
   deriving (Show, Eq)
 
+data FloatCmpOp
+  = FEq
+  | FNe
+  | FLe
+  | FLt
+  | FGe
+  | FGt
+  | FOrd
+  | FUnord
+  deriving (Show, Eq)
+
 data Instr
   = Add Value Value
   | Sub Value Value
@@ -276,6 +287,7 @@ data Instr
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
+  | CompareFloat FloatArg FloatCmpOp Value Value
   | Ext ExtArg Value
   | FloatToInt FloatArg Bool Value
   | IntToFloat IntArg Bool Value
