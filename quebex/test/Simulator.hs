@@ -959,6 +959,19 @@ blockTests =
 
           let f2d = D.VDouble $ float2Double f
           res @?= Just f2d,
+      testCase "Invalid exts" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "ext")
+              [D.VSingle 23.42]
+              "function s $ext(s %s) {\n\
+              \@start\n\
+              \%s =s exts %s\n\
+              \ret %s\n\
+              \}"
+
+          res @?= Left TypingError,
       testCase "Convert single to unsigned long" $
         do
           let f = 4.2

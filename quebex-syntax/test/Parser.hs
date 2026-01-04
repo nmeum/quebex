@@ -153,7 +153,7 @@ funcTests =
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,
       testCase "Function definition with extend instruction" $
-        let c = Ext SLSignedWord (VConst (Const (Number 42)))
+        let c = Ext ExtSignedWord (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f,
@@ -193,7 +193,7 @@ funcTests =
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Double) (LocalIdent "d")] [b]
          in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f,
       testCase "exts instruction" $
-        let c = Assign (LocalIdent "d") Double $ ExtSingle (VLocal $ LocalIdent "s")
+        let c = Assign (LocalIdent "d") Double $ Ext ExtSingle (VLocal $ LocalIdent "s")
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s")] [b]
          in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f,

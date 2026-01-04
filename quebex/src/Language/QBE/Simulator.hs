@@ -130,23 +130,16 @@ execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
 
   let exprOp = E.compareExpr cmpOp
   runBinary retTy exprOp v1 v2
-execInstr retTy (QBE.Ext subLongTy value) = do
+-- exts is only valid with a double return type.
+execInstr QBE.Double (QBE.Ext QBE.ExtSingle value) = do
+  v <- lookupValue QBE.Single value
+  liftMaybe TypingError $ E.extendFloat v
+execInstr retTy (QBE.Ext extArg value) = do
   v <- lookupValue QBE.Word value
-  let (isSigned, extTy) = case subLongTy of
-        QBE.SLSubWord QBE.SignedByte -> (True, QBE.Byte)
-        QBE.SLSubWord QBE.UnsignedByte -> (False, QBE.Byte)
-        QBE.SLSubWord QBE.SignedHalf -> (True, QBE.HalfWord)
-        QBE.SLSubWord QBE.UnsignedHalf -> (False, QBE.HalfWord)
-        QBE.SLSignedWord -> (True, QBE.Base QBE.Word)
-        QBE.SLUnsignedWord -> (False, QBE.Base QBE.Word)
+  let (isSigned, extTy) = QBE.toExtType extArg
   liftMaybe
     TypingError
     (E.extract extTy v >>= E.extend (QBE.Base retTy) isSigned)
-execInstr QBE.Double (QBE.ExtSingle value) = do
-  v <- lookupValue QBE.Single value
-  liftMaybe TypingError $ E.extendFloat v
--- exts is only valid with a double return type.
-execInstr _ (QBE.ExtSingle _) = throwM TypingError
 execInstr QBE.Single (QBE.TruncDouble value) = do
   v <- lookupValue QBE.Double value
   liftMaybe TypingError $ E.truncFloat v

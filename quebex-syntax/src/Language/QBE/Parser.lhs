@@ -1077,20 +1077,17 @@ extend the precision of a temporary (e.g., from signed 8-bit to 32-bit), or
 convert a floating point into an integer and vice versa.
 
 \begin{code}
-subLongType :: Parser Q.SubLongType
-subLongType = try (Q.SLSubWord <$> subWordType)
-  <|> bind "sw" Q.SLSignedWord
-  <|> bind "uw" Q.SLUnsignedWord
-
 extInstr :: Parser Q.Instr
 extInstr = do
   _ <- string "ext"
-  (try extInt) <|> extFloat
-
-extInt :: Parser Q.Instr
-extInt = do
-  ty <- ws1 subLongType
+  ty <- ws1 extArg
   ws val <&> Q.Ext ty
+ where
+  extArg :: Parser Q.ExtArg
+  extArg = try (Q.ExtSubWord <$> subWordType)
+    <|> try (bind "sw" Q.ExtSignedWord)
+    <|> bind "s" Q.ExtSingle
+    <|> bind "uw" Q.ExtUnsignedWord
 \end{code}
 
 Extending the precision of a temporary is done using the \texttt{ext} family of
@@ -1100,11 +1097,6 @@ example, \texttt{extsb} takes a word argument and sign-extends the 8
 least-significant bits to a full word or long, depending on the return type.
 
 \begin{code}
-extFloat :: Parser Q.Instr
-extFloat = do
-  _ <- ws1 $ char 's'
-  ws val <&> Q.ExtSingle
-
 truncInstr :: Parser Q.Instr
 truncInstr = do
   _ <- ws1 $ string "truncd"

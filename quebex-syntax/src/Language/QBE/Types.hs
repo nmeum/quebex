@@ -214,15 +214,21 @@ loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
 loadByteSize (LBase Double) = 8
 
--- TODO: Consider removing this as it is only used by
--- the Ext instruction and instead provide multiple
--- Ext constructors where an additional type indicates
--- if the value is signed/unsigned.
-data SubLongType
-  = SLSubWord SubWordType
-  | SLSignedWord
-  | SLUnsignedWord
+data ExtArg
+  = ExtSingle
+  | ExtSubWord SubWordType
+  | ExtSignedWord
+  | ExtUnsignedWord
   deriving (Show, Eq)
+
+toExtType :: ExtArg -> (Bool, ExtType)
+toExtType (ExtSubWord SignedByte) = (True, Byte)
+toExtType (ExtSubWord UnsignedByte) = (False, Byte)
+toExtType (ExtSubWord SignedHalf) = (True, HalfWord)
+toExtType (ExtSubWord UnsignedHalf) = (False, HalfWord)
+toExtType ExtSignedWord = (True, Base Word)
+toExtType ExtUnsignedWord = (False, Base Word)
+toExtType ExtSingle = (True, Base Single)
 
 -- TODO: Distinict types for floating point comparison?
 data CmpOp
@@ -256,11 +262,7 @@ data Instr
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
-  | -- TODO: Integrate Ext and ExtSingle into a single constructor.
-    -- Requires refactoring SubLongType, which requires refactoring
-    -- 'wordToLong' from the expression abstraction.
-    Ext SubLongType Value
-  | ExtSingle Value
+  | Ext ExtArg Value
   | SToInt Bool Value
   | DToInt Bool Value
   | WToFloat Bool Value
