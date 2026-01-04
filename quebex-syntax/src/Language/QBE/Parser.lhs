@@ -1047,11 +1047,11 @@ compareArgs = do
 
 intCompare :: Parser Q.Instr
 intCompare = do
-  op <- compareOp
-  ty <- Q.i2BaseType <$> ws1 intArg
+  op <- compareIntOp
+  ty <- ws1 intArg
 
   (lhs, rhs) <- compareArgs
-  pure $ Q.Compare ty op lhs rhs
+  pure $ Q.CompareInt ty op lhs rhs
 
 floatCompare :: Parser Q.Instr
 floatCompare = do
@@ -1076,18 +1076,18 @@ respect a standard naming scheme in three parts:
 The following instruction are available for integer comparisons:
 
 \begin{code}
-compareOp :: Parser Q.CmpOp
-compareOp = choice
-  [ bind "eq" Q.CEq
-  , bind "ne" Q.CNe
-  , try $ bind "sle" Q.CSle
-  , try $ bind "slt" Q.CSlt
-  , try $ bind "sge" Q.CSge
-  , try $ bind "sgt" Q.CSgt
-  , try $ bind "ule" Q.CUle
-  , try $ bind "ult" Q.CUlt
-  , try $ bind "uge" Q.CUge
-  , try $ bind "ugt" Q.CUgt ]
+compareIntOp :: Parser Q.IntCmpOp
+compareIntOp = choice
+  [ bind "eq" Q.IEq
+  , bind "ne" Q.INe
+  , try $ bind "sle" Q.ISle
+  , try $ bind "slt" Q.ISlt
+  , try $ bind "sge" Q.ISge
+  , try $ bind "sgt" Q.ISgt
+  , try $ bind "ule" Q.IUle
+  , try $ bind "ult" Q.IUlt
+  , try $ bind "uge" Q.IUge
+  , try $ bind "ugt" Q.IUgt ]
 \end{code}
 
 For floating point comparisons use one of these instructions:

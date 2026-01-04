@@ -148,7 +148,7 @@ funcTests =
             f = FuncDef [LSection "foo" (Just "bar")] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\" \"bar\"\n#test\nfunction w $bla(l %v) {\n#foo\n@start\n# bar \nret\n#bllubbb\n#bllaaa\n}" @?= Right f,
       testCase "Function definition with comparison instruction" $
-        let c = Compare Word CSlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
+        let c = CompareInt IWord ISlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,

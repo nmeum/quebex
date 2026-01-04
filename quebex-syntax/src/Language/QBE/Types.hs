@@ -245,17 +245,17 @@ i2BaseType IWord = Word
 i2BaseType ILong = Long
 
 -- TODO: Distinict types for floating point comparison?
-data CmpOp
-  = CEq
-  | CNe
-  | CSle
-  | CSlt
-  | CSge
-  | CSgt
-  | CUle
-  | CUlt
-  | CUge
-  | CUgt
+data IntCmpOp
+  = IEq
+  | INe
+  | ISle
+  | ISlt
+  | ISge
+  | ISgt
+  | IUle
+  | IUlt
+  | IUge
+  | IUgt
   deriving (Show, Eq)
 
 data FloatCmpOp
@@ -286,7 +286,7 @@ data Instr
   | Shl Value Value
   | Alloc AllocSize Value
   | Load LoadType Value
-  | Compare BaseType CmpOp Value Value
+  | CompareInt IntArg IntCmpOp Value Value
   | CompareFloat FloatArg FloatCmpOp Value Value
   | Ext ExtArg Value
   | FloatToInt FloatArg Bool Value

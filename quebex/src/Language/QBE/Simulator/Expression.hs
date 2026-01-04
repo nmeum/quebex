@@ -81,18 +81,18 @@ boolToValue :: (ValueRepr v) => Bool -> v
 boolToValue True = fromLit (QBE.Base QBE.Long) 1
 boolToValue False = fromLit (QBE.Base QBE.Long) 0
 
-compareExpr :: (ValueRepr v) => QBE.CmpOp -> (v -> v -> Maybe v)
-compareExpr QBE.CEq = eq
-compareExpr QBE.CNe = ne
-compareExpr QBE.CSle = sle
-compareExpr QBE.CSlt = slt
-compareExpr QBE.CSge = sge
-compareExpr QBE.CSgt = sgt
-compareExpr QBE.CUle = ule
-compareExpr QBE.CUlt = ult
-compareExpr QBE.CUge = uge
-compareExpr QBE.CUgt = ugt
-{-# INLINE compareExpr #-}
+compareIntExpr :: (ValueRepr v) => QBE.IntCmpOp -> (v -> v -> Maybe v)
+compareIntExpr QBE.IEq = eq
+compareIntExpr QBE.INe = ne
+compareIntExpr QBE.ISle = sle
+compareIntExpr QBE.ISlt = slt
+compareIntExpr QBE.ISge = sge
+compareIntExpr QBE.ISgt = sgt
+compareIntExpr QBE.IUle = ule
+compareIntExpr QBE.IUlt = ult
+compareIntExpr QBE.IUge = uge
+compareIntExpr QBE.IUgt = ugt
+{-# INLINE compareIntExpr #-}
 
 compareFloatExpr :: (ValueRepr v) => QBE.FloatCmpOp -> (v -> v -> Maybe v)
 compareFloatExpr QBE.FEq = eq
