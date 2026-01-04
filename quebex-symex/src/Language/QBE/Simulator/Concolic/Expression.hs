@@ -94,6 +94,18 @@ instance E.ValueRepr (Concolic D.RegVal) where
   extend ty s = unaryOp (E.extend ty s) (E.extend ty s)
   extract ty = unaryOp (E.extract ty) (E.extract ty)
 
+  -- TODO: Add constraint which enforces concrete value on
+  -- symbolic part instead of silently discarding it. See
+  -- the address concretization implementation for details.
+  floatToInt ty s Concolic {concrete = c} =
+    (`Concolic` Nothing) <$> E.floatToInt ty s c
+  intToFloat ty s Concolic {concrete = c} =
+    (`Concolic` Nothing) <$> E.intToFloat ty s c
+  extendFloat Concolic {concrete = c} =
+    (`Concolic` Nothing) <$> E.extendFloat c
+  truncFloat Concolic {concrete = c} =
+    (`Concolic` Nothing) <$> E.truncFloat c
+
   add = binaryOp E.add E.add
   sub = binaryOp E.sub E.sub
   mul = binaryOp E.mul E.mul
