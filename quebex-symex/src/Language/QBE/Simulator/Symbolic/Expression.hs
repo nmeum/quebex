@@ -204,3 +204,6 @@ instance E.ValueRepr BitVector where
   ult = binaryBoolOp SMT.bvULt
   uge = binaryBoolOp (\lhs rhs -> SMT.or (SMT.bvULt rhs lhs) (SMT.eq lhs rhs))
   ugt = binaryBoolOp (flip SMT.bvULt)
+
+  ord = error "symbolic ordered comparison not supported"
+  unord = error "symbolic unordered comparison not supported"

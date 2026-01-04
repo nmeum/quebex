@@ -1033,35 +1033,76 @@ address of a variable.
 \subsection{Comparisons}
 \label{sec:comparisions}
 
-Comparison instructions return an integer value (either a word or a long), and
-compare values of arbitrary types. The returned value is 1 if the two operands
-satisfy the comparison relation, or 0 otherwise. The names of comparisons
-respect a standard naming scheme in three parts.
-
 \begin{code}
 compareInstr :: Parser Q.Instr
 compareInstr = do
   _ <- char 'c'
-  op <- compareOp
-  ty <- ws1 baseType
+  (try intCompare) <|> floatCompare
+
+compareArgs :: Parser (Q.Value, Q.Value)
+compareArgs = do
   lhs <- ws val <* ws (char ',')
   rhs <- ws val
-  pure $ Q.Compare ty op lhs rhs
+  pure (lhs, rhs)
+
+intCompare :: Parser Q.Instr
+intCompare = do
+  op <- compareIntOp
+  ty <- ws1 intArg
+
+  (lhs, rhs) <- compareArgs
+  pure $ Q.CompareInt ty op lhs rhs
+
+floatCompare :: Parser Q.Instr
+floatCompare = do
+  op <- compareFloatOp
+  ty <- ws1 floatArg
+
+  (lhs, rhs) <- compareArgs
+  pure $ Q.CompareFloat ty op lhs rhs
 \end{code}
 
+Comparison instructions return an integer value (either a word or a long), and
+compare values of arbitrary types. The returned value is 1 if the two operands
+satisfy the comparison relation, or 0 otherwise. The names of comparisons
+respect a standard naming scheme in three parts:
+
+\begin{enumerate}
+  \item All comparisons start with the letter \texttt{c}.
+  \item Then comes a comparison type.
+  \item Finally, the instruction name is terminated with a basic type suffix precising the type of the operands to be compared.
+\end{enumerate}
+
+The following instruction are available for integer comparisons:
+
 \begin{code}
-compareOp :: Parser Q.CmpOp
-compareOp = choice
-  [ bind "eq" Q.CEq
-  , bind "ne" Q.CNe
-  , try $ bind "sle" Q.CSle
-  , try $ bind "slt" Q.CSlt
-  , try $ bind "sge" Q.CSge
-  , try $ bind "sgt" Q.CSgt
-  , try $ bind "ule" Q.CUle
-  , try $ bind "ult" Q.CUlt
-  , try $ bind "uge" Q.CUge
-  , try $ bind "ugt" Q.CUgt ]
+compareIntOp :: Parser Q.IntCmpOp
+compareIntOp = choice
+  [ bind "eq" Q.IEq
+  , bind "ne" Q.INe
+  , try $ bind "sle" Q.ISle
+  , try $ bind "slt" Q.ISlt
+  , try $ bind "sge" Q.ISge
+  , try $ bind "sgt" Q.ISgt
+  , try $ bind "ule" Q.IUle
+  , try $ bind "ult" Q.IUlt
+  , try $ bind "uge" Q.IUge
+  , try $ bind "ugt" Q.IUgt ]
+\end{code}
+
+For floating point comparisons use one of these instructions:
+
+\begin{code}
+compareFloatOp :: Parser Q.FloatCmpOp
+compareFloatOp = choice
+  [ bind "eq" Q.FEq
+  , bind "ne" Q.FNe
+  , try $ bind "le" Q.FLe
+  , bind "lt" Q.FLt
+  , try $ bind "ge" Q.FGe
+  , bind "gt" Q.FGt
+  , bind "o" Q.FOrd
+  , bind "uo" Q.FUnord ]
 \end{code}
 
 For example, \texttt{cod} compares two double-precision floating point numbers
@@ -1109,15 +1150,18 @@ the double argument of truncd cannot be represented as a single-precision
 floating point, it is truncated towards zero.
 
 \begin{code}
+floatArg :: Parser Q.FloatArg
+floatArg = bind "d" Q.FDouble <|> bind "s" Q.FSingle
+
 fromFloatInstr :: Parser Q.Instr
 fromFloatInstr = do
   arg <- floatArg <* string "to"
   isSigned <- signageChar
   _ <- ws1 $ char 'i'
   ws val <&> Q.FloatToInt arg isSigned
- where
-  floatArg :: Parser Q.FloatArg
-  floatArg = bind "d" Q.FDouble <|> bind "s" Q.FSingle
+
+intArg :: Parser Q.IntArg
+intArg = bind "w" Q.IWord <|> bind "l" Q.ILong
 
 toFloatInstr :: Parser Q.Instr
 toFloatInstr = do
@@ -1125,9 +1169,6 @@ toFloatInstr = do
   arg <- intArg
   _ <- ws1 $ string "tof"
   ws val <&> Q.IntToFloat arg isSigned
- where
-  intArg :: Parser Q.IntArg
-  intArg = bind "w" Q.IWord <|> bind "l" Q.ILong
 \end{code}
 
 Converting between signed integers and floating points is done using

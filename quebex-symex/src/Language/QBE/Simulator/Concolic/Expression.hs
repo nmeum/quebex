@@ -133,3 +133,8 @@ instance E.ValueRepr (Concolic D.RegVal) where
   ult = binaryOp E.ult E.ult
   uge = binaryOp E.uge E.uge
   ugt = binaryOp E.ugt E.ugt
+
+  -- TODO: Add constraint which enforces concrete value on
+  -- symbolic part instead of silently discarding it. See
+  -- the address concretization implementation for details.
+  ord lhs rhs = (`Concolic` Nothing) <$> E.ord (concrete lhs) (concrete rhs)

@@ -124,11 +124,19 @@ execInstr QBE.Long (QBE.Alloc align sizeValue) = do
   size <- lookupValue QBE.Long sizeValue
   stackAlloc size (fromIntegral $ QBE.getSize align)
 execInstr _ QBE.Alloc {} = throwM InvalidAddressType
-execInstr retTy (QBE.Compare cmpTy cmpOp lhs rhs) = do
+execInstr retTy (QBE.CompareInt intArg cmpOp lhs rhs) = do
+  let cmpTy = QBE.i2BaseType intArg
   v1 <- lookupValue cmpTy lhs
   v2 <- lookupValue cmpTy rhs
 
-  let exprOp = E.compareExpr cmpOp
+  let exprOp = E.compareIntExpr cmpOp
+  runBinary retTy exprOp v1 v2
+execInstr retTy (QBE.CompareFloat floatArg cmpOp lhs rhs) = do
+  let cmpTy = QBE.f2BaseType floatArg
+  v1 <- lookupValue cmpTy lhs
+  v2 <- lookupValue cmpTy rhs
+
+  let exprOp = E.compareFloatExpr cmpOp
   runBinary retTy exprOp v1 v2
 -- exts is only valid with a double return type.
 execInstr QBE.Double (QBE.Ext QBE.ExtSingle value) = do

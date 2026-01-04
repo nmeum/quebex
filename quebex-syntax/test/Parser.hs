@@ -148,7 +148,7 @@ funcTests =
             f = FuncDef [LSection "foo" (Just "bar")] (GlobalIdent "bla") (Just (ABase Word)) p b
          in parse "section \"foo\" \"bar\"\n#test\nfunction w $bla(l %v) {\n#foo\n@start\n# bar \nret\n#bllubbb\n#bllaaa\n}" @?= Right f,
       testCase "Function definition with comparison instruction" $
-        let c = Compare Word CSlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
+        let c = CompareInt IWord ISlt (VConst (Const (Number 23))) (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,
@@ -228,6 +228,27 @@ funcTests =
               \%f.2 =s uwtof %w\n\
               \%f.3 =d sltof %l\n\
               \%f.4 =d ultof %l\n\
+              \hlt\n\
+              \}"
+              @?= Right f,
+      testCase "floating point comparision" $
+        let c1 = Assign (LocalIdent "w.1") Word $ CompareFloat FDouble FOrd (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            c2 = Assign (LocalIdent "w.2") Word $ CompareFloat FSingle FOrd (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            c3 = Assign (LocalIdent "w.3") Word $ CompareFloat FDouble FLe (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            c4 = Assign (LocalIdent "w.4") Word $ CompareFloat FDouble FLt (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            c5 = Assign (LocalIdent "w.5") Word $ CompareFloat FDouble FGe (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            c6 = Assign (LocalIdent "w.6") Word $ CompareFloat FDouble FGt (VLocal $ LocalIdent "lhs") (VLocal $ LocalIdent "rhs")
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c1, c2, c3, c4, c5, c6], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Double) (LocalIdent "lhs"), Regular (ABase Double) (LocalIdent "rhs")] [b]
+         in parse
+              "function $f(d %lhs, d %rhs) { \n\
+              \@start\n\
+              \%w.1 =w cod %lhs, %rhs\n\
+              \%w.2 =w cos %lhs, %rhs\n\
+              \%w.3 =w cled %lhs, %rhs\n\
+              \%w.4 =w cltd %lhs, %rhs\n\
+              \%w.5 =w cged %lhs, %rhs\n\
+              \%w.6 =w cgtd %lhs, %rhs\n\
               \hlt\n\
               \}"
               @?= Right f
