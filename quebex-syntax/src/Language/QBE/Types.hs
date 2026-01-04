@@ -230,6 +230,20 @@ toExtType ExtSignedWord = (True, Base Word)
 toExtType ExtUnsignedWord = (False, Base Word)
 toExtType ExtSingle = (True, Base Single)
 
+data FloatArg = FDouble | FSingle
+  deriving (Show, Eq)
+
+f2BaseType :: FloatArg -> BaseType
+f2BaseType FSingle = Single
+f2BaseType FDouble = Double
+
+data IntArg = IWord | ILong
+  deriving (Show, Eq)
+
+i2BaseType :: IntArg -> BaseType
+i2BaseType IWord = Word
+i2BaseType ILong = Long
+
 -- TODO: Distinict types for floating point comparison?
 data CmpOp
   = CEq
@@ -263,10 +277,8 @@ data Instr
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
   | Ext ExtArg Value
-  | SToInt Bool Value
-  | DToInt Bool Value
-  | WToFloat Bool Value
-  | LToFloat Bool Value
+  | FloatToInt FloatArg Bool Value
+  | IntToFloat IntArg Bool Value
   | TruncDouble Value
   | Cast Value
   | Copy Value

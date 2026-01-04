@@ -1111,19 +1111,23 @@ floating point, it is truncated towards zero.
 \begin{code}
 fromFloatInstr :: Parser Q.Instr
 fromFloatInstr = do
-  conc <- floatType <* string "to"
+  arg <- floatArg <* string "to"
   isSigned <- signageChar
   _ <- ws1 $ char 'i'
-  ws val <&> conc isSigned
+  ws val <&> Q.FloatToInt arg isSigned
  where
-  floatType = bind "d" Q.DToInt <|> bind "s" Q.SToInt
+  floatArg :: Parser Q.FloatArg
+  floatArg = bind "d" Q.FDouble <|> bind "s" Q.FSingle
 
 toFloatInstr :: Parser Q.Instr
 toFloatInstr = do
   isSigned <- signageChar
-  conc <- bind "w" Q.WToFloat <|> bind "l" Q.LToFloat
+  arg <- intArg
   _ <- ws1 $ string "tof"
-  ws val <&> conc isSigned
+  ws val <&> Q.IntToFloat arg isSigned
+ where
+  intArg :: Parser Q.IntArg
+  intArg = bind "w" Q.IWord <|> bind "l" Q.ILong
 \end{code}
 
 Converting between signed integers and floating points is done using

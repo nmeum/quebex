@@ -146,17 +146,11 @@ execInstr QBE.Single (QBE.TruncDouble value) = do
 -- truncd is only valid with a single return type.
 execInstr _ (QBE.TruncDouble _) = throwM TypingError
 execInstr retTy (QBE.Copy value) = lookupValue retTy value
-execInstr retTy (QBE.SToInt isSigned value) = do
-  v <- lookupValue QBE.Single value
+execInstr retTy (QBE.FloatToInt floatArg isSigned value) = do
+  v <- lookupValue (QBE.f2BaseType floatArg) value
   liftMaybe TypingError $ E.floatToInt (QBE.Base retTy) isSigned v
-execInstr retTy (QBE.DToInt isSigned value) = do
-  v <- lookupValue QBE.Double value
-  liftMaybe TypingError $ E.floatToInt (QBE.Base retTy) isSigned v
-execInstr retTy (QBE.WToFloat isSigned value) = do
-  v <- lookupValue QBE.Word value
-  liftMaybe TypingError $ E.intToFloat (QBE.Base retTy) isSigned v
-execInstr retTy (QBE.LToFloat isSigned value) = do
-  v <- lookupValue QBE.Long value
+execInstr retTy (QBE.IntToFloat intArg isSigned value) = do
+  v <- lookupValue (QBE.i2BaseType intArg) value
   liftMaybe TypingError $ E.intToFloat (QBE.Base retTy) isSigned v
 execInstr retTy (QBE.Cast value) = do
   -- We must deduce the value type to use for lookup from
