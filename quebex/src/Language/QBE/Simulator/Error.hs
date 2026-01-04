@@ -8,6 +8,7 @@ import Control.Monad.Catch (Exception)
 import Language.QBE.Simulator.Memory (Address)
 import Language.QBE.Types qualified as QBE
 
+-- TODO: Differentiate different typing errors.
 data EvalError
   = TypingError
   | UnknownVariable String
