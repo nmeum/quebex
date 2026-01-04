@@ -5,8 +5,9 @@
 module Simulator (simTests) where
 
 import Control.Monad.Catch (try)
+import Data.Int (Int32)
 import Data.Word (Word8)
-import GHC.Float (castDoubleToWord64, castFloatToWord32)
+import GHC.Float (castDoubleToWord64, castFloatToWord32, double2Float, float2Double)
 import Language.QBE (parseAndFind)
 import Language.QBE.Simulator
 import Language.QBE.Simulator.Default.Expression qualified as D
@@ -927,7 +928,92 @@ blockTests =
               \ret %d\n\
               \}"
 
-          res @?= Just (D.VDouble 4.2342)
+          res @?= Just (D.VDouble 4.2342),
+      testCase "Trunc double to single" $
+        do
+          let f = 4.293170199018932489308403284024098032
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "trunc")
+              [D.VDouble f]
+              "function s $trunc(d %d) {\n\
+              \@start\n\
+              \%s =s truncd %d\n\
+              \ret %s\n\
+              \}"
+
+          let d2f = D.VSingle $ double2Float f
+          res @?= Just d2f,
+      testCase "Extend float to double" $
+        do
+          let f = 23.42
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "ext")
+              [D.VSingle f]
+              "function d $ext(s %s) {\n\
+              \@start\n\
+              \%d =d exts %s\n\
+              \ret %d\n\
+              \}"
+
+          let f2d = D.VDouble $ float2Double f
+          res @?= Just f2d,
+      testCase "Invalid exts" $
+        do
+          res <-
+            parseAndExec'
+              (QBE.GlobalIdent "ext")
+              [D.VSingle 23.42]
+              "function s $ext(s %s) {\n\
+              \@start\n\
+              \%s =s exts %s\n\
+              \ret %s\n\
+              \}"
+
+          res @?= Left TypingError,
+      testCase "Convert single to unsigned long" $
+        do
+          let f = 4.2
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "fcon")
+              [D.VSingle f]
+              "function l $fcon(s %s) {\n\
+              \@start\n\
+              \%ret =l stoui %s\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VLong 4),
+      testCase "Convert single to signed word" $
+        do
+          let f = -3.99
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "fcon")
+              [D.VSingle f]
+              "function w $fcon(s %s) {\n\
+              \@start\n\
+              \%ret =w stosi %s\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VWord $ fromIntegral (-3 :: Int32)),
+      testCase "Convert double to unsigned int" $
+        do
+          let f = 4.9
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "fcon")
+              [D.VDouble f]
+              "function l $fcon(d %d) {\n\
+              \@start\n\
+              \%ret =l dtoui %d\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VLong 4)
     ]
 
 simTests :: TestTree

@@ -153,7 +153,7 @@ funcTests =
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w csltw 23, 42\nret\n}" @?= Right f,
       testCase "Function definition with extend instruction" $
-        let c = Ext SLSignedWord (VConst (Const (Number 42)))
+        let c = Ext ExtSignedWord (VConst (Const (Number 42)))
             b = [Block {label = BlockIdent "start", phi = [], stmt = [Assign (LocalIdent "res") Word c], term = Return Nothing}]
             f = FuncDef [] (GlobalIdent "f") Nothing [] b
          in parse "function $f() {\n@start\n%res =w extsw 42\nret\n}" @?= Right f,
@@ -191,7 +191,46 @@ funcTests =
         let c = Assign (LocalIdent "r") Single $ TruncDouble (VLocal $ LocalIdent "d")
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Double) (LocalIdent "d")] [b]
-         in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f
+         in parse "function $f(d %d) {\n@s\n%r =s truncd %d\nhlt\n}" @?= Right f,
+      testCase "exts instruction" $
+        let c = Assign (LocalIdent "d") Double $ Ext ExtSingle (VLocal $ LocalIdent "s")
+            b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s")] [b]
+         in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f,
+      testCase "float to int conversions" $
+        let c1 = Assign (LocalIdent "w.1") Word (FloatToInt FSingle True (VLocal $ LocalIdent "s"))
+            c2 = Assign (LocalIdent "w.2") Word (FloatToInt FSingle False (VLocal $ LocalIdent "s"))
+            c3 = Assign (LocalIdent "w.3") Word (FloatToInt FDouble True (VLocal $ LocalIdent "d"))
+            c4 = Assign (LocalIdent "w.4") Word (FloatToInt FDouble False (VLocal $ LocalIdent "d"))
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c1, c2, c3, c4], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s"), Regular (ABase Double) (LocalIdent "d")] [b]
+         in parse
+              "function $f(s %s, d %d) { \n\
+              \@start\n\
+              \%w.1 =w stosi %s\n\
+              \%w.2 =w stoui %s\n\
+              \%w.3 =w dtosi %d\n\
+              \%w.4 =w dtoui %d\n\
+              \hlt\n\
+              \}"
+              @?= Right f,
+      testCase "int to float conversions" $
+        let c1 = Assign (LocalIdent "f.1") Single (IntToFloat IWord True (VLocal $ LocalIdent "w"))
+            c2 = Assign (LocalIdent "f.2") Single (IntToFloat IWord False (VLocal $ LocalIdent "w"))
+            c3 = Assign (LocalIdent "f.3") Double (IntToFloat ILong True (VLocal $ LocalIdent "l"))
+            c4 = Assign (LocalIdent "f.4") Double (IntToFloat ILong False (VLocal $ LocalIdent "l"))
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c1, c2, c3, c4], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Word) (LocalIdent "w"), Regular (ABase Long) (LocalIdent "l")] [b]
+         in parse
+              "function $f(w %w, l %l) { \n\
+              \@start\n\
+              \%f.1 =s swtof %w\n\
+              \%f.2 =s uwtof %w\n\
+              \%f.3 =d sltof %l\n\
+              \%f.4 =d ultof %l\n\
+              \hlt\n\
+              \}"
+              @?= Right f
     ]
   where
     parse :: String -> Either P.ParseError FuncDef

@@ -214,15 +214,35 @@ loadByteSize (LBase Long) = 8
 loadByteSize (LBase Single) = 4
 loadByteSize (LBase Double) = 8
 
--- TODO: Consider removing this as it is only used by
--- the Ext instruction and instead provide multiple
--- Ext constructors where an additional type indicates
--- if the value is signed/unsigned.
-data SubLongType
-  = SLSubWord SubWordType
-  | SLSignedWord
-  | SLUnsignedWord
+data ExtArg
+  = ExtSingle
+  | ExtSubWord SubWordType
+  | ExtSignedWord
+  | ExtUnsignedWord
   deriving (Show, Eq)
+
+toExtType :: ExtArg -> (Bool, ExtType)
+toExtType (ExtSubWord SignedByte) = (True, Byte)
+toExtType (ExtSubWord UnsignedByte) = (False, Byte)
+toExtType (ExtSubWord SignedHalf) = (True, HalfWord)
+toExtType (ExtSubWord UnsignedHalf) = (False, HalfWord)
+toExtType ExtSignedWord = (True, Base Word)
+toExtType ExtUnsignedWord = (False, Base Word)
+toExtType ExtSingle = (True, Base Single)
+
+data FloatArg = FDouble | FSingle
+  deriving (Show, Eq)
+
+f2BaseType :: FloatArg -> BaseType
+f2BaseType FSingle = Single
+f2BaseType FDouble = Double
+
+data IntArg = IWord | ILong
+  deriving (Show, Eq)
+
+i2BaseType :: IntArg -> BaseType
+i2BaseType IWord = Word
+i2BaseType ILong = Long
 
 -- TODO: Distinict types for floating point comparison?
 data CmpOp
@@ -256,7 +276,9 @@ data Instr
   | Alloc AllocSize Value
   | Load LoadType Value
   | Compare BaseType CmpOp Value Value
-  | Ext SubLongType Value
+  | Ext ExtArg Value
+  | FloatToInt FloatArg Bool Value
+  | IntToFloat IntArg Bool Value
   | TruncDouble Value
   | Cast Value
   | Copy Value

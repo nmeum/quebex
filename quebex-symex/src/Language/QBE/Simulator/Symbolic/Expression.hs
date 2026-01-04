@@ -158,6 +158,11 @@ instance E.ValueRepr BitVector where
     64 -> QBE.Base QBE.Long
     _ -> error "unreachable"
 
+  floatToInt = error "symbolic float conversion not supported"
+  intToFloat = error "symbolic float conversion not supported"
+  extendFloat = error "symbolic float extension not supported"
+  truncFloat = error "symbolic float trunction not supported"
+
   extend extTy isSigned val@(BitVector s)
     | QBE.extTypeBitSize extTy <= bitSize val = Nothing
     | otherwise = Just $ BitVector (extFunc targetSize s)

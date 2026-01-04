@@ -21,7 +21,14 @@ import Data.Bits
   )
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Float (castDoubleToWord64, castFloatToWord32, castWord32ToFloat, castWord64ToDouble)
+import GHC.Float
+  ( castDoubleToWord64,
+    castFloatToWord32,
+    castWord32ToFloat,
+    castWord64ToDouble,
+    double2Float,
+    float2Double,
+  )
 import Language.QBE.Simulator.Default.Generator (generateOperators)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -218,6 +225,58 @@ instance E.ValueRepr RegVal where
 
   fromFloat = VSingle
   fromDouble = VDouble
+
+  -- stosi
+  floatToInt ty@(QBE.Base QBE.Word) True (VSingle v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Int32))
+  floatToInt ty@(QBE.Base QBE.Long) True (VSingle v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Int64))
+  -- stoui
+  floatToInt ty@(QBE.Base QBE.Word) False (VSingle v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Word32))
+  floatToInt ty@(QBE.Base QBE.Long) False (VSingle v) =
+    Just $ E.fromLit ty (truncate v :: Word64)
+  -- dtosi
+  floatToInt ty@(QBE.Base QBE.Word) True (VDouble v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Int32))
+  floatToInt ty@(QBE.Base QBE.Long) True (VDouble v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Int64))
+  -- dtoui
+  floatToInt ty@(QBE.Base QBE.Word) False (VDouble v) =
+    Just $ E.fromLit ty (fromIntegral (truncate v :: Word32))
+  floatToInt ty@(QBE.Base QBE.Long) False (VDouble v) =
+    Just $ E.fromLit ty (truncate v :: Word64)
+  -- rest
+  floatToInt _ _ _ = Nothing
+
+  -- swtof
+  intToFloat ty@(QBE.Base QBE.Single) True (VWord v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Int32))
+  intToFloat ty@(QBE.Base QBE.Double) True (VWord v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Int32))
+  -- uwtof
+  intToFloat ty@(QBE.Base QBE.Single) False (VWord v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Word32))
+  intToFloat ty@(QBE.Base QBE.Double) False (VWord v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Word32))
+  -- sltof
+  intToFloat ty@(QBE.Base QBE.Single) True (VLong v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Int64))
+  intToFloat ty@(QBE.Base QBE.Double) True (VLong v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Int64))
+  -- ultof
+  intToFloat ty@(QBE.Base QBE.Single) False (VLong v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Word64))
+  intToFloat ty@(QBE.Base QBE.Double) False (VLong v) =
+    Just $ E.fromLit ty (fromIntegral (fromIntegral v :: Word64))
+  -- rest
+  intToFloat _ _ _ = Nothing
+
+  extendFloat (VSingle v) = Just $ VDouble (float2Double v)
+  extendFloat _ = Nothing
+
+  truncFloat (VDouble v) = Just $ VSingle (double2Float v)
+  truncFloat _ = Nothing
 
   getType (VByte _) = QBE.Byte
   getType (VHalf _) = QBE.HalfWord
