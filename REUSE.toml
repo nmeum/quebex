@@ -32,6 +32,12 @@ path = "quebex-symex/bench/data/**/*.qbe"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
 SPDX-License-Identifier = "Unlicense"
 
+# .ktest files are binary files, often generated using KLEE.
+[[annotations]]
+path = "quebex-cli/test/testdata/*.ktest"
+SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
+SPDX-License-Identifier = "Unlicense"
+
 [[annotations]]
 path = "TODO.txt"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"

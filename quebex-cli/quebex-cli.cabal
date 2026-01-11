@@ -27,11 +27,14 @@ library
 
     build-depends:
       base,
+      binary,
+      bytestring,
       quebex,
       quebex-syntax,
       optparse-applicative >=0.17.0.0
 
     exposed-modules:
+      Data.KTest,
       Language.QBE.CmdLine
 
 executable quebex
@@ -58,3 +61,21 @@ executable quebex-symex
       quebex-symex,
       quebex-syntax,
       optparse-applicative
+
+test-suite quebex-cli-test
+    import:           warnings
+    default-language: GHC2021
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+
+    other-modules:
+      KTest
+
+    build-depends:
+        base,
+        binary,
+        bytestring,
+        quebex-cli,
+        tasty        >=1.4.3,
+        tasty-hunit  >=0.10
