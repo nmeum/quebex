@@ -121,8 +121,6 @@ For example, consider the following C program:
 extern void quebex_symbolic_array(void *ptr, size_t nelem, size_t elsiz, const char *name);
 
 int main(void) {
-	puts("<path>");
-
 	int a;
 	quebex_symbolic_array(&a, 1, sizeof(a), "a");
 	if (a == 42) {
@@ -131,7 +129,6 @@ int main(void) {
 		puts("not the answer");
 	}
 
-	puts("</path>");
 	return 0;
 }
 ```
@@ -145,25 +142,40 @@ $ cproc -emit-qbe example.c
 The resulting QBE representation (`example.qbe`) can be symbolically executed using quebex:
 
 ```
-$ quebex-symex example.qbe
+$ quebex-symex --write-tests tests/ example.qbe
 ```
 
 This will yield the following output:
 
 ```
-<path>
 not the answer
-</path>
-<path>
 you found the answer
-</path>
 
 Amount of paths: 2
 ```
 
-This tells us that quebex found two paths through our program based on the symbolic variable `a`.
-In the future, it will be possible to obtain test inputs for each path in a standardized format using `quebex-symex`, which can then be used to automatically [generate high-coverage tests][KLEE OSDI].
-However, for now the focus is on improving the library, not the command-line interface.
+This tells us that quebex-symex found two execution paths through our program based on the symbolic variable `a`.
+Due to the `--write-tests` option, quebex-symex will further create a `tests/` directory that contains test inputs in the [ktest format][KLE ktest], one for each execution path.
+These files can be inspecting with the `ktest-tool` from [KLEE] (which is included in the Guix closure).
+For example:
+
+```
+$ ktest-tool tests/test000002.ktest
+ktest file : 'tests/test000002.ktest'
+args       : ['example.qbe']
+num objects: 1
+object 0: name: 'a1'
+object 0: size: 4
+object 0: data: b'*\x00\x00\x00'
+object 0: hex : 0x2a000000
+object 0: int : 42
+object 0: uint: 42
+object 0: text: *...
+```
+
+This tells us that the second execution path, where the program prints `you found the answer`, was triggered with `a1 := 42`.
+From these files, we can—for example—automatically [generate high-coverage test cases][KLEE OSDI].
+In the future, it will be possible to replay selected `.ktest` files using `quebex-cli`.
 
 ### Design Goals
 
@@ -196,6 +208,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 [KLEE]: https://klee-se.org
 [KLEE LLVM]: https://klee-se.org/build/build-llvm13/
 [KLEE OSDI]: https://www.usenix.org/legacy/events/osdi08/tech/full_papers/cadar/cadar.pdf
+[KLEE ktest]: https://klee-se.org/tutorials/testing-function/#klee-generated-test-cases
 [SCC]: https://www.simple-cc.org/
 [cproc]: https://sr.ht/~mcf/cproc/
 [Hare]: https://harelang.org/
