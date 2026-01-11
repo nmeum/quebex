@@ -207,7 +207,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 [LLVM]: https://llvm.org/
 [KLEE]: https://klee-se.org
 [KLEE LLVM]: https://klee-se.org/build/build-llvm13/
-[KLEE OSDI]: https://www.usenix.org/legacy/events/osdi08/tech/full_papers/cadar/cadar.pdf
+[KLEE OSDI]: https://www.usenix.org/legacy/events/osdi08/tech/full_papers/cadar/cadar.pdf#page=9
 [KLEE ktest]: https://klee-se.org/tutorials/testing-function/#klee-generated-test-cases
 [SCC]: https://www.simple-cc.org/
 [cproc]: https://sr.ht/~mcf/cproc/
