@@ -29,7 +29,9 @@ library
       base,
       binary,
       bytestring,
+      containers,
       quebex,
+      quebex-symex,
       quebex-syntax,
       optparse-applicative >=0.17.0.0
 
@@ -60,6 +62,9 @@ executable quebex-symex
       quebex-cli,
       quebex-symex,
       quebex-syntax,
+      filepath,
+      binary,
+      directory,
       optparse-applicative
 
 test-suite quebex-cli-test

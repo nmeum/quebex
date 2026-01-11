@@ -2,15 +2,24 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Data.KTest (KTest (..), KTestObj (..)) where
+module Data.KTest
+  ( KTest (..),
+    KTestObj (..),
+    fromAssign,
+  )
+where
 
 import Control.Monad (forM_, when)
 import Data.Binary (Binary (get, put))
 import Data.Binary.Get (getLazyByteString, getWord32be)
 import Data.Binary.Put (putLazyByteString, putWord32be)
 import Data.ByteString.Lazy qualified as BL
+import Data.Map qualified as Map
 import Data.String (fromString)
 import Data.Word (Word32)
+import Language.QBE.Backend.Store (Assign)
+import Language.QBE.Simulator.Default.Expression qualified as DE
+import Language.QBE.Simulator.Memory (toBytes)
 
 newtype KTestString
   = KTestString BL.ByteString
@@ -24,6 +33,8 @@ instance Binary KTestString where
     len <- getWord32be
     str <- getLazyByteString (fromIntegral len)
     pure $ KTestString str
+
+------------------------------------------------------------------------
 
 data KTestObj
   = KTestObj
@@ -41,6 +52,15 @@ instance Binary KTestObj where
     (KTestString name) <- get
     (KTestString bytes) <- get
     pure $ KTestObj name bytes
+
+fromAssign :: Assign -> [KTestObj]
+fromAssign assign = map go $ Map.toList assign
+  where
+    go :: (String, DE.RegVal) -> KTestObj
+    go (name, value) =
+      KTestObj (fromString name) (BL.pack $ toBytes value)
+
+------------------------------------------------------------------------
 
 data KTest
   = KTest
