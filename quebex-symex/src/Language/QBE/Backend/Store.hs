@@ -67,7 +67,11 @@ setModel store model =
 -- an unconstrained 'CE.Concolic' value with a random concrete part.
 getConcolic :: Store -> String -> QBE.ExtType -> (Store, CE.Concolic DE.RegVal)
 getConcolic store@Store {randGen = rand} name ty =
-  ( store {sValues = newSymVars, randGen = nextRand},
+  ( store
+      { sValues = newSymVars,
+        cValues = newConVars,
+        randGen = nextRand
+      },
     CE.Concolic concrete (Just symbolic)
   )
   where
@@ -75,11 +79,12 @@ getConcolic store@Store {randGen = rand} name ty =
       let bv = SE.symbolic name ty
        in (bv, Map.insert name bv $ sValues store)
 
-    (concrete, nextRand) =
-      case Map.lookup name (cValues store) of
-        Just cv -> (cv, rand)
-        Nothing ->
-          let maxValue = (2 ^ QBE.extTypeBitSize ty) - 1
-              (rv, nr) = genWord64R maxValue rand
-              conValue = E.fromLit ty rv
-           in (conValue, nr)
+    (concrete, newConVars, nextRand) =
+      let cm = cValues store
+       in case Map.lookup name cm of
+            Just cv -> (cv, cm, rand)
+            Nothing ->
+              let maxValue = (2 ^ QBE.extTypeBitSize ty) - 1
+                  (rv, nr) = genWord64R maxValue rand
+                  conValue = E.fromLit ty rv
+               in (conValue, Map.insert name conValue cm, nr)
