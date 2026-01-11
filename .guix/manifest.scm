@@ -26,6 +26,7 @@
           (list
             cabal-install
             coreutils
+            ktest-tool
             hlint
             apply-refact
             reuse
