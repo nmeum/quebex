@@ -9,7 +9,7 @@ module Data.KTest
   )
 where
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, void, when)
 import Data.Binary (Binary (get, put))
 import Data.Binary.Get (getLazyByteString, getWord32be)
 import Data.Binary.Put (putLazyByteString, putWord32be)
@@ -91,10 +91,9 @@ instance Binary KTest where
         )
         [1 .. numArgs]
 
-    when
-      (ver >= 2)
+    when (ver >= 2) $
       -- XXX: Skip symArgvs and symArgvLen for now.
-      (getWord32be >> getWord32be >> pure ())
+      void (getWord32be >> getWord32be)
 
     numObjs <- getWord32be
     objs <- mapM (const get) [1 .. numObjs]
