@@ -111,8 +111,8 @@ As such, interactions with the file system or more complex output functions (e.g
 
 #### Symbolic Execution
 
-[Symbolic execution][symbolic execution] is a dynamic software analysis technique that explores reachable program paths based on a symbolic input variable.
-For example, consider the following C program:
+[Symbolic execution][symbolic execution] is a dynamic software analysis technique that explores reachable program paths based on a symbolic input variable (i.e., an input source).
+As an example, consider the following C program:
 
 ```C
 #include <stdio.h>
@@ -133,13 +133,13 @@ int main(void) {
 }
 ```
 
-This program can be compiled using [cproc] as follows:
+This program can be compiled using the QBE-based [cproc] C compiler as follows:
 
 ```
 $ cproc -emit-qbe example.c
 ```
 
-The resulting QBE representation (`example.qbe`) can be symbolically executed using quebex:
+The resulting QBE representation (`example.qbe`) can be symbolically executed using quebex-symex:
 
 ```
 $ quebex-symex --write-tests tests/ example.qbe
@@ -154,9 +154,9 @@ you found the answer
 Amount of paths: 2
 ```
 
-This tells us that quebex-symex found two execution paths through our program based on the symbolic variable `a`.
-Due to the `--write-tests` option, quebex-symex will further create a `tests/` directory that contains test inputs in the [ktest format][KLE ktest], one for each execution path.
-These files can be inspecting with the `ktest-tool` from [KLEE] (which is included in the Guix closure).
+This indicates that we found two execution paths through our program based on the symbolic variable `a`.
+Due to the `--write-tests` option, quebex-symex will create a `tests/` directory that contains test inputs in the [ktest format][KLE ktest], one for each execution path.
+These files can be inspected with the `ktest-tool` from [KLEE] (which is included in the Guix closure).
 For example:
 
 ```
