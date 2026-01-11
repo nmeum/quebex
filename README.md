@@ -155,7 +155,7 @@ Amount of paths: 2
 ```
 
 This indicates that we found two execution paths through our program based on the symbolic variable `a`.
-Due to the `--write-tests` option, quebex-symex will create a `tests/` directory that contains test inputs in the [ktest format][KLE ktest], one for each execution path.
+Due to the `--write-tests` option, quebex-symex will create a `tests/` directory that contains test inputs in the [ktest format][KLEE ktest], one for each execution path.
 These files can be inspected with the `ktest-tool` from [KLEE] (which is included in the Guix closure).
 For example:
 
