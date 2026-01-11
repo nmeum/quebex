@@ -144,7 +144,8 @@
         quebex
         quebex-syntax
         quebex-symex
-        ghc-optparse-applicative))
+        ghc-optparse-applicative
+        ghc-tasty-hunit))
     (synopsis "Command line utilities for Quebex")
     (description "")
     (home-page "https://git.8pit.net/quebex")

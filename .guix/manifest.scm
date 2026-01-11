@@ -32,4 +32,5 @@
             reuse
             cproc
             git
-            lhs2tex))))
+            lhs2tex
+            quebex-cli))))
