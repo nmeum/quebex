@@ -95,7 +95,7 @@ main = do
   args <- OPT.execParser cmd
   paths <- exploreFile args
 
-  putStrLn $ "Amount of paths: " ++ show (length paths)
+  putStrLn $ "\n---\nAmount of paths: " ++ show (length paths)
   case optTests args of
     Just dir ->
       writeKTests dir (CMD.optQBEFile $ optBase args) $

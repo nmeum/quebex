@@ -151,6 +151,7 @@ This will yield the following output:
 not the answer
 you found the answer
 
+---
 Amount of paths: 2
 ```
 
