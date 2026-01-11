@@ -70,11 +70,13 @@ explore ::
   [(String, QBE.ExtType)] ->
   IO [(ST.Assign, T.ExecTrace)]
 explore engine@(Engine {expSolver = solver}) env entry params = do
-  let store = envStore env
-  let varAssign = ST.cValues store
   (eTrace, nStore) <- run env (mapM (uncurry makeConcolic) params >>= execFunc entry)
 
+  -- Before finalizing the store, we can extract the variables we encountered
+  -- during this concrete execution, as well as the concrete values used for
+  -- these variables during the execution.
   let inputVars = ST.sexprs nStore
+      varAssign = ST.cValues nStore
   finalStore <- ST.finalize solver nStore
 
   (model, nEngine) <- findNext engine inputVars eTrace
