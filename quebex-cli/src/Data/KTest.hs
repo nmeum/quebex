@@ -81,6 +81,8 @@ instance Binary KTest where
     when (hdr /= header) $
       fail "invalid ktest header"
     ver <- getWord32be
+    when (ver > version) $
+      fail "unsupported ktest version"
 
     numArgs <- getWord32be
     strs <-
