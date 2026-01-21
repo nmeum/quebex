@@ -72,13 +72,16 @@ data KTest
 header :: BL.ByteString
 header = fromString "KTEST"
 
+legacyHeader :: BL.ByteString
+legacyHeader = fromString "BOUT\n"
+
 version :: Word32
 version = 3
 
 instance Binary KTest where
   get = do
     hdr <- getLazyByteString (BL.length header)
-    when (hdr /= header) $
+    when (hdr /= header && hdr /= legacyHeader) $
       fail "invalid ktest header"
     ver <- getWord32be
     when (ver > version) $
