@@ -19,6 +19,7 @@ import Data.IntSet qualified as IntSet
 import Data.List (singleton)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
+import Data.Tuple (swap)
 import Language.QBE.Analysis.Graph qualified as G
 import Language.QBE.Types qualified as QBE
 
@@ -99,7 +100,7 @@ build func =
   CFG
     { cfgFunction = func,
       cfgLabelMap = labelMap,
-      cfgBlockMap = IntMap.fromList $ map (\(i, l) -> (l, i)) blkIdLabels,
+      cfgBlockMap = IntMap.fromList $ map swap blkIdLabels,
       cfgSuccessors = IntMap.fromList $ build' labelMap blocks
     }
   where
