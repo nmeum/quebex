@@ -5,6 +5,8 @@
 
 module Analysis (analTests) where
 
+import Data.Bifunctor (bimap)
+import Data.Maybe (fromJust)
 import Language.QBE (parseAndFind)
 import Language.QBE.Analysis.CFG qualified as CFG
 import Language.QBE.Types qualified as QBE
@@ -33,4 +35,8 @@ analTests =
 
           let cfg = CFG.build func
           CFG.lookupSuccessors cfg (QBE.BlockIdent "start") @?= Just [QBE.BlockIdent "next"]
+
+          let getBlock = fromJust . CFG.labelToBasicBlock cfg
+              edges = map (bimap getBlock getBlock) $ CFG.cfgEdges cfg
+          edges @?= [(QBE.BlockIdent "start", QBE.BlockIdent "next"), (QBE.BlockIdent "next", QBE.BlockIdent "=return")]
     ]
