@@ -24,7 +24,8 @@ type Label = IntMap.Key
 -- or a BlockIdent or a custom Block data structure which includes both? Hmhm…
 data CFG
   = CFG
-  { cfgLabelMap :: Map.Map QBE.BlockIdent Label,
+  { cfgFunction :: QBE.FuncDef,
+    cfgLabelMap :: Map.Map QBE.BlockIdent Label,
     cfgBlockMap :: IntMap.IntMap QBE.BlockIdent,
     cfgSuccessors :: IntMap.IntMap Successors -- TODO: Use a Set or List here?
   }
@@ -87,7 +88,8 @@ build' labelMap = foldl go []
 build :: QBE.FuncDef -> CFG
 build func =
   CFG
-    { cfgLabelMap = labelMap,
+    { cfgFunction = func,
+      cfgLabelMap = labelMap,
       cfgBlockMap = IntMap.fromList $ map (\(i, l) -> (l, i)) blkIdLabels,
       cfgSuccessors = IntMap.fromList $ build' labelMap blocks
     }
