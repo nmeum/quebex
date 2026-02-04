@@ -14,12 +14,12 @@ module Language.QBE.Analysis.CFG
   )
 where
 
-import Data.Graph.Dom qualified as D
 import Data.IntMap qualified as IntMap
 import Data.IntSet qualified as IntSet
 import Data.List (singleton)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
+import Language.QBE.Analysis.Graph qualified as G
 import Language.QBE.Types qualified as QBE
 
 type Label = IntMap.Key
@@ -114,7 +114,7 @@ build func =
 
 ------------------------------------------------------------------------
 
-cfgToGraph :: CFG -> D.Graph
+cfgToGraph :: CFG -> G.Graph
 cfgToGraph cfg@(CFG {cfgLabelMap = labelMap}) =
   IntMap.fromList $ map (\l -> (l, succSet l)) (Map.elems labelMap)
   where
@@ -123,5 +123,5 @@ cfgToGraph cfg@(CFG {cfgLabelMap = labelMap}) =
       maybe IntSet.empty successorsToIntSet $
         IntMap.lookup l (cfgSuccessors cfg)
 
-cfgToRooted :: CFG -> D.Rooted
+cfgToRooted :: CFG -> G.Rooted
 cfgToRooted cfg = (identStart, cfgToGraph cfg)
