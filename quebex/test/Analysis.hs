@@ -1,10 +1,10 @@
 -- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2026 Reliable System Software, Technische Universität Braunschweig <vss@ibr.cs.tu-bs.de>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
 module Analysis (analTests) where
 
-import Data.Map qualified as Map
 import Language.QBE (parseAndFind)
 import Language.QBE.Analysis.CFG qualified as CFG
 import Language.QBE.Types qualified as QBE
@@ -32,5 +32,5 @@ analTests =
               \}\n"
 
           let cfg = CFG.build func
-          Map.lookup (QBE.BlockIdent "start") cfg @?= Just [QBE.BlockIdent "next"]
+          CFG.lookupSuccessors cfg (QBE.BlockIdent "start") @?= Just [QBE.BlockIdent "next"]
     ]
