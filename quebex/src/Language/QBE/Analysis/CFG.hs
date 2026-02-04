@@ -9,10 +9,14 @@ module Language.QBE.Analysis.CFG
     labelToBasicBlock,
     lookupSuccessors,
     build,
+    cfgToGraph,
+    cfgToRooted,
   )
 where
 
+import Data.Graph.Dom qualified as D
 import Data.IntMap qualified as IntMap
+import Data.IntSet qualified as IntSet
 import Data.List (singleton)
 import Data.Map qualified as Map
 import Data.Maybe (fromJust)
@@ -61,6 +65,9 @@ successorsToBlockList cfg succs = map getBlock (successorsToBlockList' succs)
     getBlock :: Label -> QBE.BlockIdent
     getBlock label = fromJust $ IntMap.lookup label (cfgBlockMap cfg)
 
+successorsToIntSet :: Successors -> IntSet.IntSet
+successorsToIntSet = IntSet.fromList . successorsToBlockList'
+
 ------------------------------------------------------------------------
 
 haltIdent :: (QBE.BlockIdent, Label)
@@ -104,3 +111,17 @@ build func =
 
     blkIdLabels :: [(QBE.BlockIdent, Label)]
     blkIdLabels = [haltIdent, returnIdent] ++ zip (map QBE.label blocks) [identStart ..]
+
+------------------------------------------------------------------------
+
+cfgToGraph :: CFG -> D.Graph
+cfgToGraph cfg@(CFG {cfgLabelMap = labelMap}) =
+  IntMap.fromList $ map (\l -> (l, succSet l)) (Map.elems labelMap)
+  where
+    succSet :: Label -> IntSet.IntSet
+    succSet l =
+      maybe IntSet.empty successorsToIntSet $
+        IntMap.lookup l (cfgSuccessors cfg)
+
+cfgToRooted :: CFG -> D.Rooted
+cfgToRooted cfg = (identStart, cfgToGraph cfg)

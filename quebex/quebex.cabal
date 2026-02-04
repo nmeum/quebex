@@ -34,7 +34,8 @@ library
       containers,
       exceptions,
       parsec,
-      mtl
+      mtl,
+      dom-lt
 
     exposed-modules:
       Language.QBE.Analysis.CFG,
