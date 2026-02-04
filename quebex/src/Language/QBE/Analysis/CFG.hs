@@ -29,6 +29,7 @@ data CFG
     cfgBlockMap :: IntMap.IntMap QBE.BlockIdent,
     cfgSuccessors :: IntMap.IntMap Successors -- TODO: Use a Set or List here?
   }
+  deriving (Show)
 
 basicBlockToLabel :: CFG -> QBE.BlockIdent -> Maybe Label
 basicBlockToLabel CFG {cfgLabelMap = m} blkId = Map.lookup blkId m
@@ -48,6 +49,7 @@ lookupSuccessors cfg ident = do
 data Successors
   = SuccUncond Label
   | SuccCond Label Label
+  deriving (Show, Eq)
 
 successorsToBlockList' :: Successors -> [Label]
 successorsToBlockList' (SuccUncond label) = singleton label
@@ -61,11 +63,11 @@ successorsToBlockList cfg succs = map getBlock (successorsToBlockList' succs)
 
 ------------------------------------------------------------------------
 
-haltIdent :: (Label, QBE.BlockIdent)
-haltIdent = (0, QBE.BlockIdent "=halt")
+haltIdent :: (QBE.BlockIdent, Label)
+haltIdent = (QBE.BlockIdent "=halt", 0)
 
-returnIdent :: (Label, QBE.BlockIdent)
-returnIdent = (1, QBE.BlockIdent "=return")
+returnIdent :: (QBE.BlockIdent, Label)
+returnIdent = (QBE.BlockIdent "=return", 1)
 
 -- Keep in sync with 'haltIdent' and 'returnIdent'.
 identStart :: Label
@@ -81,8 +83,8 @@ build' labelMap = foldl go []
       let succs = case QBE.term block of
             QBE.Jump target -> SuccUncond (getId target)
             QBE.Jnz _ i1 i2 -> SuccCond (getId i1) (getId i2)
-            QBE.Return _ -> SuccUncond $ fst returnIdent
-            QBE.Halt -> SuccUncond $ fst haltIdent
+            QBE.Return _ -> SuccUncond $ snd returnIdent
+            QBE.Halt -> SuccUncond $ snd haltIdent
        in (getId ident, succs) : acc
 
 build :: QBE.FuncDef -> CFG
@@ -101,4 +103,4 @@ build func =
     blocks = QBE.fBlock func
 
     blkIdLabels :: [(QBE.BlockIdent, Label)]
-    blkIdLabels = zip (map QBE.label blocks) [identStart ..]
+    blkIdLabels = [haltIdent, returnIdent] ++ zip (map QBE.label blocks) [identStart ..]
