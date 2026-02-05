@@ -38,15 +38,8 @@ data CFG
   }
   deriving (Show)
 
-cfgEdges :: CFG -> [(Label, Label)]
-cfgEdges cfg@(CFG {cfgSuccessors = succs}) =
-  foldr (\l acc -> getSuccessEdges l ++ acc) [] $
-    IntMap.keys (cfgBlockMap cfg)
-  where
-    getSuccessEdges :: Label -> [(Label, Label)]
-    getSuccessEdges l =
-      let labelSuccs = fromJust $ IntMap.lookup l succs
-       in map (l,) (successorsToBlockList' labelSuccs)
+cfgEdges :: CFG -> [G.Edge]
+cfgEdges = G.toEdges . cfgToGraph
 
 basicBlockToLabel :: CFG -> QBE.BlockIdent -> Maybe Label
 basicBlockToLabel CFG {cfgLabelMap = m} blkId = Map.lookup blkId m
