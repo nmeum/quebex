@@ -20,10 +20,12 @@ import Language.QBE.Analysis.Graph qualified as G
 
 computeCDG :: CFG.CFG -> M.IntMap S.IntSet
 computeCDG cfg =
-  let rooted = CFG.cfgToRooted cfg
+  -- From the CFG, generate a post-dominator tree and also convert this tree
+  -- to an IntMap representation for efficient successor lookup in 'addCDGEdge'.
+  let rooted = CFG.cfgReturnRoot cfg
       pdTree = G.pdomTree rooted
       pdtMap = M.fromList $ map (second S.fromList) (G.pdom rooted)
-   in foldr (uncurry (addCDGEdge pdTree pdtMap)) M.empty $ CFG.cfgEdges cfg
+   in foldr (uncurry $ addCDGEdge pdTree pdtMap) M.empty $ CFG.cfgEdges cfg
 
 -- computeCDG :: CFG -> M.IntMap S.IntSet
 -- computeCDG cfg@(CFG { cfgSuccessors = succs }) =
