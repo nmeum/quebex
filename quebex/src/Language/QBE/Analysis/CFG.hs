@@ -12,7 +12,9 @@ module Language.QBE.Analysis.CFG
     lookupSuccessors,
     build,
     cfgToGraph,
-    cfgToRooted,
+    cfgStartRoot,
+    cfgReturnRoot,
+    cfgHaltRoot,
   )
 where
 
@@ -131,5 +133,11 @@ cfgToGraph cfg@(CFG {cfgLabelMap = labelMap}) =
       successorsToIntSet
         (fromJust $ IntMap.lookup l (cfgSuccessors cfg))
 
-cfgToRooted :: CFG -> G.Rooted
-cfgToRooted cfg = (identStart, cfgToGraph cfg)
+cfgStartRoot :: CFG -> G.Rooted
+cfgStartRoot cfg = (identStart, cfgToGraph cfg)
+
+cfgReturnRoot :: CFG -> G.Rooted
+cfgReturnRoot cfg = (snd returnIdent, cfgToGraph cfg)
+
+cfgHaltRoot :: CFG -> G.Rooted
+cfgHaltRoot cfg = (snd returnIdent, cfgToGraph cfg)
