@@ -6,8 +6,11 @@
 module Analysis (analTests) where
 
 import Data.Bifunctor (bimap)
+import Data.IntMap qualified as M
+import Data.IntSet qualified as S
 import Data.Maybe (fromJust)
 import Language.QBE (parseAndFind)
+import Language.QBE.Analysis.CDG qualified as CDG
 import Language.QBE.Analysis.CFG qualified as CFG
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
@@ -36,7 +39,10 @@ analTests =
           let cfg = CFG.build func
           CFG.lookupSuccessors cfg (QBE.BlockIdent "start") @?= Just [QBE.BlockIdent "next"]
 
-          let getBlock = fromJust . CFG.labelToBasicBlock cfg
-              edges = map (bimap getBlock getBlock) $ CFG.cfgEdges cfg
+          let toBlk = fromJust . CFG.labelToBasicBlock cfg
+              edges = map (bimap toBlk toBlk) $ CFG.cfgEdges cfg
           edges @?= [(QBE.BlockIdent "start", QBE.BlockIdent "next"), (QBE.BlockIdent "next", QBE.BlockIdent "=return")]
+
+          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
+          cdg @?= [(QBE.BlockIdent "=return", [QBE.BlockIdent "next"]), (QBE.BlockIdent "next", [QBE.BlockIdent "start"])]
     ]
