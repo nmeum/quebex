@@ -5,6 +5,8 @@
 
 module Language.QBE.Analysis.CFG
   ( CFG,
+    Label,
+    cfgEdges,
     basicBlockToLabel,
     labelToBasicBlock,
     lookupSuccessors,
@@ -35,6 +37,16 @@ data CFG
     cfgSuccessors :: IntMap.IntMap Successors -- TODO: Use a Set or List here?
   }
   deriving (Show)
+
+cfgEdges :: CFG -> [(Label, Label)]
+cfgEdges cfg@(CFG {cfgSuccessors = succs}) =
+  foldr (\l acc -> getSuccessEdges l ++ acc) [] $
+    IntMap.keys (cfgBlockMap cfg)
+  where
+    getSuccessEdges :: Label -> [(Label, Label)]
+    getSuccessEdges l =
+      let labelSuccs = fromJust $ IntMap.lookup l succs
+       in map (l,) (successorsToBlockList' labelSuccs)
 
 basicBlockToLabel :: CFG -> QBE.BlockIdent -> Maybe Label
 basicBlockToLabel CFG {cfgLabelMap = m} blkId = Map.lookup blkId m
