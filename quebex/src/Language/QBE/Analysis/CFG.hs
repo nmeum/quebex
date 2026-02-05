@@ -64,11 +64,13 @@ lookupSuccessors cfg ident = do
 -- A basic block can have one unconditional successor or two possible successors
 -- in the case of a conditional jump. In QBE, there can never be more than two.
 data Successors
-  = SuccUncond Label
+  = SuccNone
+  | SuccUncond Label
   | SuccCond Label Label
   deriving (Show, Eq)
 
 successorsToBlockList' :: Successors -> [Label]
+successorsToBlockList' SuccNone = []
 successorsToBlockList' (SuccUncond label) = singleton label
 successorsToBlockList' (SuccCond ifT ifF) = [ifT, ifF]
 
@@ -94,7 +96,7 @@ identStart :: Label
 identStart = 2
 
 build' :: Map.Map QBE.BlockIdent Label -> [QBE.Block] -> [(IntMap.Key, Successors)]
-build' labelMap = foldl go []
+build' labelMap = foldl go [(snd haltIdent, SuccNone), (snd returnIdent, SuccNone)]
   where
     getId :: QBE.BlockIdent -> Label
     getId ident = fromJust $ Map.lookup ident labelMap
@@ -133,8 +135,8 @@ cfgToGraph cfg@(CFG {cfgLabelMap = labelMap}) =
   where
     succSet :: Label -> IntSet.IntSet
     succSet l =
-      maybe IntSet.empty successorsToIntSet $
-        IntMap.lookup l (cfgSuccessors cfg)
+      successorsToIntSet
+        (fromJust $ IntMap.lookup l (cfgSuccessors cfg))
 
 cfgToRooted :: CFG -> G.Rooted
 cfgToRooted cfg = (identStart, cfgToGraph cfg)
