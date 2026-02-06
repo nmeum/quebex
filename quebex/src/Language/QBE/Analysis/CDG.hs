@@ -19,7 +19,6 @@ import Data.IntMap qualified as M
 import Data.IntSet qualified as S
 import Data.List (find)
 import Data.Maybe (fromMaybe)
-import Data.Tree qualified as T
 import Language.QBE.Analysis.CFG qualified as CFG
 import Language.QBE.Analysis.Graph qualified as G
 
@@ -32,25 +31,26 @@ computeCDG cfg =
   let rooted = CFG.cfgReturnRoot cfg
       pdTree = G.pdomTree rooted
       pdtMap = M.fromList $ map (second S.fromList) (G.pdom rooted)
-   in foldr (uncurry $ addCDGEdge pdTree pdtMap) M.empty $ CFG.cfgEdges cfg
+      pdtAnc = M.fromList (G.ancestors pdTree)
+   in foldr (uncurry $ addCDGEdge pdtMap pdtAnc) M.empty $ CFG.cfgEdges cfg
 
 -- This function essentially implements the algorithm described in Section 3.1
 -- of the Paper by Ferrante et al., using the algorithm by Cytron et al. may be
 -- more efficient and could be considered in the future.
 addCDGEdge ::
-  T.Tree G.Node ->
   M.IntMap S.IntSet ->
+  M.IntMap [Int] ->
   CFG.Label ->
   CFG.Label ->
   M.IntMap S.IntSet ->
   M.IntMap S.IntSet
-addCDGEdge pdt pdtMap a b acc
+addCDGEdge pdtMap pdtAnc a b acc
   -- Consider all edges (A, B) in the control flow graph such that B does not
   -- post-dominate M. If it does, we return 'acc' unmodified (insert nothing).
   | postdominates b a = acc
   | otherwise =
       -- Let AC denote the least common ancestor of A and B in the post-dominator tree.
-      case commonAncestor pdt b a of
+      case commonAncestor b a of
         -- Case 1: All nodes in the post-dominator tree on the path from AC to
         -- B, including B but not AC, should be made control dependent on A.
         Just ac ->
@@ -72,11 +72,8 @@ addCDGEdge pdt pdtMap a b acc
     postdominates :: CFG.Label -> CFG.Label -> Bool
     postdominates x y = maybe False (x `S.member`) $ M.lookup y pdtMap
 
-    commonAncestor :: T.Tree G.Node -> G.Node -> G.Node -> Maybe G.Node
-    commonAncestor t n1 n2 = do
-      -- TODO: Only generate this once.
-      let mp = M.fromList (G.ancestors t)
-
-      a1 <- M.lookup n1 mp
-      a2 <- M.lookup n2 mp
+    commonAncestor :: G.Node -> G.Node -> Maybe G.Node
+    commonAncestor n1 n2 = do
+      a1 <- M.lookup n1 pdtAnc
+      a2 <- M.lookup n2 pdtAnc
       find (`elem` a1) a2
