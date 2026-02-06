@@ -69,7 +69,7 @@ addCDGEdge pdt pdtMap m n acc
     lookupSucc l = fromMaybe S.empty $ M.lookup l pdtMap
 
     postdominates :: CFG.Label -> CFG.Label -> Bool
-    postdominates x y = maybe False (y `S.member`) $ M.lookup x pdtMap
+    postdominates x y = maybe False (x `S.member`) $ M.lookup y pdtMap
 
     commonAncestor :: T.Tree G.Node -> G.Node -> G.Node -> Maybe G.Node
     commonAncestor t n1 n2 = do

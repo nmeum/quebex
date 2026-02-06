@@ -44,5 +44,25 @@ analTests =
           edges @?= [(QBE.BlockIdent "start", QBE.BlockIdent "next"), (QBE.BlockIdent "next", QBE.BlockIdent "=return")]
 
           let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
-          cdg @?= [(QBE.BlockIdent "=return", [QBE.BlockIdent "next"]), (QBE.BlockIdent "next", [QBE.BlockIdent "start"])]
+          cdg @?= [],
+      testCase "Generate CDG for code with single branch" $
+        do
+          func <-
+            getFunction
+              (QBE.GlobalIdent "foo")
+              "function w $foo() {\n\
+              \@start\n\
+              \%val =w add 0, 1\n\
+              \jnz %val, @ifT, @ifF\n\
+              \@ifT\n\
+              \ret 1\n\
+              \@ifF\n\
+              \ret 0\n\
+              \}\n"
+
+          let cfg = CFG.build func
+              toBlk = fromJust . CFG.labelToBasicBlock cfg
+
+          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
+          cdg @?= [(QBE.BlockIdent "ifT", [QBE.BlockIdent "start"]), (QBE.BlockIdent "ifF", [QBE.BlockIdent "start"])]
     ]
