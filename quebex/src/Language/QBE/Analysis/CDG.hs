@@ -5,7 +5,14 @@
 
 -- Based on the implementation provided by LLVM.Analysis.CDG from Tristan Ravitch
 -- See https://hackage.haskell.org/package/llvm-analysis-0.3.0/docs/src/LLVM-Analysis-CDG.html
-module Language.QBE.Analysis.CDG where
+--
+-- The implementation by Tristan Ravitch mentions a paper by Cytron et al.
+-- See: https://doi.org/10.1145/115372.115320
+--
+-- However, I found that the original paper by Ferrante et al. does a much better job at
+-- explaining what was implemented by Tristan Ravitch in llvm-analysis. Hence, the comments
+-- below mainly refer to that: https://doi.org/10.1145/24039.24041
+module Language.QBE.Analysis.CDG (CDG, computeCDG) where
 
 import Data.Bifunctor (second)
 import Data.IntMap qualified as M
@@ -16,7 +23,7 @@ import Data.Tree qualified as T
 import Language.QBE.Analysis.CFG qualified as CFG
 import Language.QBE.Analysis.Graph qualified as G
 
--- data CDG = CDG (T.Tree Node) (M.IntMap S.IntSet)
+type CDG = M.IntMap S.IntSet
 
 computeCDG :: CFG.CFG -> M.IntMap S.IntSet
 computeCDG cfg =
@@ -27,17 +34,9 @@ computeCDG cfg =
       pdtMap = M.fromList $ map (second S.fromList) (G.pdom rooted)
    in foldr (uncurry $ addCDGEdge pdTree pdtMap) M.empty $ CFG.cfgEdges cfg
 
--- computeCDG :: CFG -> M.IntMap S.IntSet
--- computeCDG cfg@(CFG { cfgSuccessors = succs }) =
---   let rooted = CFG.cfgToRooted cfg
---       pdTree = G.pdomTree rooted
---       pdtMap = M.fromList $ map (\(n, p) -> (n, S.fromList p)) (G.pdom rooted)
---    in foldr addPairs 2 M.mempty
---   where
---     addPairs :: CFG.Label -> M.IntMap S.IntSet -> M.IntMap S.IntSet
---     addPairs b acc =
---       foldr (addCDGEdge pdTree pdtMap b) acc (fromJust $ Map.lookup b succs)
-
+-- This function essentially implements the algorithm described in Section 3.1
+-- of the Paper by Ferrante et al., using the algorithm by Cytron et al. may be
+-- more efficient and could be considered in the future.
 addCDGEdge ::
   T.Tree G.Node ->
   M.IntMap S.IntSet ->
@@ -45,29 +44,31 @@ addCDGEdge ::
   CFG.Label ->
   M.IntMap S.IntSet ->
   M.IntMap S.IntSet
-addCDGEdge pdt pdtMap m n acc
-  -- Consider all edges (M, N) in the control flow graph such that N does not
-  -- post-dominate N. If it does, we return 'acc' unmodified (insert nothing).
-  | postdominates n m = acc
+addCDGEdge pdt pdtMap a b acc
+  -- Consider all edges (A, B) in the control flow graph such that B does not
+  -- post-dominate M. If it does, we return 'acc' unmodified (insert nothing).
+  | postdominates b a = acc
   | otherwise =
-      case commonAncestor pdt n m of
+      -- Let AC denote the least common ancestor of A and B in the post-dominator tree.
+      case commonAncestor pdt b a of
+        -- Case 1: All nodes in the post-dominator tree on the path from AC to
+        -- B, including B but not AC, should be made control dependent on A.
         Just ac ->
-          -- All nodes in the post-dominator tree on the path from AC to M,
-          -- including M but not AC, should be made control dependent on N.
-          let cdepsOnM = S.insert n (S.filter (/= ac) $ lookupSucc n)
-           in foldr insertEdge acc (S.toList cdepsOnM)
-        -- If there is no common ancestor, then all of the postdominators
-        -- of N are control dependent on M.
+          let cdepsOnA = S.insert b (S.filter (/= ac) $ lookupSucc b)
+           in foldr insertEdge acc (S.toList cdepsOnA)
+        -- Case 2: All nodes in the post-dominator tree on the path from A to B,
+        -- including A and B, should be made control dependent on A.
         Nothing ->
-          let deps = S.insert n $ lookupSucc n
+          let deps = S.insert b $ lookupSucc b
            in foldr insertEdge acc (S.toList deps)
   where
     insertEdge :: CFG.Label -> M.IntMap S.IntSet -> M.IntMap S.IntSet
-    insertEdge blk = M.insertWith S.union blk (S.singleton m)
+    insertEdge blk = M.insertWith S.union blk (S.singleton a)
 
     lookupSucc :: CFG.Label -> S.IntSet
     lookupSucc l = fromMaybe S.empty $ M.lookup l pdtMap
 
+    -- Returns true if 'x' post-dominates 'y'.
     postdominates :: CFG.Label -> CFG.Label -> Bool
     postdominates x y = maybe False (x `S.member`) $ M.lookup y pdtMap
 

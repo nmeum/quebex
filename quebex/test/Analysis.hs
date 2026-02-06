@@ -43,6 +43,8 @@ analTests =
               edges = map (bimap toBlk toBlk) $ CFG.cfgEdges cfg
           edges @?= [(QBE.BlockIdent "start", QBE.BlockIdent "next"), (QBE.BlockIdent "next", QBE.BlockIdent "=return")]
 
+          -- “If Y is control dependent on X then X must have two exits.“, in
+          -- this CFG there are no nodes with two exits: The CDG must be emtpy.
           let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
           cdg @?= [],
       testCase "Generate CDG for code with single branch" $
