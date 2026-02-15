@@ -82,6 +82,7 @@ test-suite quebex-test
         base,
         array,
         parsec,
+        filepath,
         quebex,
         quebex-syntax,
         containers,
