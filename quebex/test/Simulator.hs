@@ -1056,7 +1056,22 @@ blockTests =
           res2 @?= Just (D.VWord 0)
 
           res3 <- exec 42.2323 42.2323
-          res3 @?= Just (D.VWord 1)
+          res3 @?= Just (D.VWord 1),
+      testCase "phi instruction in second block" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $main() {\n\
+              \@start.1\n\
+              \%.0 =w copy 42\n\
+              \@body.2\n\
+              \%.1 =w phi @start.1 1, @body.2 2\n\
+              \ret %.1\n\
+              \}"
+
+          res @?= Just (D.VWord 1)
     ]
 
 simTests :: TestTree

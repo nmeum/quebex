@@ -8,6 +8,7 @@ module Language.QBE.Simulator
     execVolatile,
     execStmt,
     execBlock,
+    execTilRet,
     execFunc,
   )
 where
@@ -248,6 +249,14 @@ execBlock prevIdent block = do
   execJump (QBE.term block)
 {-# INLINEABLE execBlock #-}
 
+execTilRet :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Block -> m (BlockResult v)
+execTilRet prevIdent block = go prevIdent (Right block)
+  where
+    go _ retValue@(Left _) = pure retValue
+    go prevIdent' (Right nextBlock) =
+      execBlock prevIdent' nextBlock >>= go (Just $ QBE.label nextBlock)
+{-# INLINEABLE execTilRet #-}
+
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
@@ -258,16 +267,11 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
   let vars = Map.fromList $ zip (map paramName params) args
   modifyFrame (\s -> s {stkVars = vars})
 
-  blockResult <- (execBlock Nothing block >>= go Nothing) <* returnFromFunc
+  blockResult <- execTilRet Nothing block <* returnFromFunc
   case blockResult of
     Right _block -> throwM MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
-    go :: (Simulator m v) => Maybe QBE.BlockIdent -> BlockResult v -> m (BlockResult v)
-    go _ retValue@(Left _) = pure retValue
-    go prevIdent (Right nextBlock) =
-      execBlock prevIdent nextBlock >>= go (Just $ QBE.label nextBlock)
-
     paramName :: QBE.FuncParam -> QBE.LocalIdent
     paramName (QBE.Regular _ n) = n
     paramName (QBE.Env n) = n
