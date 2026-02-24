@@ -1,0 +1,19 @@
+export
+function w $main() {
+@start.1
+	%.1 =w copy 42
+	%.2 =w copy 0
+@body.2
+	jnz %.1, @if_true.3, @if_false.4
+@if_true.3
+	jnz %.2, @if_true.5, @if_false.6
+@if_true.5
+	%.1 =w copy 5
+	jmp @if_join.7
+@if_false.6
+	ret 0
+@if_join.7
+@if_false.4
+	%.1 =w copy 23
+	ret %.1
+}

@@ -3,7 +3,7 @@ name:               quebex
 version:            0.1.0.0
 -- synopsis:
 -- description:
-license:            GPL-3.0-only AND MIT
+license:            GPL-3.0-only AND MIT AND BSD-3-Clause
 -- license-file:
 author:             Sören Tempel
 maintainer:         soeren+git@soeren-tempel.net
@@ -38,6 +38,8 @@ library
 
     exposed-modules:
       Language.QBE.Analysis.CFG,
+      Language.QBE.Analysis.CDG,
+      Language.QBE.Analysis.Graph,
       Language.QBE.Simulator,
       Language.QBE.Simulator.State,
       Language.QBE.Simulator.Error,
@@ -80,6 +82,7 @@ test-suite quebex-test
         base,
         array,
         parsec,
+        filepath,
         quebex,
         quebex-syntax,
         containers,
