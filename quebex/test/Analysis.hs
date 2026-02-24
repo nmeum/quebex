@@ -25,6 +25,23 @@ getFuncAndProg fileName funcName =
   let filePath = "test" </> "testdata" </> fileName
    in readFile filePath >>= getFunction funcName
 
+toBlkName :: CFG.CFG -> CFG.Label -> String
+toBlkName cfg = show . fromJust . CFG.labelToBasicBlock cfg
+
+cdgEdges :: CFG.CFG -> CDG.CDG -> [(String, [String])]
+cdgEdges cfg cdg = map go (M.toList cdg)
+  where
+    go :: (CFG.Label, S.IntSet) -> (String, [String])
+    go (l, lst) =
+      (toBlkName cfg l, map (toBlkName cfg) (S.toList lst))
+
+cfgEdges :: CFG.CFG -> [(String, String)]
+cfgEdges cfg =
+  let toBlk = toBlkName cfg
+   in map (bimap toBlk toBlk) $ CFG.cfgEdges cfg
+
+------------------------------------------------------------------------
+
 analTests :: TestTree
 analTests =
   testGroup
@@ -43,16 +60,17 @@ analTests =
               \}\n"
 
           let cfg = CFG.build func
-          CFG.lookupSuccessors cfg (QBE.BlockIdent "start") @?= Just [QBE.BlockIdent "next"]
+          CFG.lookupSuccessors cfg (QBE.BlockIdent "start")
+            @?= Just [QBE.BlockIdent "next"]
 
-          let toBlk = fromJust . CFG.labelToBasicBlock cfg
-              edges = map (bimap toBlk toBlk) $ CFG.cfgEdges cfg
-          edges @?= [(QBE.BlockIdent "start", QBE.BlockIdent "next"), (QBE.BlockIdent "next", QBE.BlockIdent "=return")]
+          cfgEdges cfg
+            @?= [ ("@start", "@next"),
+                  ("@next", "@=return")
+                ]
 
           -- “If Y is control dependent on X then X must have two exits.“, in
           -- this CFG there are no nodes with two exits: The CDG must be emtpy.
-          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
-          cdg @?= [],
+          cdgEdges cfg (CDG.computeCDG cfg) @?= [],
       testCase "Generate CDG for code with single branch" $
         do
           func <-
@@ -69,10 +87,12 @@ analTests =
               \}\n"
 
           let cfg = CFG.build func
-              toBlk = fromJust . CFG.labelToBasicBlock cfg
+              cdg = CDG.computeCDG cfg
 
-          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
-          cdg @?= [(QBE.BlockIdent "ifT", [QBE.BlockIdent "start"]), (QBE.BlockIdent "ifF", [QBE.BlockIdent "start"])],
+          cdgEdges cfg cdg
+            @?= [ ("@ifT", ["@start"]),
+                  ("@ifF", ["@start"])
+                ],
       testCase "Compute CDG for code with loop" $
         do
           func <-
@@ -96,28 +116,26 @@ analTests =
               \}\n"
 
           let cfg = CFG.build func
-              toBlk = fromJust . CFG.labelToBasicBlock cfg
+              cdg = CDG.computeCDG cfg
 
-          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
-          cdg
-            @?= [ (QBE.BlockIdent "=return", [QBE.BlockIdent "for_cond"]),
-                  (QBE.BlockIdent "for_cond", [QBE.BlockIdent "for_cond"]),
-                  (QBE.BlockIdent "for_body", [QBE.BlockIdent "for_cond"]),
-                  (QBE.BlockIdent "for_cont", [QBE.BlockIdent "for_cond"])
+          cdgEdges cfg cdg
+            @?= [ ("@=return", ["@for_cond"]),
+                  ("@for_cond", ["@for_cond"]),
+                  ("@for_body", ["@for_cond"]),
+                  ("@for_cont", ["@for_cond"])
                 ],
       testCase "Compute CDG for code with two paths to node" $
         do
           func <- getFuncAndProg "disjunction.qbe" (QBE.GlobalIdent "main")
 
           let cfg = CFG.build func
-              toBlk = fromJust . CFG.labelToBasicBlock cfg
+              cdg = CDG.computeCDG cfg
 
-          let cdg = map (\(l, lst) -> (toBlk l, map toBlk $ S.toList lst)) $ M.toList (CDG.computeCDG cfg)
-          cdg
-            @?= [ (QBE.BlockIdent "if_true.3", [QBE.BlockIdent "body.2"]),
-                  (QBE.BlockIdent "if_true.5", [QBE.BlockIdent "if_true.3"]),
-                  (QBE.BlockIdent "if_false.6", [QBE.BlockIdent "if_true.3"]),
-                  (QBE.BlockIdent "if_join.7", [QBE.BlockIdent "if_true.3"]),
-                  (QBE.BlockIdent "if_false.4", [QBE.BlockIdent "body.2", QBE.BlockIdent "if_true.3"])
+          cdgEdges cfg cdg
+            @?= [ ("@if_true.3", ["@body.2"]),
+                  ("@if_true.5", ["@if_true.3"]),
+                  ("@if_false.6", ["@if_true.3"]),
+                  ("@if_join.7", ["@if_true.3"]),
+                  ("@if_false.4", ["@body.2", "@if_true.3"])
                 ]
     ]
