@@ -207,9 +207,9 @@ This project uses the [REUSE Specification] to indicated used software license.
 [QBE v1.2]: https://c9x.me/compile/doc/il-v1.2.html
 [LLVM]: https://llvm.org/
 [KLEE]: https://klee-se.org
-[KLEE LLVM]: https://klee-se.org/build/build-llvm13/
+[KLEE LLVM]: https://klee-se.org/releases/docs/v3.1/build-llvm13/
 [KLEE OSDI]: https://www.usenix.org/legacy/events/osdi08/tech/full_papers/cadar/cadar.pdf#page=9
-[KLEE ktest]: https://klee-se.org/tutorials/testing-function/#klee-generated-test-cases
+[KLEE ktest]: https://klee-se.org/releases/docs/v3.1/tutorials/testing-function/#klee-generated-test-cases
 [SCC]: https://www.simple-cc.org/
 [cproc]: https://sr.ht/~mcf/cproc/
 [Hare]: https://harelang.org/
