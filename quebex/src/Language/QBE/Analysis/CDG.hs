@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: 2010 Tristan Ravitch <travitch@csCFG.cfgReturnRoot cfg.wisc.edu>
+-- SPDX-FileCopyrightText: 2010 Tristan Ravitch <travitch@cs.wisc.edu>
 -- SPDX-FileCopyrightText: 2026 Reliable System Software, Technische Universität Braunschweig <vss@ibr.cs.tu-bs.de>
 --
 -- SPDX-License-Identifier: BSD-3-Clause AND GPL-3.0-only
