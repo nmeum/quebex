@@ -8,6 +8,7 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Catch (Exception, MonadThrow, throwM)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Word (Word64)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
@@ -159,15 +160,15 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
 lookupFunc _ = error "non-global functions not supported"
 {-# INLINEABLE lookupFunc #-}
 
-lookupArg :: (Simulator m v) => QBE.FuncArg -> m v
-lookupArg (QBE.ArgReg abity value) = do
-  lookupValue (QBE.abityToBase abity) value
+lookupArg :: (Simulator m v) => QBE.FuncArg -> m (Maybe v)
+lookupArg (QBE.ArgReg abity value) =
+  Just <$> lookupValue (QBE.abityToBase abity) value
 lookupArg (QBE.ArgEnv _) = error "env function parameters not supported"
-lookupArg QBE.ArgVar = error "variadic functions not supported"
+lookupArg QBE.ArgVar = pure Nothing
 {-# INLINEABLE lookupArg #-}
 
 lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
-lookupArgs = mapM lookupArg
+lookupArgs args = catMaybes <$> mapM lookupArg args
 {-# INLINE lookupArgs #-}
 
 readNullArray :: (Simulator m v) => MEM.Address -> m [v]
