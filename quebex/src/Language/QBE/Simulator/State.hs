@@ -103,6 +103,7 @@ stackAlloc size align = do
     Just ptr -> setSP ptr >> pure ptr
     Nothing -> throwM InvalidAddressType
   where
+    -- TODO: Code duplication with MEM.alignAddr.
     alignAddr addr alignment = addr `E.urem` alignment >>= (addr `E.sub`)
 {-# INLINEABLE stackAlloc #-}
 
