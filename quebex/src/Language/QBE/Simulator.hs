@@ -16,7 +16,7 @@ where
 import Control.Monad (void, when)
 import Control.Monad.Catch (throwM)
 import Data.Functor ((<&>))
-import Data.List (find)
+import Data.List (find, uncons)
 import Data.Map qualified as Map
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
@@ -24,7 +24,7 @@ import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Memory (addrOverlap)
+import Language.QBE.Simulator.Memory (addrOverlap, alignAddr)
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
@@ -64,6 +64,15 @@ execVolatile (QBE.Blit src dst toCopy) = do
           writeMemory (dstAddr + off) QBE.Byte srcByte
       )
       [0 .. toCopy - 1]
+execVolatile (QBE.VAStart val) = do
+  ptr <- E.toWord64 <$> lookupValue QBE.Long val
+  stk <- activeFrame
+
+  addrs <- mapM stackSpill (stkVarArgs stk)
+  case uncons addrs of
+    Just (firstAddr, _) ->
+      writeMemory ptr (QBE.Base QBE.Long) firstAddr
+    Nothing -> pure ()
 {-# INLINEABLE execVolatile #-}
 
 execBinaryTy ::
@@ -175,6 +184,22 @@ execInstr retTy (QBE.Cast value) = do
   -- of floating points to the expression language abstraction.
   v <- lookupValue valueType value
   pure (E.fromLit (QBE.Base retTy) $ E.toWord64 v)
+execInstr retTy (QBE.VAArg argLst) = do
+  -- 'argsCtx' represents the “variable argument list”. Currently,
+  -- it is not modeled after a specific ABI but simply contains a
+  -- pointer to the first argument. This pointer is updated by
+  -- each invocation of the `vaarg` instruction.
+  argsCtx <- E.toWord64 <$> lookupValue QBE.Long argLst
+
+  ptr <- E.toWord64 <$> readMemory (QBE.LBase QBE.Long) argsCtx
+  let retTySize = fromIntegral $ QBE.baseTypeByteSize retTy
+      ptrAligned = alignAddr ptr retTySize
+      ptrNext = ptrAligned - retTySize
+
+  val <- readMemory (QBE.LBase retTy) ptrAligned
+  writeMemory argsCtx (QBE.Base QBE.Long) $
+    E.fromLit (QBE.Base QBE.Long) ptrNext
+  pure val
 {-# INLINEABLE execInstr #-}
 
 execStmt :: (Simulator m v) => QBE.Statement -> m ()

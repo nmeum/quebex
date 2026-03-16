@@ -18,11 +18,12 @@ data StackFrame v
   = StackFrame
   { stkFunc :: QBE.FuncDef,
     stkVars :: Map.Map QBE.LocalIdent v,
+    stkVarArgs :: [v],
     stkFp :: v
   }
 
 mkStackFrame :: (E.ValueRepr v) => QBE.FuncDef -> v -> StackFrame v
-mkStackFrame func = StackFrame func Map.empty
+mkStackFrame func = StackFrame func Map.empty []
 
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
@@ -106,6 +107,16 @@ stackAlloc size align = do
     -- TODO: Code duplication with MEM.alignAddr.
     alignAddr addr alignment = addr `E.urem` alignment >>= (addr `E.sub`)
 {-# INLINEABLE stackAlloc #-}
+
+stackSpill :: (Simulator m v) => v -> m v
+stackSpill val = do
+  let ty = E.getType val
+      size = fromIntegral $ QBE.extTypeByteSize ty
+      sizeVal = E.fromLit (QBE.Base QBE.Long) size
+  ptr <- stackAlloc sizeVal size
+  writeMemory (E.toWord64 ptr) ty val
+  pure ptr
+{-# INLINEABLE stackSpill #-}
 
 newStackFrame :: (Simulator m v) => QBE.FuncDef -> m (StackFrame v)
 newStackFrame f = do
