@@ -846,6 +846,7 @@ instr =
       try $ unaryInstr Q.Neg "neg",
       try $ unaryInstr Q.Cast "cast",
       try $ unaryInstr Q.Copy "copy",
+      try $ unaryInstr Q.VAArg "vaarg",
       try $ loadInstr,
       try $ allocInstr,
       try $ compareInstr,
@@ -870,7 +871,9 @@ assign = do
   Q.Assign n t <$> instr
 
 volatileInstr :: Parser Q.Statement
-volatileInstr = Q.Volatile <$> (storeInstr <|> blitInstr)
+volatileInstr =
+  Q.Volatile <$>
+    (storeInstr <|> blitInstr <|> vastartInstr)
 
 -- TODO: Not documented in the QBE BNF.
 statement :: Parser Q.Statement
@@ -1251,7 +1254,32 @@ separating the named and variadic arguments.
 \subsection{Variadic}
 \label{sec:variadic}
 
-To-Do.
+\begin{code}
+vastartInstr :: Parser Q.VolatileInstr
+vastartInstr = do
+  _ <- ws1 (string "vastart")
+  Q.VAStart <$> ws val
+\end{code}
+
+The \texttt{vastart} and \texttt{vaarg} instructions provide a portable way to
+access the extra parameters of a variadic function.
+
+\begin{enumerate}
+  \item \texttt{vastart} -- \texttt{(m)}
+  \item \texttt{vaarg} -- \texttt{T(mmmm)}
+\end{enumerate}
+
+The \texttt{vastart} instruction initializes a variable argument list used to
+access the extra parameters of the enclosing variadic function. It is safe to
+call it multiple times.
+
+The \texttt{vaarg} instruction fetches the next argument from a variable
+argument list. It is currently limited to fetching arguments that have a base
+type. This instruction is essentially effectful: calling it twice in a row will
+return two consecutive arguments from the argument list.
+
+Both instructions take a pointer to a variable argument list as sole argument.
+The size and alignment of variable argument lists depend on the target used.
 
 \subsection{Phi}
 
