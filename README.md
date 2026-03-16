@@ -25,16 +25,16 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 ### Status
 
 I currently consider this a vertical prototype.
-A lot of the desired functionality is already there, but not fully developed.
-Presently, it covers the majority of QBE features needed for medium-complexity QBE programs (e.g., as emitted by [cproc]).
-Notably, proper support for variadic functions is missing.
-In terms of analysis features, the implementation presently focuses on dynamic analysis techniques (primarily [symbolic execution]).
-Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very basic.
+A lot of the desired functionality is already there, but not fully developed and tested.
+However, all major features of the [QBE specification][QBE v1.2] are implemented to same degree.
+Consequentially, it is possible to process QBE programs emitted by existing compiler frontends such as the [cproc] C11 compiler.
+In terms of analysis features, the implementation currently focuses on dynamic analysis techniques (primarily [symbolic execution]).
+Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very rudimentary.
 
 ### Architecture
 
-This project provides a formal, yet executable, description of the QBE intermediate language.
-Currently, it targets [v1.2 of the QBE specification][QBE v1.2].
+The foundation of this project is a formal, yet executable, description of the QBE intermediate language.
+At the time of writing, it targets [v1.2 of the QBE specification][QBE v1.2].
 The syntax is specified using [literate Haskell][literate programming] and [parser combinators] in the `quebex-syntax` library.
 The language semantics are expressed in a modular way by distinguishing abstract and actual semantics.
 *Abstract semantics* of the QBE language are described in terms of a `Simulator` monad (i.e., an [abstract monad]).
