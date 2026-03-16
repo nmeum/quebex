@@ -65,23 +65,21 @@ execVolatile (QBE.Blit src dst toCopy) = do
       )
       [0 .. toCopy - 1]
 execVolatile (QBE.VAStart val) = do
-  ptr <- E.toWord64 <$> lookupValue QBE.Long val
+  ptr <- lookupValue QBE.Long val >>= toAddress
   stk <- activeFrame
 
   addrs <- mapM (\v -> (v,) <$> stackSpill v) (stkVarArgs stk)
   case uncons addrs of
     Just ((firstValue, firstAddr), _) -> do
       let valType = E.getType firstValue
-          valSize =
-            E.fromLit (QBE.Base QBE.Long) $
-              fromIntegral (QBE.extTypeByteSize valType)
+          valSize = fromIntegral $ QBE.extTypeByteSize valType
 
       -- Initially, the pointer stored in our representation of the “variable
       -- argument list” points one element beyond the argument list. This
       -- allows us to determine the element pointer in `vaarg` by always
       -- substracting the size of the requested element from the pointer.
-      endAddr <- runBinary QBE.Long E.add firstAddr valSize
-      writeMemory ptr (QBE.Base QBE.Long) endAddr
+      writeMemory ptr (QBE.Base QBE.Long) $
+        E.fromLit (QBE.Base QBE.Long) (firstAddr + valSize)
     Nothing -> pure ()
 {-# INLINEABLE execVolatile #-}
 
@@ -199,16 +197,22 @@ execInstr retTy (QBE.VAArg argLst) = do
   -- it is not modeled after a specific ABI but simply contains a
   -- pointer to the previous argument. This pointer is updated by
   -- each invocation of the `vaarg` instruction.
-  argsCtx <- E.toWord64 <$> lookupValue QBE.Long argLst
+  argsCtx <- lookupValue QBE.Long argLst >>= toAddress
 
-  ptr <- E.toWord64 <$> readMemory (QBE.LBase QBE.Long) argsCtx
-  let retTySize = fromIntegral $ QBE.baseTypeByteSize retTy
-      alignAddr a l = a - (a `rem` l)
-      ptrAligned = alignAddr (ptr - retTySize) retTySize
+  prevPtr <- readMemory (QBE.LBase QBE.Long) argsCtx
+  let retTySize =
+        E.fromLit
+          (QBE.Base QBE.Long)
+          (fromIntegral $ QBE.baseTypeByteSize retTy)
 
-  val <- readMemory (QBE.LBase retTy) ptrAligned
-  writeMemory argsCtx (QBE.Base QBE.Long) $
-    E.fromLit (QBE.Base QBE.Long) ptrAligned
+  -- Obtain current pointer by substracting size from 'prevPtr'
+  -- and align the pointer down to the nearest aligned address.
+  ptrAligned <-
+    liftMaybe InvalidAddressType $
+      (prevPtr `E.sub` retTySize) >>= (`stackAlign` retTySize)
+
+  val <- toAddress ptrAligned >>= readMemory (QBE.LBase retTy)
+  writeMemory argsCtx (QBE.Base QBE.Long) ptrAligned
   pure val
 {-# INLINEABLE execInstr #-}
 
