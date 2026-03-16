@@ -67,7 +67,9 @@ exponentValue base = (fromIntegral base **) . fromInteger
 
 -- ** fractional parts
 
--- | parse an optional dot followed by decimal digits as fractional part
+-- | optionally parse a dot followed by decimal digits as fractional part.
+-- if there is no dot, and the fractional part is not required (as indicated
+-- by the predicate argument), then 0.0 is returned.
 fraction :: (Fractional f, Stream s m Char) => Bool -> ParsecT s u m f
 fraction reqDigit = do
   hasDot <- (char '.' >> pure True) <|> pure False
