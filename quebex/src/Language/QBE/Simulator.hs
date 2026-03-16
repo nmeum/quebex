@@ -305,12 +305,12 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
   unless argsSane $
     throwM (FuncArgsMismatch $ QBE.fName func)
 
-  void $ newStackFrame func
+  -- Seperate name and unnamed variadic arguments using 'numNamed'
+  -- and create a 'StackFrame' for 'func' that captures both.
   let vars =
         Map.fromList $
           zip (map paramName $ take numNamed params) args
-  -- TODO: Don't modify existing frame, just create it accordingly.
-  modifyFrame (\s -> s {stkVars = vars, stkVarArgs = drop numNamed args})
+  void $ newStackFrame func vars (drop numNamed args)
 
   blockResult <- execTilRet Nothing block <* returnFromFunc
   case blockResult of
