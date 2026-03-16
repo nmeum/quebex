@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
@@ -197,6 +197,20 @@ funcTests =
             b = Block {label = BlockIdent "s", phi = [], stmt = [c], term = Halt}
             f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Single) (LocalIdent "s")] [b]
          in parse "function $f(s %s) {\n@s\n%d =d exts %s\nhlt\n}" @?= Right f,
+      testCase "float literals" $
+        let c = Assign (LocalIdent "f.1") Single (Copy $ VConst (Const $ SFP 2.0))
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c, c, c, c], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [] [b]
+         in parse
+              "function $f() { \n\
+              \@start\n\
+              \%f.1 =s copy s_2\n\
+              \%f.1 =s copy s_2.\n\
+              \%f.1 =s copy s_2.0\n\
+              \%f.1 =s copy s_2.000000\n\
+              \hlt\n\
+              \}"
+              @?= Right f,
       testCase "float to int conversions" $
         let c1 = Assign (LocalIdent "w.1") Word (FloatToInt FSingle True (VLocal $ LocalIdent "s"))
             c2 = Assign (LocalIdent "w.2") Word (FloatToInt FSingle False (VLocal $ LocalIdent "s"))

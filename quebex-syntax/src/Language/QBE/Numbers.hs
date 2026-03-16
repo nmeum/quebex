@@ -1,7 +1,7 @@
 -- SPDX-FileCopyrightText: 1999-2001 Daan Leijen
 -- SPDX-FileCopyrightText: 2007 Paolo Martini
 -- SPDX-FileCopyrightText: 2013-2014 Christian Maeder <chr.maeder@web.de>
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: BSD-2-Clause AND GPL-3.0-only
 
@@ -15,7 +15,7 @@ import Text.Parsec
 
 -- | parse a floating point number given the number before a dot, e or E
 fractExponent :: (Floating f, Stream s m Char) => Integer -> ParsecT s u m f
-fractExponent i = fractExp i True
+fractExponent i = fractExp i False
 
 -- | parse a floating point number given the number before a dot, e or E
 fractExp ::
@@ -67,11 +67,15 @@ exponentValue base = (fromIntegral base **) . fromInteger
 
 -- ** fractional parts
 
--- | parse a dot followed by decimal digits as fractional part
+-- | parse an optional dot followed by decimal digits as fractional part
 fraction :: (Fractional f, Stream s m Char) => Bool -> ParsecT s u m f
-fraction b = baseFraction b 10 digit
+fraction reqDigit = do
+  hasDot <- (char '.' >> pure True) <|> pure False
+  if hasDot
+    then baseFraction reqDigit 10 digit
+    else if reqDigit then parserFail "no dot in fraction" else pure 0.0
 
--- | parse a dot followed by base dependent digits as fractional part
+-- | parse base dependent digits (usually after dot) as fractional part
 baseFraction ::
   (Fractional f, Stream s m Char) =>
   Bool ->
@@ -79,10 +83,9 @@ baseFraction ::
   ParsecT s u m Char ->
   ParsecT s u m f
 baseFraction requireDigit base baseDigit =
-  char '.'
-    >> fmap
-      (fractionValue base)
-      ((if requireDigit then many1 else many) baseDigit <?> "fraction")
+  fmap
+    (fractionValue base)
+    ((if requireDigit then many1 else many) baseDigit <?> "fraction")
     <?> "fraction"
 
 -- | compute the fraction given by a sequence of digits following the dot.
