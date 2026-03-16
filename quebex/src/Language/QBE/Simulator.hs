@@ -24,7 +24,7 @@ import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
-import Language.QBE.Simulator.Memory (addrOverlap, alignAddr)
+import Language.QBE.Simulator.Memory (addrOverlap)
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
@@ -68,10 +68,20 @@ execVolatile (QBE.VAStart val) = do
   ptr <- E.toWord64 <$> lookupValue QBE.Long val
   stk <- activeFrame
 
-  addrs <- mapM stackSpill (stkVarArgs stk)
+  addrs <- mapM (\v -> (v,) <$> stackSpill v) (stkVarArgs stk)
   case uncons addrs of
-    Just (firstAddr, _) ->
-      writeMemory ptr (QBE.Base QBE.Long) firstAddr
+    Just ((firstValue, firstAddr), _) -> do
+      let valType = E.getType firstValue
+          valSize =
+            E.fromLit (QBE.Base QBE.Long) $
+              fromIntegral (QBE.extTypeByteSize valType)
+
+      -- Initially, the pointer stored in our representation of the “variable
+      -- argument list” points one element beyond the argument list. This
+      -- allows us to determine the element pointer in `vaarg` by always
+      -- substracting the size of the requested element from the pointer.
+      endAddr <- runBinary QBE.Long E.add firstAddr valSize
+      writeMemory ptr (QBE.Base QBE.Long) endAddr
     Nothing -> pure ()
 {-# INLINEABLE execVolatile #-}
 
@@ -187,18 +197,18 @@ execInstr retTy (QBE.Cast value) = do
 execInstr retTy (QBE.VAArg argLst) = do
   -- 'argsCtx' represents the “variable argument list”. Currently,
   -- it is not modeled after a specific ABI but simply contains a
-  -- pointer to the first argument. This pointer is updated by
+  -- pointer to the previous argument. This pointer is updated by
   -- each invocation of the `vaarg` instruction.
   argsCtx <- E.toWord64 <$> lookupValue QBE.Long argLst
 
   ptr <- E.toWord64 <$> readMemory (QBE.LBase QBE.Long) argsCtx
   let retTySize = fromIntegral $ QBE.baseTypeByteSize retTy
-      ptrAligned = alignAddr ptr retTySize
-      ptrNext = ptrAligned - retTySize
+      alignAddr a l = a - (a `rem` l)
+      ptrAligned = alignAddr (ptr - retTySize) retTySize
 
   val <- readMemory (QBE.LBase retTy) ptrAligned
   writeMemory argsCtx (QBE.Base QBE.Long) $
-    E.fromLit (QBE.Base QBE.Long) ptrNext
+    E.fromLit (QBE.Base QBE.Long) ptrAligned
   pure val
 {-# INLINEABLE execInstr #-}
 
