@@ -23,9 +23,6 @@ data StackFrame v
     stkFp :: v
   }
 
-mkStackFrame :: (E.ValueRepr v) => QBE.FuncDef -> v -> StackFrame v
-mkStackFrame func = StackFrame func Map.empty []
-
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
   frame {stkVars = Map.insert ident value v}
@@ -119,9 +116,14 @@ stackSpill val = do
   pure ptr
 {-# INLINEABLE stackSpill #-}
 
-newStackFrame :: (Simulator m v) => QBE.FuncDef -> m (StackFrame v)
-newStackFrame f = do
-  frame <- getSP <&> mkStackFrame f
+newStackFrame ::
+  (Simulator m v) =>
+  QBE.FuncDef ->
+  Map.Map QBE.LocalIdent v ->
+  [v] ->
+  m (StackFrame v)
+newStackFrame f args variadicArgs = do
+  frame <- getSP <&> StackFrame f args variadicArgs
   pushStackFrame frame >> pure frame
 {-# INLINEABLE newStackFrame #-}
 
