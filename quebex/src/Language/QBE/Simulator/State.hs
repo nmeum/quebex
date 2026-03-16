@@ -94,25 +94,30 @@ modifyFrame func = do
   pushStackFrame (func frame)
 {-# INLINEABLE modifyFrame #-}
 
+-- | Align a stack address. Contrary to 'MEM.alignAddr', this rounds down to
+-- the nearest aligned addressed (not up) as the stack grows downward. Further,
+-- since the SP representation is presently not fixed, it operates on 'ValueRepr'.
+stackAlign :: (E.ValueRepr v) => v -> v -> Maybe v
+stackAlign addr alignment =
+  addr `E.urem` alignment >>= (addr `E.sub`)
+{-# INLINEABLE stackAlign #-}
+
 stackAlloc :: (Simulator m v) => v -> Word64 -> m v
 stackAlloc size align = do
   stkPtr <- getSP
-  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit (QBE.Base QBE.Long) align)
+  let newStkPtr = stkPtr `E.sub` size >>= (`stackAlign` E.fromLit (QBE.Base QBE.Long) align)
   case newStkPtr of
     Just ptr -> setSP ptr >> pure ptr
     Nothing -> throwM InvalidAddressType
-  where
-    -- TODO: Code duplication with MEM.alignAddr.
-    alignAddr addr alignment = addr `E.urem` alignment >>= (addr `E.sub`)
 {-# INLINEABLE stackAlloc #-}
 
-stackSpill :: (Simulator m v) => v -> m v
+stackSpill :: (Simulator m v) => v -> m MEM.Address
 stackSpill val = do
   let ty = E.getType val
       size = fromIntegral $ QBE.extTypeByteSize ty
       sizeVal = E.fromLit (QBE.Base QBE.Long) size
-  ptr <- stackAlloc sizeVal size
-  writeMemory (E.toWord64 ptr) ty val
+  ptr <- stackAlloc sizeVal size >>= toAddress
+  writeMemory ptr ty val
   pure ptr
 {-# INLINEABLE stackSpill #-}
 
