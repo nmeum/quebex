@@ -13,12 +13,12 @@ module Language.QBE.Simulator
   )
 where
 
-import Control.Monad (void, when)
+import Control.Monad (unless, void, when)
 import Control.Monad.Catch (throwM)
 import Data.Functor ((<&>))
-import Data.List (find, uncons)
+import Data.List (elemIndex, find, uncons)
 import Data.Map qualified as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State
@@ -209,8 +209,8 @@ execStmt (QBE.Assign name ty inst) = do
 execStmt (QBE.Volatile v) = execVolatile v
 execStmt (QBE.Call ret toCall params) = do
   function <- lookupFunc toCall
-  -- TODO: Check if provided args match FuncDef
   funcArgs <- lookupArgs params
+  -- Sanity chekcs on funcArgs are performed by execFunc.
 
   mayRetVal <- case function of
     SFuncDef funcDef -> execFunc funcDef funcArgs
@@ -285,12 +285,22 @@ execTilRet prevIdent block = go prevIdent (Right block)
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
-  when (length params /= length args) $
+  -- Assumption: Variadic argument has been filtered from args (see lookupArgs).
+  let varIdxMay = elemIndex QBE.Variadic params
+      numNamed = fromMaybe (length args) varIdxMay
+      argsSane =
+        if isJust varIdxMay
+          then length args + 1 >= length params -- +1 for filtered '...'
+          else length params == length args
+  unless argsSane $
     throwM (FuncArgsMismatch $ QBE.fName func)
-  void $ newStackFrame func
 
-  let vars = Map.fromList $ zip (map paramName params) args
-  modifyFrame (\s -> s {stkVars = vars})
+  void $ newStackFrame func
+  let vars =
+        Map.fromList $
+          zip (map paramName $ take numNamed params) args
+  -- TODO: Don't modify existing frame, just create it accordingly.
+  modifyFrame (\s -> s {stkVars = vars, stkVarArgs = drop numNamed args})
 
   blockResult <- execTilRet Nothing block <* returnFromFunc
   case blockResult of
@@ -300,6 +310,6 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName :: QBE.FuncParam -> QBE.LocalIdent
     paramName (QBE.Regular _ n) = n
     paramName (QBE.Env n) = n
-    paramName QBE.Variadic = error "variadic parameters not supported"
+    paramName QBE.Variadic = error "unreachable"
 {-# SPECIALIZE execFunc :: QBE.FuncDef -> [DE.RegVal] -> SimState DE.RegVal Word8 (Maybe DE.RegVal) #-}
 {-# INLINEABLE execFunc #-}
