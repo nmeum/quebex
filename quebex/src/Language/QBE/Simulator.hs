@@ -205,7 +205,7 @@ execInstr retTy (QBE.VAArg argLst) = do
           (QBE.Base QBE.Long)
           (fromIntegral $ QBE.baseTypeByteSize retTy)
 
-  -- Obtain current pointer by substracting size from 'prevPtr'
+  -- Obtain current pointer by subtracting size from 'prevPtr'
   -- and align the pointer down to the nearest aligned address.
   ptrAligned <-
     liftMaybe InvalidAddressType $
@@ -309,7 +309,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
   unless argsSane $
     throwM (FuncArgsMismatch $ QBE.fName func)
 
-  -- Seperate name and unnamed variadic arguments using 'numNamed'
+  -- Separate name and unnamed variadic arguments using 'numNamed'
   -- and create a 'StackFrame' for 'func' that captures both.
   let vars =
         Map.fromList $

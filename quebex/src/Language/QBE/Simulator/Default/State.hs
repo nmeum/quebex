@@ -39,9 +39,9 @@ mkEnv ::
   MEM.Size ->
   IO (Env v b)
 mkEnv prog a s = do
-  -- Memory Layout: Data memory starts add address zero. The
-  -- stack starts at the maximum address and grows downward
-  -- towards address zero.
+  -- Memory Layout: Data memory starts at address zero and grows upward. The
+  -- stack starts at the maximum address and grows downward towards address
+  -- zero.
   --
   -- TODO: Check for stack overflow.
   mem <- MEM.mkMemory a s
