@@ -14,6 +14,7 @@ import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, mkEnv, run)
 import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
+import System.FilePath ((</>))
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -34,6 +35,12 @@ parseAndExec funcName params input = do
   case evalRes of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
+
+parseAndExecFile :: QBE.GlobalIdent -> [D.RegVal] -> FilePath -> IO (Maybe D.RegVal)
+parseAndExecFile funcName params fileName = do
+  let filePath = "test" </> "testdata" </> fileName
+  input <- readFile filePath
+  parseAndExec funcName params input
 
 ------------------------------------------------------------------------
 
@@ -1158,7 +1165,16 @@ blockTests =
               \ret %r.3\n\
               \}"
 
-          res @?= Just (D.VWord 1)
+          res @?= Just (D.VWord 1),
+      testCase "__builtin_va from cproc code base" $
+        do
+          res <-
+            parseAndExecFile
+              (QBE.GlobalIdent "main")
+              []
+              "builtin-vaarg-vm.qbe"
+
+          res @?= Just (D.VWord 127)
     ]
 
 simTests :: TestTree
