@@ -1166,6 +1166,37 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 1),
+      testCase "execute vastart twice" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "varAdd")
+              [D.VWord 0xdeadbeef, D.VLong 0xdecafbaddecafbad, D.VWord 0xffffffff, D.VDouble 23.1337]
+              "function w $varAdd(...) {\n\
+              \@start\n\
+              \%ap =l alloc8 8\n\
+              \vastart %ap\n\
+              \%p.1 =l loadl %ap\n\
+              \vastart %ap\n\
+              \%p.2 =l loadl %ap\n\
+              \%r.p =w cnel %p.1, %p.2\n\
+              \@vaarg\n\
+              \%v.1 =w vaarg %ap\n\
+              \%v.2 =l vaarg %ap\n\
+              \%v.3 =w vaarg %ap\n\
+              \%v.4 =d vaarg %ap\n\
+              \%e.1 =w ceqw %v.1, 3735928559\n\
+              \%e.2 =w ceql %v.2, 16053920545901312941\n\
+              \%e.3 =w ceqw %v.3, 4294967295\n\
+              \%e.4 =w ceqd %v.4, d_23.1337\n\
+              \%r.1 =w and %e.1, %e.2\n\
+              \%r.2 =w and %r.1, %e.3\n\
+              \%r.3 =w and %r.2, %e.4\n\
+              \%r.4 =w and %r.3, %r.p\n\
+              \ret %r.4\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
       testCase "__builtin_va from cproc code base" $
         do
           res <-
