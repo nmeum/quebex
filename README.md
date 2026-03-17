@@ -120,11 +120,11 @@ As an example, consider the following C program:
 #include <stdio.h>
 #include <stddef.h>
 
-extern void quebex_symbolic_array(void *ptr, size_t nelem, size_t elsiz, const char *name);
+extern void quebex_make_symbolic(void *ptr, size_t nelem, size_t elsiz, const char *name);
 
 int main(void) {
 	int a;
-	quebex_symbolic_array(&a, 1, sizeof(a), "a");
+	quebex_make_symbolic(&a, 1, sizeof(a), "a");
 	if (a == 42) {
 		puts("you found the answer");
 	} else {

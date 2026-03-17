@@ -7,7 +7,7 @@
 
 #define MAX 200
 
-extern void quebex_symbolic_array(void *, size_t, size_t, const char *);
+extern void quebex_make_symbolic(void *, size_t, size_t, const char *);
 
 static unsigned
 first_divisor(unsigned a)
@@ -27,7 +27,7 @@ int
 main(void)
 {
 	unsigned a;
-	quebex_symbolic_array(&a, 1, sizeof(a), "a");
+	quebex_make_symbolic(&a, 1, sizeof(a), "a");
 
 	if (a <= MAX) {
 		if (a > 1 && first_divisor(a) == a) {

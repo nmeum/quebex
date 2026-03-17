@@ -7,7 +7,7 @@
 
 // Taken from: https://github.com/TheAlgorithms/C/blob/10d006c3b10340b901860e4810d2122b10e35b76/sorting/insertion_sort.c
 
-extern void quebex_symbolic_array(void *, size_t, size_t, const char *);
+extern void quebex_make_symbolic(void *, size_t, size_t, const char *);
 
 #define MAX 7
 
@@ -33,7 +33,7 @@ main(void)
 {
     unsigned char array[MAX];
 
-    quebex_symbolic_array(array, MAX, sizeof(unsigned char), "array");
+    quebex_make_symbolic(array, MAX, sizeof(unsigned char), "array");
     insertionSort(array, MAX);
 
     return 0;

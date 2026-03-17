@@ -11,7 +11,7 @@
 
 #define MAX 6
 
-extern void quebex_symbolic_array(void *, size_t, size_t, const char *);
+extern void quebex_make_symbolic(void *, size_t, size_t, const char *);
 
 void bubble_sort(int* array_sort)
 {
@@ -48,7 +48,7 @@ main(void)
 {
     int array[MAX];
 
-    quebex_symbolic_array(array, MAX, sizeof(int), "array");
+    quebex_make_symbolic(array, MAX, sizeof(int), "array");
     bubble_sort(array);
 
     return 0;

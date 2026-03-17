@@ -94,7 +94,7 @@ makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
 makeSymbolicArray ident _ = throwM $ FuncArgsMismatch ident
 
 findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
-findSimFunc i@(QBE.GlobalIdent "quebex_symbolic_array") = Just (makeSymbolicArray i)
+findSimFunc i@(QBE.GlobalIdent "quebex_make_symbolic") = Just (makeSymbolicArray i)
 findSimFunc ident = lookupSimFunc ident
 
 instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where

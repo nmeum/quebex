@@ -88,7 +88,7 @@ function w $main() {
 	%.1 =l alloc4 24
 @body.13
 	%.2 =l extsw 6
-	call $quebex_symbolic_array(l %.1, l %.2, l 4, l $.Lstring.3)
+	call $quebex_make_symbolic(l %.1, l %.2, l 4, l $.Lstring.3)
 	call $bubble_sort(l %.1)
 	ret 0
 }

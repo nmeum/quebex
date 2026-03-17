@@ -87,7 +87,7 @@ function w $main() {
 	%.1 =l alloc4 7
 @body.13
 	%.2 =l extsw 7
-	call $quebex_symbolic_array(l %.1, l %.2, l 1, l $.Lstring.3)
+	call $quebex_make_symbolic(l %.1, l %.2, l 1, l $.Lstring.3)
 	call $insertionSort(l %.1, w 7)
 	ret 0
 }
