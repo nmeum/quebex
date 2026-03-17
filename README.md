@@ -26,7 +26,7 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 
 I currently consider this a vertical prototype.
 A lot of the desired functionality is already there, but not fully developed and tested.
-However, all major features of the [QBE specification][QBE v1.2] are implemented to same degree.
+However, all major features of the [QBE specification][QBE v1.2] are nowadays implemented to same degree.
 Consequentially, it is possible to process QBE programs emitted by existing compiler frontends such as the [cproc] C11 compiler.
 In terms of analysis features, the implementation currently focuses on dynamic analysis techniques (primarily [symbolic execution]).
 Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very rudimentary.
@@ -42,26 +42,28 @@ This monad must then be instantiated, whereby *actual semantics* are specified.
 Presently, the following instantiations are supported:
 
 1. Concrete semantics, provided by `Language.QBE.Simulator.Default.State`.
-   This is useful for simulation of the QBE intermediate language.
-2. [Symbolic][symbolic execution] (more specifically [concolic][concolic testing]) semantics, provided by `Language.QBE.Simulator.Concolic.State`.
-   This is intended for automated software testing using [symbolic execution].
+2. [Symbolic][symbolic execution] (specifically [concolic][concolic testing]) through `Language.QBE.Simulator.Concolic.State`.
+
+The former is primarily useful for simulation of programs written in the QBE intermediate language.
+The latter intended for automated software testing using [symbolic execution] and—as demonstrated below—can be used to automatically generate test inputs.
 
 The abstract description of the QBE semantics, in terms of the `Simulator` monad, and its concrete instantiation are provided by the `quebex` library.
 The symbolic semantics are implemented by a separate `quebex-symex` library.
-Additional semantics can be implemented by building on top of these existing Haskell libraries.
+Additional semantics (e.g., for [abstract interpretation]) can be implemented by building on top of these existing libraries.
 
 Further, executable programs are provided by the `quebex-cli` component.
+These programs can be used directly from a shell, without interacting with the Haskell codebase.
 Presently the following executable program components are available:
 
 1. `quebex`: A simulator for QBE programs built on top of the concrete semantics.
 2. `quebex-symex`: An automated software testing tool facilitating the symbolic semantics.
 
-These program components can be used directly on QBE input programs.
+These program components operate directly on QBE input programs.
 
 ### Installation
 
-After cloning the repository, individual components can be installed using `cabal install`.
-However, presently specific GHC versions are required; therefore, installation using [Guix] is recommended.
+After cloning the repository, individual components can be installed using [Cabal] (e.g., `cabal install quebex-cli`).
+However, presently the codebase is mainly tested with selected GHC versions; therefore, installation using [Guix] is recommended.
 For example, in order to install the `quebex-cli` component using Guix:
 
 ```
@@ -75,7 +77,7 @@ The following section demonstrates usage of these components.
 
 This framework is primarily *intended to be used as a library*, allowing the implementation of both static and dynamic analysis techniques based on QBE.
 Presently, it focuses on dynamic analysis, and sufficient documentation of the library interface is still lacking.
-Nonetheless, it is already capable of executing QBE representations of medium-complexity C code (e.g., as emitted by [cproc]).
+Nonetheless, it is already capable of executing QBE representations of complex C code (e.g., as emitted by [cproc]).
 In order to experiment with the current capabilities, the following subsections demonstrate utilization of the aforementioned program components.
 
 #### Concrete Execution
@@ -133,7 +135,7 @@ int main(void) {
 }
 ```
 
-This program can be compiled using the QBE-based [cproc] C compiler as follows:
+This program can be compiled using the QBE-based [cproc] C11 compiler as follows:
 
 ```
 $ cproc -emit-qbe example.c
@@ -224,6 +226,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 [Guix]: https://guix.gnu.org
 [symbolic execution]: https://en.wikipedia.org/wiki/Symbolic_execution
 [concolic testing]: https://en.wikipedia.org/wiki/Concolic_testing
+[abstract interpretation]: https://en.wikipedia.org/wiki/Abstract_interpretation
 [literate programming]: https://en.wikipedia.org/wiki/Literate_programming
 [parser combinators]: https://en.wikipedia.org/wiki/Parser_combinator
 [abstract monad]: https://doi.org/10.1145/3607833
