@@ -42,7 +42,7 @@ This monad must then be instantiated, whereby *actual semantics* are specified.
 Presently, the following instantiations are supported:
 
 1. Concrete semantics, provided by `Language.QBE.Simulator.Default.State`.
-2. [Symbolic][symbolic execution] (specifically [concolic][concolic testing]) through `Language.QBE.Simulator.Concolic.State`.
+2. [Symbolic][symbolic execution] (specifically [concolic][concolic testing]) semantics through `Language.QBE.Simulator.Concolic.State`.
 
 The former is primarily useful for simulation of programs written in the QBE intermediate language.
 The latter intended for automated software testing using [symbolic execution] and—as demonstrated below—can be used to automatically generate test inputs.
