@@ -120,6 +120,9 @@ As an example, consider the following C program:
 #include <stdio.h>
 #include <stddef.h>
 
+// Convert a memory region to an unconstrained symbolic value. Like calloc(3), it can
+// account for memory regions which store multiple elements (nelem) of a specific size
+// (elsiz). The give name is used to identify the symbolic variable and must be unique.
 extern void quebex_make_symbolic(void *ptr, size_t nelem, size_t elsiz, const char *name);
 
 int main(void) {
