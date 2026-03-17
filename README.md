@@ -26,7 +26,7 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 
 I currently consider this a vertical prototype.
 A lot of the desired functionality is already there, but not fully developed and tested.
-However, all major features of the [QBE specification][QBE v1.2] are nowadays implemented to same degree.
+However, all major features of the [QBE specification][QBE v1.2] are nowadays implemented to some degree.
 Consequentially, it is possible to process QBE programs emitted by existing compiler frontends such as the [cproc] C11 compiler.
 In terms of analysis features, the implementation currently focuses on dynamic analysis techniques (primarily [symbolic execution]).
 Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very rudimentary.
