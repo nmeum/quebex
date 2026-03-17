@@ -1278,8 +1278,8 @@ argument list. It is currently limited to fetching arguments that have a base
 type. This instruction is essentially effectful: calling it twice in a row will
 return two consecutive arguments from the argument list.
 
-Both instructions take a pointer to a variable argument list as sole argument.
-The size and alignment of variable argument lists depend on the target used.
+Both instructions take a pointer to a variable argument list as the sole argument.
+The size and alignment of the variable argument lists depends on the target used.
 
 \subsection{Phi}
 
