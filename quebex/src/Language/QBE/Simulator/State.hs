@@ -8,6 +8,7 @@ module Language.QBE.Simulator.State where
 import Control.Monad.Catch (Exception, MonadThrow, throwM)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Word (Word64)
 import Language.QBE.Simulator.Error
 import Language.QBE.Simulator.Expression qualified as E
@@ -18,11 +19,9 @@ data StackFrame v
   = StackFrame
   { stkFunc :: QBE.FuncDef,
     stkVars :: Map.Map QBE.LocalIdent v,
+    stkVarArgs :: [v],
     stkFp :: v
   }
-
-mkStackFrame :: (E.ValueRepr v) => QBE.FuncDef -> v -> StackFrame v
-mkStackFrame func = StackFrame func Map.empty
 
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
@@ -95,20 +94,41 @@ modifyFrame func = do
   pushStackFrame (func frame)
 {-# INLINEABLE modifyFrame #-}
 
+-- | Align a stack address. Contrary to 'MEM.alignAddr', this rounds down to
+-- the nearest aligned addressed (not up) as the stack grows downward. Further,
+-- since the SP representation is presently not fixed, it operates on 'ValueRepr'.
+stackAlign :: (E.ValueRepr v) => v -> v -> Maybe v
+stackAlign addr alignment =
+  addr `E.urem` alignment >>= (addr `E.sub`)
+{-# INLINEABLE stackAlign #-}
+
 stackAlloc :: (Simulator m v) => v -> Word64 -> m v
 stackAlloc size align = do
   stkPtr <- getSP
-  let newStkPtr = stkPtr `E.sub` size >>= (`alignAddr` E.fromLit (QBE.Base QBE.Long) align)
+  let newStkPtr = stkPtr `E.sub` size >>= (`stackAlign` E.fromLit (QBE.Base QBE.Long) align)
   case newStkPtr of
     Just ptr -> setSP ptr >> pure ptr
     Nothing -> throwM InvalidAddressType
-  where
-    alignAddr addr alignment = addr `E.urem` alignment >>= (addr `E.sub`)
 {-# INLINEABLE stackAlloc #-}
 
-newStackFrame :: (Simulator m v) => QBE.FuncDef -> m (StackFrame v)
-newStackFrame f = do
-  frame <- getSP <&> mkStackFrame f
+stackSpill :: (Simulator m v) => v -> m MEM.Address
+stackSpill val = do
+  let ty = E.getType val
+      size = fromIntegral $ QBE.extTypeByteSize ty
+      sizeVal = E.fromLit (QBE.Base QBE.Long) size
+  ptr <- stackAlloc sizeVal size >>= toAddress
+  writeMemory ptr ty val
+  pure ptr
+{-# INLINEABLE stackSpill #-}
+
+newStackFrame ::
+  (Simulator m v) =>
+  QBE.FuncDef ->
+  Map.Map QBE.LocalIdent v ->
+  [v] ->
+  m (StackFrame v)
+newStackFrame f args variadicArgs = do
+  frame <- getSP <&> StackFrame f args variadicArgs
   pushStackFrame frame >> pure frame
 {-# INLINEABLE newStackFrame #-}
 
@@ -147,15 +167,15 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
 lookupFunc _ = error "non-global functions not supported"
 {-# INLINEABLE lookupFunc #-}
 
-lookupArg :: (Simulator m v) => QBE.FuncArg -> m v
-lookupArg (QBE.ArgReg abity value) = do
-  lookupValue (QBE.abityToBase abity) value
+lookupArg :: (Simulator m v) => QBE.FuncArg -> m (Maybe v)
+lookupArg (QBE.ArgReg abity value) =
+  Just <$> lookupValue (QBE.abityToBase abity) value
 lookupArg (QBE.ArgEnv _) = error "env function parameters not supported"
-lookupArg QBE.ArgVar = error "variadic functions not supported"
+lookupArg QBE.ArgVar = pure Nothing
 {-# INLINEABLE lookupArg #-}
 
 lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
-lookupArgs = mapM lookupArg
+lookupArgs args = catMaybes <$> mapM lookupArg args
 {-# INLINE lookupArgs #-}
 
 readNullArray :: (Simulator m v) => MEM.Address -> m [v]

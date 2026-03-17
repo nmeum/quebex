@@ -265,6 +265,19 @@ funcTests =
               \%w.6 =w cgtd %lhs, %rhs\n\
               \hlt\n\
               \}"
+              @?= Right f,
+      testCase "variadic function" $
+        let c0 = Volatile (VAStart $ VLocal (LocalIdent "ap"))
+            c1 = Assign (LocalIdent ".1") Word $ VAArg (VLocal $ LocalIdent "ap")
+            b = Block {label = BlockIdent "start", phi = [], stmt = [c0, c1], term = Halt}
+            f = FuncDef [] (GlobalIdent "f") Nothing [Regular (ABase Word) (LocalIdent "w"), Variadic] [b]
+         in parse
+              "function $f(w %w, ...) { \n\
+              \@start\n\
+              \vastart %ap\n\
+              \%.1 =w vaarg %ap\n\
+              \hlt\n\
+              \}"
               @?= Right f
     ]
   where

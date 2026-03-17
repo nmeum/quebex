@@ -14,6 +14,7 @@ import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, mkEnv, run)
 import Language.QBE.Simulator.Error
 import Language.QBE.Types qualified as QBE
+import System.FilePath ((</>))
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -34,6 +35,12 @@ parseAndExec funcName params input = do
   case evalRes of
     Left e -> fail $ "Unexpected evaluation error: " ++ show e
     Right r -> pure r
+
+parseAndExecFile :: QBE.GlobalIdent -> [D.RegVal] -> FilePath -> IO (Maybe D.RegVal)
+parseAndExecFile funcName params fileName = do
+  let filePath = "test" </> "testdata" </> fileName
+  input <- readFile filePath
+  parseAndExec funcName params input
 
 ------------------------------------------------------------------------
 
@@ -1071,7 +1078,134 @@ blockTests =
               \ret %.1\n\
               \}"
 
-          res @?= Just (D.VWord 1)
+          res @?= Just (D.VWord 1),
+      testCase "variable argument list with single argument" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "varAdd1")
+              [D.VWord 1, D.VWord 2]
+              "function w $varAdd1(w %a, ...) {\n\
+              \@start\n\
+              \%ap =l alloc8 8\n\
+              \vastart %ap\n\
+              \%b =w vaarg %ap\n\
+              \%c =w add %a, %b\n\
+              \ret %c\n\
+              \}"
+
+          res @?= Just (D.VWord 3),
+      testCase "variable argument list with no variable argument" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "varAdd1")
+              [D.VWord 1, D.VWord 2, D.VWord 2342]
+              "function w $varAdd1(w %a, ...) {\n\
+              \@start\n\
+              \%ap =l alloc8 8\n\
+              \vastart %ap\n\
+              \ret 0\n\
+              \}"
+
+          res @?= Just (D.VWord 0),
+      testCase "passing pointer to variable argument list" $
+        do
+          -- Example from https://c9x.me/compile/doc/il-v1.2.html#Variadic
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $add3(w %a, ...) {\n\
+              \@start\n\
+              \%ap =l alloc8 32\n\
+              \vastart %ap\n\
+              \%r =w call $vadd(w %a, l %ap)\n\
+              \ret %r\n\
+              \}\n\
+              \function w $vadd(w %a, l %ap) {\n\
+              \@start\n\
+              \%b =w vaarg %ap\n\
+              \%c =w vaarg %ap\n\
+              \%d =w add %a, %b\n\
+              \%e =w add %d, %c\n\
+              \ret %e\n\
+              \}\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%.1 =w copy 23\n\
+              \%.2 =w copy 42\n\
+              \%.3 =w copy 5\n\
+              \%.4 =w call $add3(w %.1, ..., w %.2, w %.3)\n\
+              \ret %.4\n\
+              \}"
+
+          res @?= Just (D.VWord 70),
+      testCase "variable argument list with different argument alignment" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "varAdd")
+              [D.VWord 0xdeadbeef, D.VLong 0xdecafbaddecafbad, D.VWord 0xffffffff, D.VDouble 23.1337]
+              "function w $varAdd(...) {\n\
+              \@start\n\
+              \%ap =l alloc8 8\n\
+              \vastart %ap\n\
+              \%v.1 =w vaarg %ap\n\
+              \%v.2 =l vaarg %ap\n\
+              \%v.3 =w vaarg %ap\n\
+              \%v.4 =d vaarg %ap\n\
+              \%e.1 =w ceqw %v.1, 3735928559\n\
+              \%e.2 =w ceql %v.2, 16053920545901312941\n\
+              \%e.3 =w ceqw %v.3, 4294967295\n\
+              \%e.4 =w ceqd %v.4, d_23.1337\n\
+              \%r.1 =w and %e.1, %e.2\n\
+              \%r.2 =w and %r.1, %e.3\n\
+              \%r.3 =w and %r.2, %e.4\n\
+              \ret %r.3\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
+      testCase "execute vastart twice" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "varAdd")
+              [D.VWord 0xdeadbeef, D.VLong 0xdecafbaddecafbad, D.VWord 0xffffffff, D.VDouble 23.1337]
+              "function w $varAdd(...) {\n\
+              \@start\n\
+              \%ap =l alloc8 8\n\
+              \vastart %ap\n\
+              \%p.1 =l loadl %ap\n\
+              \vastart %ap\n\
+              \%p.2 =l loadl %ap\n\
+              \%r.p =w cnel %p.1, %p.2\n\
+              \@vaarg\n\
+              \%v.1 =w vaarg %ap\n\
+              \%v.2 =l vaarg %ap\n\
+              \%v.3 =w vaarg %ap\n\
+              \%v.4 =d vaarg %ap\n\
+              \%e.1 =w ceqw %v.1, 3735928559\n\
+              \%e.2 =w ceql %v.2, 16053920545901312941\n\
+              \%e.3 =w ceqw %v.3, 4294967295\n\
+              \%e.4 =w ceqd %v.4, d_23.1337\n\
+              \%r.1 =w and %e.1, %e.2\n\
+              \%r.2 =w and %r.1, %e.3\n\
+              \%r.3 =w and %r.2, %e.4\n\
+              \%r.4 =w and %r.3, %r.p\n\
+              \ret %r.4\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
+      testCase "__builtin_va from cproc code base" $
+        do
+          res <-
+            parseAndExecFile
+              (QBE.GlobalIdent "main")
+              []
+              "builtin-vaarg-vm.qbe"
+
+          res @?= Just (D.VWord 127)
     ]
 
 simTests :: TestTree

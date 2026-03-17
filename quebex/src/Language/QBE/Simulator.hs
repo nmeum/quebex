@@ -13,12 +13,12 @@ module Language.QBE.Simulator
   )
 where
 
-import Control.Monad (void, when)
+import Control.Monad (unless, void, when)
 import Control.Monad.Catch (throwM)
 import Data.Functor ((<&>))
-import Data.List (find)
+import Data.List (elemIndex, find, uncons)
 import Data.Map qualified as Map
-import Data.Maybe (isNothing)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Default.State
@@ -64,6 +64,23 @@ execVolatile (QBE.Blit src dst toCopy) = do
           writeMemory (dstAddr + off) QBE.Byte srcByte
       )
       [0 .. toCopy - 1]
+execVolatile (QBE.VAStart val) = do
+  ptr <- lookupValue QBE.Long val >>= toAddress
+  stk <- activeFrame
+
+  addrs <- mapM (\v -> (v,) <$> stackSpill v) (stkVarArgs stk)
+  case uncons addrs of
+    Just ((firstValue, firstAddr), _) -> do
+      let valType = E.getType firstValue
+          valSize = fromIntegral $ QBE.extTypeByteSize valType
+
+      -- Initially, the pointer stored in our representation of the “variable
+      -- argument list” points one element beyond the argument list. This
+      -- allows us to determine the element pointer in `vaarg` by always
+      -- substracting the size of the requested element from the pointer.
+      writeMemory ptr (QBE.Base QBE.Long) $
+        E.fromLit (QBE.Base QBE.Long) (firstAddr + valSize)
+    Nothing -> pure ()
 {-# INLINEABLE execVolatile #-}
 
 execBinaryTy ::
@@ -175,6 +192,28 @@ execInstr retTy (QBE.Cast value) = do
   -- of floating points to the expression language abstraction.
   v <- lookupValue valueType value
   pure (E.fromLit (QBE.Base retTy) $ E.toWord64 v)
+execInstr retTy (QBE.VAArg argLst) = do
+  -- 'argsCtx' represents the “variable argument list”. Currently,
+  -- it is not modeled after a specific ABI but simply contains a
+  -- pointer to the previous argument. This pointer is updated by
+  -- each invocation of the `vaarg` instruction.
+  argsCtx <- lookupValue QBE.Long argLst >>= toAddress
+
+  prevPtr <- readMemory (QBE.LBase QBE.Long) argsCtx
+  let retTySize =
+        E.fromLit
+          (QBE.Base QBE.Long)
+          (fromIntegral $ QBE.baseTypeByteSize retTy)
+
+  -- Obtain current pointer by subtracting size from 'prevPtr'
+  -- and align the pointer down to the nearest aligned address.
+  ptrAligned <-
+    liftMaybe InvalidAddressType $
+      (prevPtr `E.sub` retTySize) >>= (`stackAlign` retTySize)
+
+  val <- toAddress ptrAligned >>= readMemory (QBE.LBase retTy)
+  writeMemory argsCtx (QBE.Base QBE.Long) ptrAligned
+  pure val
 {-# INLINEABLE execInstr #-}
 
 execStmt :: (Simulator m v) => QBE.Statement -> m ()
@@ -184,8 +223,8 @@ execStmt (QBE.Assign name ty inst) = do
 execStmt (QBE.Volatile v) = execVolatile v
 execStmt (QBE.Call ret toCall params) = do
   function <- lookupFunc toCall
-  -- TODO: Check if provided args match FuncDef
   funcArgs <- lookupArgs params
+  -- Sanity chekcs on funcArgs are performed by execFunc.
 
   mayRetVal <- case function of
     SFuncDef funcDef -> execFunc funcDef funcArgs
@@ -260,12 +299,22 @@ execTilRet prevIdent block = go prevIdent (Right block)
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
-  when (length params /= length args) $
+  -- Assumption: Variadic argument has been filtered from args (see lookupArgs).
+  let varIdxMay = elemIndex QBE.Variadic params
+      numNamed = fromMaybe (length args) varIdxMay
+      argsSane =
+        if isJust varIdxMay
+          then length args + 1 >= length params -- +1 for filtered '...'
+          else length params == length args
+  unless argsSane $
     throwM (FuncArgsMismatch $ QBE.fName func)
-  void $ newStackFrame func
 
-  let vars = Map.fromList $ zip (map paramName params) args
-  modifyFrame (\s -> s {stkVars = vars})
+  -- Separate name and unnamed variadic arguments using 'numNamed'
+  -- and create a 'StackFrame' for 'func' that captures both.
+  let vars =
+        Map.fromList $
+          zip (map paramName $ take numNamed params) args
+  void $ newStackFrame func vars (drop numNamed args)
 
   blockResult <- execTilRet Nothing block <* returnFromFunc
   case blockResult of
@@ -275,6 +324,6 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
     paramName :: QBE.FuncParam -> QBE.LocalIdent
     paramName (QBE.Regular _ n) = n
     paramName (QBE.Env n) = n
-    paramName QBE.Variadic = error "variadic parameters not supported"
+    paramName QBE.Variadic = error "unreachable"
 {-# SPECIALIZE execFunc :: QBE.FuncDef -> [DE.RegVal] -> SimState DE.RegVal Word8 (Maybe DE.RegVal) #-}
 {-# INLINEABLE execFunc #-}

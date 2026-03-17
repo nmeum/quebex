@@ -294,10 +294,12 @@ data Instr
   | TruncDouble Value
   | Cast Value
   | Copy Value
+  | VAArg Value
   deriving (Show, Eq)
 
 data VolatileInstr
   = Store ExtType Value Value
+  | VAStart Value
   | Blit Value Value Word64
   deriving (Show, Eq)
 
