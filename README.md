@@ -233,3 +233,4 @@ This project uses the [REUSE Specification] to indicated used software license.
 [literate programming]: https://en.wikipedia.org/wiki/Literate_programming
 [parser combinators]: https://en.wikipedia.org/wiki/Parser_combinator
 [abstract monad]: https://doi.org/10.1145/3607833
+[Cabal]: https://www.haskell.org/cabal/
