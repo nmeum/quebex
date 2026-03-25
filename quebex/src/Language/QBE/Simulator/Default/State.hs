@@ -51,8 +51,8 @@ mkEnv prog a s = do
           (makeFuncs $ globalFuncs prog)
           mem
           []
-          (E.fromLit (QBE.Base QBE.Long) $ s - 1)
-          0
+          (E.fromLit (QBE.Base QBE.Long) $ a + s - 1)
+          a
 
   let dataDefs = mapMaybe isData prog
   snd <$> runStateT (mapM loadData dataDefs) env
