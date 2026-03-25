@@ -35,7 +35,7 @@ basicArgs =
       OPT.auto
       ( OPT.long "memory-start"
           <> OPT.short 'm'
-          <> OPT.value 0x0
+          <> OPT.value 0x10000
       )
     <*> OPT.option
       OPT.auto
