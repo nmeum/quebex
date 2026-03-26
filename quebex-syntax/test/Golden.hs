@@ -75,5 +75,6 @@ goldenTests =
       runTest "data",
       runTest "comments",
       runTest "number-literal-plus-sign",
-      runTest "float-literal-plus-sign"
+      runTest "float-literal-plus-sign",
+      runTest "data-linkage"
     ]

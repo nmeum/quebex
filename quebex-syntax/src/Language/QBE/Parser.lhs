@@ -1,5 +1,5 @@
 % SPDX-FileCopyrightText: 2015-2024 Quentin Carbonneaux <quentin@c9x.me>
-% SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+% SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 %
 % SPDX-License-Identifier: MIT AND GPL-3.0-only
 

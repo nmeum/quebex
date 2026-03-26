@@ -25,6 +25,7 @@ import Text.ParserCombinators.Parsec
     eof,
     many,
     parse,
+    try,
   )
 
 data Definition
@@ -37,7 +38,11 @@ parseDef :: Parser Definition
 parseDef =
   choice
     [ DefType <$> typeDef,
-      DefFunc <$> funcDef,
+      -- Need to try funcDef as both funcDef and
+      -- dataDef start with a linkage definition.
+      --
+      -- TODO: Try parsing linkage then funcDef <|> dataDef.
+      DefFunc <$> try funcDef,
       DefData <$> dataDef
     ]
 

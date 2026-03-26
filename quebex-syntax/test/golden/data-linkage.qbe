@@ -1,0 +1,15 @@
+section ".data.strdata.1"
+data $strdata.1 = { b "test.ha" }
+
+section ".data.strliteral.0"      data $strliteral.0 = { l $strdata.1, l 7, l 7 }
+
+# str [id: 168584446; size: 24]
+type :type.8 = align 8 { l 3 }
+
+# [5]str [id: 3814273521; size: 120]
+type :type.7 = align 8 { :type.8 5 }
+
+export function w $main() {
+@start
+	ret 0
+}
