@@ -38,6 +38,7 @@ module Language.QBE.Parser
     dataDef,
     typeDef,
     funcDef,
+    fileDef
   )
 where
 
@@ -873,7 +874,7 @@ assign = do
 volatileInstr :: Parser Q.Statement
 volatileInstr =
   Q.Volatile <$>
-    (storeInstr <|> blitInstr <|> vastartInstr)
+    (storeInstr <|> blitInstr <|> vastartInstr <|> dbglocInstr)
 
 -- TODO: Not documented in the QBE BNF.
 statement :: Parser Q.Statement
@@ -1366,4 +1367,38 @@ An important remark about phi instructions is that QBE assumes that if a
 variable is defined by a phi it respects all the SSA invariants. So it is
 critical to not use phi instructions unless you know exactly what you are
 doing.
+
+\subsection{Debug Information}
+
+QBE supports the inclusion of debug information. Specifically, it allows
+defining from which source file type, data, and function definitions originated.
+For this purpose, it provides the \texttt{dbgfile} definition, which receives a
+file name (string literal) as its sole argument. Every type, data and function
+definition thereafter are assumed to originate in this file.
+
+\begin{code}
+-- TODO: not documnted in the QBE BNF.
+fileDef :: Parser String
+fileDef = do
+  _ <- ws1 $ string "dbgfile"
+  wsNL1 strLit
+\end{code}
+
+Further, instructions within a function can be associated with a specific line
+and column number of a previously defined \texttt{dbgfile}. The
+\texttt{dbgfile} is referenced by index using the first argument to
+\texttt{dbgloc}. The second argument represents the line number, the third
+(optional) argument the column number.
+
+\begin{code}
+-- TODO: not documnted in the QBE BNF.
+dbglocInstr :: Parser Q.VolatileInstr
+dbglocInstr = do
+  _ <- ws1 $ string "dbgloc"
+  file <- ws decNumber <* ws (char ',')
+  line <- ws decNumber
+  col  <- optionMaybe (ws (char ',') >> ws decNumber)
+  return $ Q.DBGLoc file line col
+\end{code}
+
 \end{document}

@@ -15,7 +15,7 @@ where
 import Control.Monad.Catch (Exception, MonadThrow, throwM)
 import Data.List (find)
 import Data.Maybe (mapMaybe)
-import Language.QBE.Parser (dataDef, funcDef, skipInitComments, typeDef)
+import Language.QBE.Parser (dataDef, fileDef, funcDef, skipInitComments, typeDef)
 import Language.QBE.Types (DataDef, FuncDef, GlobalIdent, TypeDef, fName)
 import Text.ParserCombinators.Parsec
   ( ParseError,
@@ -32,6 +32,7 @@ data Definition
   = DefData DataDef
   | DefType TypeDef
   | DefFunc FuncDef
+  | DefFile String
   deriving (Eq, Show)
 
 parseDef :: Parser Definition
@@ -42,8 +43,9 @@ parseDef =
       -- dataDef start with a linkage definition.
       --
       -- TODO: Try parsing linkage then funcDef <|> dataDef.
-      DefFunc <$> try funcDef,
-      DefData <$> dataDef
+      DefData <$> try dataDef,
+      DefFunc <$> funcDef,
+      DefFile <$> fileDef
     ]
 
 type Program = [Definition]

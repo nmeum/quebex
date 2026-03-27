@@ -278,6 +278,19 @@ funcTests =
               \%.1 =w vaarg %ap\n\
               \hlt\n\
               \}"
+              @?= Right f,
+      testCase "debug information" $
+        let s1 = Volatile (DBGLoc 1 2 Nothing)
+            s2 = Volatile (DBGLoc 23 42 $ Just 1337)
+            b = Block {label = BlockIdent "start", phi = [], stmt = [s1, s2], term = Halt}
+            f = FuncDef [] (GlobalIdent "main") Nothing [] [b]
+         in parse
+              "function $main() { \n\
+              \@start\n\
+              \dbgloc 1, 2\n\
+              \dbgloc 23, 42, 1337\n\
+              \hlt\n\
+              \}"
               @?= Right f
     ]
   where

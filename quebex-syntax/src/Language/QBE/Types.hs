@@ -301,6 +301,7 @@ data VolatileInstr
   = Store ExtType Value Value
   | VAStart Value
   | Blit Value Value Word64
+  | DBGLoc Word64 Word64 (Maybe Word64)
   deriving (Show, Eq)
 
 data Statement

@@ -1,0 +1,212 @@
+dbgfile "<unknown>"
+section ".data.strdata.1"
+data $strdata.1 = { b "test.ha" }
+
+dbgfile "<unknown>"
+section ".data.strliteral.0"
+data $strliteral.0 = { l $strdata.1, l 7, l 7 }
+
+dbgfile "<unknown>"
+# str [id: 168584446; size: 24]
+type :type.8 = align 8 { l 3 }
+
+dbgfile "<unknown>"
+# [5]str [id: 3814273521; size: 120]
+type :type.7 = align 8 { :type.8 5 }
+
+dbgfile "<unknown>"
+section ".data.strdata.11"
+data $strdata.11 = { b "Hello, world!" }
+
+dbgfile "/tmp/hare/test.ha"
+section ".data.strliteral.10"
+data $strliteral.10 = { l $strdata.11, l 13, l 13 }
+
+dbgfile "<unknown>"
+section ".data.strdata.13"
+data $strdata.13 = { b -62, b -95, b "Hola Mundo!" }
+
+dbgfile "/tmp/hare/test.ha"
+section ".data.strliteral.12"
+data $strliteral.12 = { l $strdata.13, l 13, l 13 }
+
+dbgfile "<unknown>"
+section ".data.strdata.15"
+data $strdata.15 = { b -50, b -109, b -50, b -75, b -50, b -71, b -50, b -84, b " ", b -49, b -125, b -50, b -65, b -49, b -123, b " ", b -50, b -102, b -49, b -116, b -49, b -125, b -50, b -68, b -50, b -75, b "!" }
+
+dbgfile "/tmp/hare/test.ha"
+section ".data.strliteral.14"
+data $strliteral.14 = { l $strdata.15, l 27, l 27 }
+
+dbgfile "<unknown>"
+section ".data.strdata.17"
+data $strdata.17 = { b -48, b -97, b -47, b -128, b -48, b -72, b -48, b -78, b -47, b -106, b -47, b -126, b ", ", b -47, b -127, b -48, b -78, b -47, b -106, b -47, b -126, b -48, b -75, b "!" }
+
+dbgfile "/tmp/hare/test.ha"
+section ".data.strliteral.16"
+data $strliteral.16 = { l $strdata.17, l 25, l 25 }
+
+dbgfile "<unknown>"
+section ".data.strdata.19"
+data $strdata.19 = { b -29, b -127, b -109, b -29, b -126, b -109, b -29, b -127, b -85, b -29, b -127, b -95, b -29, b -127, b -81, b -28, b -72, b -106, b -25, b -107, b -116, b -17, b -68, b -127 }
+
+dbgfile "/tmp/hare/test.ha"
+section ".data.strliteral.18"
+data $strliteral.18 = { l $strdata.19, l 24, l 24 }
+
+dbgfile "<unknown>"
+# [3]u64 [id: 3897114480; size: 24]
+type :type.39 = align 8 { l 3 }
+
+dbgfile "<unknown>"
+# struct { strerror: *fn(_: *errors::opaque_data) str, data: errors::opaque_data, } [id: 1739311748; size: 32]
+type :type.38 = align 8 { l 1, :type.39 1 }
+
+dbgfile "<unknown>"
+type :values.align8.37 = { { :type.38 1 } { l 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align8.40 = { w 1, :values.align8.37 1 }
+
+dbgfile "<unknown>"
+# (errors::again | errors::cancelled | nomem | errors::refused | errors::unsupported | errors::opaque_ | io::underread | errors::invalid | errors::interrupted | errors::noentry | errors::netunreachable | errors::overflow | errors::timeout | errors::noaccess | errors::busy | errors::exists) [id: 3466724163; size: 40]
+type :type.36 = align 8 { { :tagged.align8.40 1 } { w 1 } }
+
+dbgfile "<unknown>"
+type :values.align8.35 = { { l 1 } { :type.36 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align8.41 = { w 1, :values.align8.35 1 }
+
+dbgfile "<unknown>"
+# (size | io::error) [id: 1592311418; size: 48]
+type :type.34 = align 8 { { :tagged.align8.41 1 } }
+
+dbgfile "<unknown>"
+# []fmt::formattable [id: 1634457743; size: 24]
+type :type.43 = align 8 { l 3 }
+
+dbgfile "<unknown>"
+type :values.align1.47 = { { b 1 } { b 1 } { b 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align1.48 = { w 1, :values.align1.47 1 }
+
+dbgfile "<unknown>"
+type :values.align2.49 = { { h 1 } { h 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align2.50 = { w 1, :values.align2.49 1 }
+
+dbgfile "<unknown>"
+type :values.align4.51 = { { w 1 } { s 1 } { w 1 } { w 1 } { w 1 } { w 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align4.52 = { w 1, :values.align4.51 1 }
+
+dbgfile "<unknown>"
+type :values.align8.53 = { { l 1 } { l 1 } { d 1 } { :type.8 1 } { l 1 } { l 1 } { l 1 } }
+
+dbgfile "<unknown>"
+type :tagged.align8.54 = { w 1, :values.align8.53 1 }
+
+dbgfile "<unknown>"
+# (i32 | i16 | i8 | i64 | nullable *opaque | bool | f64 | f32 | rune | str | size | int | uintptr | uint | void | u32 | u16 | u8 | u64) [id: 2974858336; size: 32]
+type :type.46 = align 8 { { :tagged.align1.48 1 } { :tagged.align2.50 1 } { :tagged.align4.52 1 } { :tagged.align8.54 1 } { w 1 } }
+
+dbgfile "<unknown>"
+# [1]fmt::formattable [id: 1234624002; size: 32]
+type :type.45 = align 8 { :type.46 1 }
+
+dbgfile "/tmp/hare/test.ha"
+section ".text.main" "ax" export
+function $main() {
+@start.2
+	%binding.6 =l alloc8 120
+	%cur_object.26 =l alloc8 24
+	%object.42 =l alloc8 24
+	%object.44 =l alloc8 32
+	%binding.69 =l alloc8 8
+@body.3
+	dbgloc 3, 25
+	dbgloc 4, 14
+	%item.9 =l add %binding.6, 0
+	dbgloc 5, 31
+	blit $strliteral.10, %item.9, 24
+	%item.9 =l add %binding.6, 24
+	dbgloc 6, 30
+	blit $strliteral.12, %item.9, 24
+	%item.9 =l add %binding.6, 48
+	dbgloc 7, 33
+	blit $strliteral.14, %item.9, 24
+	%item.9 =l add %binding.6, 72
+	dbgloc 8, 32
+	blit $strliteral.16, %item.9, 24
+	%item.9 =l add %binding.6, 96
+	dbgloc 9, 26
+	blit $strliteral.18, %item.9, 24
+	dbgloc 11, 12
+	dbgloc 11, 39
+	%.27 =l copy %binding.6
+	%cur_idx.28 =l copy 0
+@loop.20
+	%valid.30 =w cultl %cur_idx.28, 5
+	jnz %valid.30, @valid.22, @else.25
+@valid.22
+	blit %.27, %cur_object.26, 24
+	%cur_idx.28 =l add %cur_idx.28, 1
+@body.21
+	dbgloc 11, 41
+	dbgloc 12, 40
+	dbgloc 12, 29
+	dbgloc 12, 29
+	dbgloc 12, 38
+	# gen lowered cast
+	dbgloc 12, 38
+	%item.55 =l add %object.44, 0
+	# gen lowered cast
+	storew 168584446, %item.55
+	%.56 =l add %item.55, 8
+	dbgloc 12, 38
+	blit %cur_object.26, %.56, 24
+	%.57 =l add %object.42, 8
+	%.58 =l add %object.42, 16
+	storel %object.44, %object.42
+	storel 1, %.57
+	storel 1, %.58
+	%.33 =:type.34 call $fmt.println(:type.43 %object.42)
+	%tag.62 =w loaduw %.33
+	%subval.65 =l copy %.33
+	%.66 =w ceqw %tag.62, 185362065
+	jnz %.66, @subtype.68, @next.64
+@subtype.68
+	jmp @matches.63
+@matches.63
+	%.70 =l add %.33, 8
+	%.71 =l loadl %.70
+	storel %.71, %binding.69
+	dbgloc 12, 40
+	%.72 =l loadl %binding.69
+	%.59 =l copy %.72
+	jmp @.60
+@next.64
+@default.61
+	dbgloc 12, 40
+	call $rt.abort_fixed(l $strliteral.0, l 12, l 40, l 5)
+	hlt
+@.73
+@.60
+	jmp @.31
+@.74
+@.31
+@after.24
+	%.27 =l add %.27, 24
+	jmp @loop.20
+@else.25
+@.23
+	jmp @.4
+@.75
+@.4
+	ret
+}
+

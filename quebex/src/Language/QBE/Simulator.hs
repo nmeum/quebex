@@ -81,6 +81,7 @@ execVolatile (QBE.VAStart val) = do
       writeMemory ptr (QBE.Base QBE.Long) $
         E.fromLit (QBE.Base QBE.Long) (firstAddr + valSize)
     Nothing -> pure ()
+execVolatile (QBE.DBGLoc {}) = pure ()
 {-# INLINEABLE execVolatile #-}
 
 execBinaryTy ::
