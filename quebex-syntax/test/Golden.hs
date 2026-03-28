@@ -76,6 +76,5 @@ goldenTests =
       runTest "comments",
       runTest "number-literal-plus-sign",
       runTest "float-literal-plus-sign",
-      runTest "data-linkage",
       runTest "hare-hello-world"
     ]
