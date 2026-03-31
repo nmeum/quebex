@@ -46,7 +46,8 @@ test-suite quebex-syntax-test
 
     other-modules:
       Parser,
-      Golden
+      Golden,
+      Types
 
     build-depends:
         base,

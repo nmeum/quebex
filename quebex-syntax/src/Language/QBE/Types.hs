@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
@@ -154,6 +154,10 @@ data DataDef
   }
   deriving (Show, Eq)
 
+dataSize :: DataDef -> Int
+dataSize dataDef =
+  sum $ map objSize (objs dataDef)
+
 data DataObj
   = OItem ExtType [DataItem]
   | OZeroFill Word64
@@ -162,6 +166,15 @@ data DataObj
 objAlign :: DataObj -> Word64
 objAlign (OZeroFill _) = 1 :: Word64
 objAlign (OItem ty _) = fromIntegral $ extTypeByteSize ty
+
+objSize :: DataObj -> Int
+objSize (OZeroFill n) = fromIntegral n
+objSize (OItem ty items) = extTypeByteSize ty * cnt items
+  where
+    cnt :: [DataItem] -> Int
+    cnt [] = 0
+    cnt ((DString s) : xs) = length s + cnt xs
+    cnt (_ : xs) = 1 + cnt xs
 
 data DataItem
   = DSymOff GlobalIdent Word64

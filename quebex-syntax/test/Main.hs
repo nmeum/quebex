@@ -7,9 +7,10 @@ module Main (main) where
 import Golden
 import Parser
 import Test.Tasty
+import Types
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [mkParser, goldenTests]
+tests = testGroup "Tests" [mkParser, goldenTests, typesTests]
