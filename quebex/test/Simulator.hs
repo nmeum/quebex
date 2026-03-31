@@ -612,6 +612,41 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 1),
+      testCase "Data definition with forward reference to other definition" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { l $b }\n\
+              \data $b = { b 0 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%isGt =w cugtl $a, $b\n\
+              \%ptrB =l loadl $a\n\
+              \%isEq =w ceql %ptrB, $b\n\
+              \%ret  =w and %isEq, %isGt\n\
+              \ret %ret\n\
+              \}"
+
+          res @?= Just (D.VWord 1),
+      testCase "Access memory of data definition with forward reference" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "data $a = { l $b }\n\
+              \data $b = { b 99 }\n\
+              \function w $main() {\n\
+              \@start\n\
+              \%pb =l loadl $a\n\
+              \%vb =w loadub %pb\n\
+              \%rt =w extub %vb\n\
+              \ret %rt\n\
+              \}"
+
+          res @?= Just (D.VWord 99),
       testCase "Subtyping with load instruction" $
         do
           res <-

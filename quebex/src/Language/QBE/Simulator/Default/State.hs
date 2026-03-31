@@ -1,10 +1,11 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 {-# LANGUAGE TypeApplications #-}
 
 module Language.QBE.Simulator.Default.State where
 
+import Control.Exception (assert)
 import Control.Monad (foldM)
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
@@ -54,8 +55,8 @@ mkEnv prog a s = do
           (E.fromLit (QBE.Base QBE.Long) $ a + s - 1)
           a
 
-  let dataDefs = mapMaybe isData prog
-  snd <$> runStateT (mapM loadData dataDefs) env
+  let dataMem = allocData a (mapMaybe isData prog)
+  snd <$> runStateT (initData dataMem) env
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
@@ -136,30 +137,64 @@ loadObj addr (QBE.OItem ty items) = do
 
 loadData ::
   (MEM.Storable v b, E.ValueRepr v) =>
+  MEM.Address ->
   QBE.DataDef ->
   StateT (Env v b) IO ()
-loadData dataDef = do
-  startAddr <- gets envDataPtr
+loadData addr dataDef = do
+  newAddr <- foldM loadObj addr $ QBE.objs dataDef
+
+  -- The address calculations performed by 'loadObj' must be aligned
+  -- with those performed by 'allocData' through 'QBE.dataSize'.
+  assert (newAddr == addr + fromIntegral (QBE.dataSize dataDef)) $
+    pure ()
+{-# INLINEABLE loadData #-}
+
+initData ::
+  (MEM.Storable v b, E.ValueRepr v) =>
+  DataMem ->
+  StateT (Env v b) IO ()
+initData dataMem = do
+  -- Transform the 'DataMem' to 'envSyms', enables forward references.
+  modify (\e -> e {envSyms = toSyms dataMem})
+  mapM_ (uncurry loadData) dataMem
+  where
+    toSyms :: DataMem -> Map.Map QBE.GlobalIdent MEM.Address
+    toSyms = Map.fromList . map (\(k, v) -> (QBE.name v, k))
+{-# SPECIALIZE initData :: DataMem -> StateT (Env D.RegVal Word8) IO () #-}
+
+------------------------------------------------------------------------
+
+-- This code implements the allocation of memory for 'DataDef's. In this
+-- case, allocation means assigning a unique non-overlapping 'MEM.Address'.
+-- This is separated from the initialization of the memory, which is
+-- performed by 'initData'. Decoupling this enables forwards references.
+--
+-- For example:
+--
+--  data $a = { l $b }
+--  data $b = { b 0 }
+
+-- Specifies the memory layout of the data memory. That is, for each
+-- 'DataDef' defined in QBE, it specifies a start address in memory.
+type DataMem = [(MEM.Address, QBE.DataDef)]
+
+allocDataDef ::
+  QBE.DataDef ->
+  (MEM.Address, DataMem) ->
+  (MEM.Address, DataMem)
+allocDataDef dataDef (startAddr, memMap) =
   let addr =
         MEM.alignAddr startAddr $
           fromMaybe maxAlign (QBE.align dataDef)
-
-  let symName = QBE.name dataDef
-      newSyms = Map.insert symName addr . envSyms
-   in -- Insert address into the Env before loading the object
-      -- itself. Thereby, allowing objects to refer to themselves
-      -- by address (e.g., `data $c = { l -1, l $c }`).
-      --
-      -- XXX: If loadObj throws an exception we (ideally) want to
-      -- catch that and remove the address from 'envSyms` again.
-      modify (\e -> e {envSyms = newSyms e})
-
-  newAddr <- foldM loadObj addr $ QBE.objs dataDef
-  modify (\e -> e {envDataPtr = newAddr})
+      size = fromIntegral $ QBE.dataSize dataDef
+   in (addr + size, (addr, dataDef) : memMap)
   where
     -- The alignment of an aggregate type is the maximum alignment the members.
     maxAlign = maximum $ map QBE.objAlign (QBE.objs dataDef)
-{-# SPECIALIZE loadData :: QBE.DataDef -> StateT (Env D.RegVal Word8) IO () #-}
+
+allocData :: MEM.Address -> [QBE.DataDef] -> DataMem
+allocData startAddr dataDefs =
+  snd $ foldr allocDataDef (startAddr, []) dataDefs
 
 ------------------------------------------------------------------------
 
