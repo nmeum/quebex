@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 {-# LANGUAGE TypeApplications #-}
@@ -122,17 +122,29 @@ loadItem addr (QBE.Base QBE.Double) (QBE.DConst (QBE.DFP num)) = do
 loadItem _ _ item = error $ "unsupported DataItem: " ++ show item
 {-# INLINEABLE loadItem #-}
 
+loadObj' ::
+  forall v b.
+  (MEM.Storable v b, E.ValueRepr v) =>
+  MEM.Address ->
+  QBE.DataObj ->
+  StateT (Env v b) IO MEM.Address
+loadObj' addr (QBE.OZeroFill n) = do
+  let zeroByte = E.fromLit @v QBE.Byte 0
+  storeValues addr $ replicate (fromIntegral n) zeroByte
+loadObj' addr (QBE.OItem ty items) = do
+  foldM (`loadItem` ty) addr items
+{-# INLINEABLE loadObj' #-}
+
+-- This invokes loadObj' with alignment. The implementation here must be
+-- semantically equivalent to 'QBE.dataSize'.
 loadObj ::
   forall v b.
   (MEM.Storable v b, E.ValueRepr v) =>
   MEM.Address ->
   QBE.DataObj ->
   StateT (Env v b) IO MEM.Address
-loadObj addr (QBE.OZeroFill n) = do
-  let zeroByte = E.fromLit @v QBE.Byte 0
-  storeValues addr $ replicate (fromIntegral n) zeroByte
-loadObj addr (QBE.OItem ty items) = do
-  foldM (`loadItem` ty) addr items
+loadObj addr dataObj =
+  loadObj' (addr + (addr `mod` QBE.objAlign dataObj)) dataObj
 {-# INLINEABLE loadObj #-}
 
 loadData ::

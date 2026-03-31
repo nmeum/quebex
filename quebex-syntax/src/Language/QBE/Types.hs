@@ -154,9 +154,14 @@ data DataDef
   }
   deriving (Show, Eq)
 
+-- | Calculate the size of a 'DataDef', including padding for alignment.
 dataSize :: DataDef -> Int
 dataSize dataDef =
-  sum $ map objSize (objs dataDef)
+  fromIntegral $
+    foldl (\acc x -> go x acc + acc) 0 (objs dataDef)
+  where
+    go :: DataObj -> Word64 -> Word64
+    go obj addr = fromIntegral (objSize obj) + (addr `mod` objAlign obj)
 
 data DataObj
   = OItem ExtType [DataItem]
