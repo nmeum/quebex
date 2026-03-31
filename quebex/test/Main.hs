@@ -8,10 +8,19 @@ import Analysis
 import Expression
 import Memory
 import Simulator
+import State
 import Test.Tasty
 
 main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Tests" [simTests, memTests, analTests, exprTests]
+tests =
+  testGroup
+    "Tests"
+    [ simTests,
+      memTests,
+      analTests,
+      exprTests,
+      stateTests
+    ]

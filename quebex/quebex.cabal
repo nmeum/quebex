@@ -76,7 +76,8 @@ test-suite quebex-test
       Analysis,
       Simulator,
       Expression,
-      Memory
+      Memory,
+      State
 
     build-depends:
         base,
@@ -87,5 +88,6 @@ test-suite quebex-test
         quebex-syntax,
         containers,
         exceptions,
-        tasty        >=1.4.3,
-        tasty-hunit  >=0.10
+        mtl,
+        tasty            >=1.4.3,
+        tasty-hunit      >=0.10
