@@ -28,7 +28,9 @@ execFile opts = do
   case res >>= fromWord of
     Just x -> pure $ fromIntegral x
     Nothing ->
-      error $ "expected '" ++ show CMD.entryFunc ++ "' to return an int"
+      -- The main function emitted by the Hare compiler does not
+      -- return an int. Therefore, we do not emit an error here.
+      pure 0
 
 main :: IO ()
 main = do
