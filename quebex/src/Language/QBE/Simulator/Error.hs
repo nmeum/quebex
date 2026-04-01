@@ -2,11 +2,12 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Error where
+module Language.QBE.Simulator.Error (EvalError (..)) where
 
 import Control.Monad.Catch (Exception)
 import Language.QBE.Simulator.Memory (Address)
 import Language.QBE.Types qualified as QBE
+import Numeric (showHex)
 
 -- TODO: Differentiate different typing errors.
 data EvalError
@@ -18,6 +19,7 @@ data EvalError
   | UnknownBlock QBE.BlockIdent
   | InvalidMemoryLoad
   | UnknownFunction QBE.GlobalIdent
+  | UnknownFunctionAddr Address
   | MissingFunctionReturn
   | FunctionReturnIgnored
   | AssignedVoidReturnValue
@@ -28,6 +30,9 @@ data EvalError
   | InvalidPhiPosition
   deriving (Eq)
 
+showAddr :: Address -> String
+showAddr addr = "0x" ++ showHex addr ""
+
 instance Show EvalError where
   show TypingError = "TypingError"
   show (UnknownVariable s) = "UnknownVariable: '" ++ show s ++ "'"
@@ -37,6 +42,7 @@ instance Show EvalError where
   show (UnknownBlock block) = "UnknownBlock: '" ++ show block ++ "'"
   show InvalidMemoryLoad = "InvalidMemoryLoad"
   show (UnknownFunction ident) = "UnknownFunction: '" ++ show ident ++ "'"
+  show (UnknownFunctionAddr addr) = "UnknownFunctionAddr: '" ++ showAddr addr ++ "'"
   show MissingFunctionReturn = "MissingFunctionReturn"
   show FunctionReturnIgnored = "FunctionReturnIgnored"
   show AssignedVoidReturnValue = "AssignedVoidReturnValue"
