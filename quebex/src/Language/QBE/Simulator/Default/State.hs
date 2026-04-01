@@ -122,6 +122,9 @@ loadItem addr (QBE.Base QBE.Double) (QBE.DConst (QBE.DFP num)) = do
 loadItem _ _ item = error $ "unsupported DataItem: " ++ show item
 {-# INLINEABLE loadItem #-}
 
+-- Load an object **without** inserting padding for data objects.
+-- In QBE, the members of a struct will be packed. The frontend
+-- is responsible for inserting padding between them when necessary.
 loadObj ::
   forall v b.
   (MEM.Storable v b, E.ValueRepr v) =>
