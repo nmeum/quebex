@@ -5,9 +5,8 @@
 module Language.QBE.Simulator.Error (EvalError (..)) where
 
 import Control.Monad.Catch (Exception)
-import Language.QBE.Simulator.Memory (Address)
+import Language.QBE.Simulator.Memory (Address, showAddr)
 import Language.QBE.Types qualified as QBE
-import Numeric (showHex)
 
 -- TODO: Differentiate different typing errors.
 data EvalError
@@ -29,9 +28,6 @@ data EvalError
   | FuncArgsMismatch QBE.GlobalIdent
   | InvalidPhiPosition
   deriving (Eq)
-
-showAddr :: Address -> String
-showAddr addr = "0x" ++ showHex addr ""
 
 instance Show EvalError where
   show TypingError = "TypingError"

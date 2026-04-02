@@ -6,6 +6,7 @@
 module Language.QBE.Simulator.Memory
   ( Address,
     Size,
+    showAddr,
     Memory (..),
     mkMemory,
     toMemAddr,
@@ -28,10 +29,7 @@ import Data.Array.IO
 import Data.Bits (complement, (.&.))
 import Data.Word (Word64)
 import Language.QBE.Types qualified as QBE
-
-class Storable valTy byteTy where
-  toBytes :: valTy -> [byteTy]
-  fromBytes :: QBE.LoadType -> [byteTy] -> Maybe valTy
+import Numeric (showHex)
 
 -- | Type used to represent an address in memory.
 --
@@ -41,14 +39,21 @@ type Address = Word64
 -- | Type used to represent the memory's size.
 type Size = Word64
 
+showAddr :: Address -> String
+showAddr addr = "0x" ++ showHex addr ""
+
+------------------------------------------------------------------------
+
+class Storable valTy byteTy where
+  toBytes :: valTy -> [byteTy]
+  fromBytes :: QBE.LoadType -> [byteTy] -> Maybe valTy
+
 -- | Memory parameterized over the Array type (e.g. 'IOUArray') and a byte
 -- polymorphic representation (e.g. 'Word8').
 data Memory a v = Memory
   { memStart :: Address,
     memBytes :: a Address v
   }
-
-------------------------------------------------------------------------
 
 mkMemory :: (MArray t a IO) => Address -> Size -> IO (Memory t a)
 mkMemory startAddr size = do
