@@ -61,11 +61,15 @@ mkEnv prog a s = do
   --
   -- TODO: Check for stack overflow.
   mem <- MEM.mkMemory a s
-  let fns = globalFuncs prog
+  let dataMem = allocData a (mapMaybe isData prog)
+      fns = globalFuncs prog
       txt = allocText (fromIntegral $ a + s) fns
       env =
         Env
-          { envSyms = getFuncPtr txt,
+          { -- envSyms contains a mapping of function names to addresses
+            -- (defined in envFuncAddrs) and addresses for all data defs.
+            -- The latter is required here to enable forward references.
+            envSyms = Map.union (getFuncPtr txt) (toSyms dataMem),
             envFuncs = makeFuncs fns,
             envFuncAddrs = txt,
             envMem = mem,
@@ -73,9 +77,7 @@ mkEnv prog a s = do
             envStkPtr = E.fromLit (QBE.Base QBE.Long) $ a + s - 1,
             envDataPtr = a
           }
-
-  let dataMem = allocData a (mapMaybe isData prog)
-   in snd <$> runStateT (initData dataMem) env
+  snd <$> runStateT (initData dataMem) env
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
@@ -84,6 +86,9 @@ mkEnv prog a s = do
       Map.Map MEM.Address QBE.GlobalIdent ->
       Map.Map QBE.GlobalIdent MEM.Address
     getFuncPtr = Map.fromList . map swap . Map.toList
+
+    toSyms :: DataMem -> Map.Map QBE.GlobalIdent MEM.Address
+    toSyms = Map.fromList . map (\(k, v) -> (QBE.name v, k))
 
     isData :: Definition -> Maybe QBE.DataDef
     isData (DefData def) = Just def
@@ -180,13 +185,7 @@ initData ::
   (MEM.Storable v b, E.ValueRepr v) =>
   DataMem ->
   StateT (Env v b) IO ()
-initData dataMem = do
-  -- Transform the 'DataMem' to 'envSyms', enables forward references.
-  modify (\e -> e {envSyms = Map.union (envSyms e) (toSyms dataMem)})
-  mapM_ (uncurry loadData) dataMem
-  where
-    toSyms :: DataMem -> Map.Map QBE.GlobalIdent MEM.Address
-    toSyms = Map.fromList . map (\(k, v) -> (QBE.name v, k))
+initData = mapM_ (uncurry loadData)
 {-# SPECIALIZE initData :: DataMem -> StateT (Env D.RegVal Word8) IO () #-}
 
 ------------------------------------------------------------------------
