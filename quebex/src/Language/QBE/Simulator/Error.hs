@@ -2,10 +2,10 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
-module Language.QBE.Simulator.Error where
+module Language.QBE.Simulator.Error (EvalError (..)) where
 
 import Control.Monad.Catch (Exception)
-import Language.QBE.Simulator.Memory (Address)
+import Language.QBE.Simulator.Memory (Address, showAddr)
 import Language.QBE.Types qualified as QBE
 
 -- TODO: Differentiate different typing errors.
@@ -18,6 +18,7 @@ data EvalError
   | UnknownBlock QBE.BlockIdent
   | InvalidMemoryLoad
   | UnknownFunction QBE.GlobalIdent
+  | UnknownFunctionAddr Address
   | MissingFunctionReturn
   | FunctionReturnIgnored
   | AssignedVoidReturnValue
@@ -37,6 +38,7 @@ instance Show EvalError where
   show (UnknownBlock block) = "UnknownBlock: '" ++ show block ++ "'"
   show InvalidMemoryLoad = "InvalidMemoryLoad"
   show (UnknownFunction ident) = "UnknownFunction: '" ++ show ident ++ "'"
+  show (UnknownFunctionAddr addr) = "UnknownFunctionAddr: '" ++ showAddr addr ++ "'"
   show MissingFunctionReturn = "MissingFunctionReturn"
   show FunctionReturnIgnored = "FunctionReturnIgnored"
   show AssignedVoidReturnValue = "AssignedVoidReturnValue"

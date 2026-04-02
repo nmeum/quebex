@@ -13,6 +13,7 @@ import Control.Monad.State (StateT, gets, modify, runStateT)
 import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Tuple (swap)
 import Data.Word (Word8)
 import Language.QBE (Definition (DefData), Program, globalFuncs)
 import Language.QBE.Simulator.Default.Expression qualified as D
@@ -27,11 +28,21 @@ data Env v b
   = Env
   { envSyms :: Map.Map QBE.GlobalIdent MEM.Address,
     envFuncs :: Map.Map QBE.GlobalIdent QBE.FuncDef,
+    envFuncAddrs :: Map.Map MEM.Address QBE.GlobalIdent, -- TODO: IntMap?
     envMem :: MEM.Memory IOArray b,
     envStk :: [StackFrame v],
     envStkPtr :: v,
     envDataPtr :: MEM.Address
   }
+
+allocText :: MEM.Address -> [QBE.FuncDef] -> Map.Map MEM.Address QBE.GlobalIdent
+allocText _ [] = Map.empty
+allocText addr (func : rest) =
+  Map.insert addr (QBE.fName func) $
+    allocText (addr + pointerSize) rest
+  where
+    pointerSize :: MEM.Size
+    pointerSize = fromIntegral $ QBE.baseTypeByteSize QBE.Long
 
 mkEnv ::
   (MEM.Storable v b, E.ValueRepr v) =>
@@ -44,22 +55,40 @@ mkEnv prog a s = do
   -- stack starts at the maximum address and grows downward towards address
   -- zero.
   --
+  -- The """text segment""" is located after the stack memory. So technically,
+  -- beyond the defined memory range. This is useful because it means that
+  -- reading/writing that memory errors.
+  --
   -- TODO: Check for stack overflow.
   mem <- MEM.mkMemory a s
-  let env =
-        Env
-          Map.empty
-          (makeFuncs $ globalFuncs prog)
-          mem
-          []
-          (E.fromLit (QBE.Base QBE.Long) $ a + s - 1)
-          a
-
   let dataMem = allocData a (mapMaybe isData prog)
+      fns = globalFuncs prog
+      txt = allocText (fromIntegral $ a + s) fns
+      env =
+        Env
+          { -- envSyms contains a mapping of function names to addresses
+            -- (defined in envFuncAddrs) and addresses for all data defs.
+            -- The latter is required here to enable forward references.
+            envSyms = Map.union (getFuncPtr txt) (toSyms dataMem),
+            envFuncs = makeFuncs fns,
+            envFuncAddrs = txt,
+            envMem = mem,
+            envStk = [],
+            envStkPtr = E.fromLit (QBE.Base QBE.Long) $ a + s - 1,
+            envDataPtr = a
+          }
   snd <$> runStateT (initData dataMem) env
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
+
+    getFuncPtr ::
+      Map.Map MEM.Address QBE.GlobalIdent ->
+      Map.Map QBE.GlobalIdent MEM.Address
+    getFuncPtr = Map.fromList . map swap . Map.toList
+
+    toSyms :: DataMem -> Map.Map QBE.GlobalIdent MEM.Address
+    toSyms = Map.fromList . map (\(k, v) -> (QBE.name v, k))
 
     isData :: Definition -> Maybe QBE.DataDef
     isData (DefData def) = Just def
@@ -156,13 +185,7 @@ initData ::
   (MEM.Storable v b, E.ValueRepr v) =>
   DataMem ->
   StateT (Env v b) IO ()
-initData dataMem = do
-  -- Transform the 'DataMem' to 'envSyms', enables forward references.
-  modify (\e -> e {envSyms = toSyms dataMem})
-  mapM_ (uncurry loadData) dataMem
-  where
-    toSyms :: DataMem -> Map.Map QBE.GlobalIdent MEM.Address
-    toSyms = Map.fromList . map (\(k, v) -> (QBE.name v, k))
+initData = mapM_ (uncurry loadData)
 {-# SPECIALIZE initData :: DataMem -> StateT (Env D.RegVal Word8) IO () #-}
 
 ------------------------------------------------------------------------
@@ -209,11 +232,17 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   toAddress = pure . E.toWord64
 
   lookupSymbol ident = gets (Map.lookup ident . envSyms)
+
   findFunc ident = do
     funcs <- gets envFuncs
     pure $ case Map.lookup ident funcs of
       Just x -> Just $ SFuncDef x
       Nothing -> SSimFunc <$> lookupSimFunc ident
+  findFuncByAddr addr = do
+    fptrs <- gets envFuncAddrs
+    case Map.lookup addr fptrs of
+      Just fn -> findFunc fn
+      Nothing -> pure Nothing
 
   activeFrame = do
     stk <- gets envStk

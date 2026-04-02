@@ -1232,6 +1232,25 @@ blockTests =
               \}"
 
           res @?= Just (D.VWord 1),
+      testCase "invoke function via function pointer" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $add(w %lhs, w %rhs) {\n\
+              \@start\n\
+              \%r =w add %lhs, %rhs\n\
+              \ret %r\n\
+              \}\n\
+              \function w $main() {\n\
+              \@body\n\
+              \%ptr =l copy $add\n\
+              \%res =w call %ptr(w 23, w 42)\n\
+              \ret %res\n\
+              \}"
+
+          res @?= Just (D.VWord 65),
       testCase "__builtin_va from cproc code base" $
         do
           res <-

@@ -48,7 +48,9 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   toAddress :: v -> m MEM.Address
 
   lookupSymbol :: QBE.GlobalIdent -> m (Maybe MEM.Address)
+
   findFunc :: QBE.GlobalIdent -> m (Maybe (SomeFunc m v))
+  findFuncByAddr :: MEM.Address -> m (Maybe (SomeFunc m v))
 
   activeFrame :: m (StackFrame v)
   pushStackFrame :: StackFrame v -> m ()
@@ -164,7 +166,12 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   case maybeFunc of
     Just def -> pure def
     Nothing -> throwM (UnknownFunction name)
-lookupFunc _ = error "non-global functions not supported"
+lookupFunc value = do
+  addr <- lookupValue QBE.Long value >>= toAddress
+  maybeFunc <- findFuncByAddr addr
+  case maybeFunc of
+    Just def -> pure def
+    Nothing -> throwM (UnknownFunctionAddr addr)
 {-# INLINEABLE lookupFunc #-}
 
 lookupArg :: (Simulator m v) => QBE.FuncArg -> m (Maybe v)

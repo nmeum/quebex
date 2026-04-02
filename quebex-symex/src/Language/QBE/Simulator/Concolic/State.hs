@@ -125,6 +125,11 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
     pure $ case Map.lookup ident funcs of
       Just x -> Just $ SFuncDef x
       Nothing -> SSimFunc <$> findSimFunc ident
+  findFuncByAddr addr = do
+    fptrs <- gets (DS.envFuncAddrs . envBase)
+    case Map.lookup addr fptrs of
+      Just fn -> findFunc fn
+      Nothing -> pure Nothing
 
   lookupSymbol = liftState . lookupSymbol
   activeFrame = liftState activeFrame
