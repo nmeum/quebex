@@ -9,6 +9,7 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
+import Control.Monad.State (execState)
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
@@ -83,5 +84,5 @@ explore engine@(Engine {expSolver = solver}) env entry params = do
   case model of
     Nothing -> pure [(varAssign, eTrace)]
     Just newModel -> do
-      let nEnv = env {envStore = ST.setModel finalStore newModel}
+      let nEnv = env {envStore = execState (ST.setModel newModel) finalStore}
       (:) (varAssign, eTrace) <$> explore nEngine nEnv entry params

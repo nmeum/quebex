@@ -6,13 +6,14 @@ module Language.QBE.Simulator.Concolic.State
   ( Env (..),
     mkEnv,
     run,
+    runPath,
     makeConcolic,
   )
 where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
+import Control.Monad.State (MonadState, StateT, gets, modify, runState, runStateT)
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program)
@@ -63,7 +64,7 @@ liftState toLift = do
 makeConcolic :: String -> QBE.ExtType -> StateT Env IO (CE.Concolic DE.RegVal)
 makeConcolic name ty = do
   st <- gets envStore
-  let (ns, cv) = ST.getConcolic st name ty
+  let (cv, ns) = runState (ST.getConcolic name ty) st
   modify (\e -> e {envStore = ns})
   pure cv
 
@@ -143,11 +144,12 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
+runPath :: StateT Env IO a -> StateT Env IO (T.ExecTrace, ST.Store)
+runPath state = do
+  _ <- state
+  t <- gets envTracer
+  s <- gets envStore
+  pure (t, s)
+
 run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
-run env state = fst <$> runStateT go env
-  where
-    go = do
-      _ <- state
-      t <- gets envTracer
-      s <- gets envStore
-      pure (t, s)
+run env state = fst <$> runStateT (runPath state) env
