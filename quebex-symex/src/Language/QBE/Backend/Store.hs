@@ -13,7 +13,8 @@ module Language.QBE.Backend.Store
   )
 where
 
-import Control.Monad.State (State, get, modify)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (State, StateT, get, modify, put)
 import Data.Map qualified as Map
 import Language.QBE.Backend.Model qualified as Model
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
@@ -47,14 +48,17 @@ sexprs = map SE.toSExpr . Map.elems . sValues
 ------------------------------------------------------------------------
 
 -- | Finalize all pending symbolic variable declarations.
-finalize :: SMT.Solver -> Store -> IO Store
-finalize solver store@(Store {sValues = m, defined = defs}) = do
-  let new = m `Map.difference` defs
-  mapM_ (uncurry declareSymbolic) $ Map.toList new
+-- This is the only function that modifies the solver state.
+finalize :: SMT.Solver -> StateT Store IO ()
+finalize solver = do
+  store@(Store {sValues = vals, defined = defs}) <- get
 
-  pure
+  let new = vals `Map.difference` defs
+  mapM_ (liftIO . uncurry declareSymbolic) $ Map.toList new
+
+  put $
     store
-      { defined = Map.union m new,
+      { defined = Map.union vals new,
         sValues = Map.empty
       }
   where
@@ -73,7 +77,7 @@ genRandom name ty = do
   store <- get
   let (cv, nr) = randomExtType (randGen store) ty
       newCVals = Map.insert name cv $ cValues store
-  modify (\s -> s {cValues = newCVals, randGen = nr})
+  put $ store {cValues = newCVals, randGen = nr}
   pure cv
   where
     randomExtType rg extTy =
