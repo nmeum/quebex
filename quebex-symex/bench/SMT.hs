@@ -40,9 +40,9 @@ exploreQBE filePath = do
   withFile logPath WriteMode (explore' prog func)
   where
     explore' prog func handle = do
-      engine <- newEngine <$> logSolver handle
       defEnv <- mkEnv prog 0 128 (Just 0)
-      explore engine defEnv func []
+      engine <- newEngine defEnv <$> logSolver handle
+      explore engine func []
 
 getQueries :: String -> IO String
 getQueries name = do

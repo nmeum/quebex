@@ -29,11 +29,10 @@ findAssign ((a, eTrace) : xs) toFind
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
-  engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
+  engine <- newEngine defEnv <$> defSolver
 
-  explore engine defEnv entry $
-    map (second QBE.Base) params
+  explore engine entry $ map (second QBE.Base) params
 
 ------------------------------------------------------------------------
 
