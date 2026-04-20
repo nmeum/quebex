@@ -11,7 +11,7 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator.Concolic.State (mkEnv)
-import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
+import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.Directory (createDirectoryIfMissing)
@@ -66,14 +66,14 @@ exploreFile opts@Opts {optBase = base} = do
     Just fn -> withFile fn WriteMode (exploreWithHandle env func)
     Nothing -> do
       engine <- newEngine env <$> defSolver
-      explore engine func params
+      exploreFunc engine func params
   where
     params :: [(String, QBE.ExtType)]
     params = []
 
     exploreWithHandle env func handle = do
       engine <- newEngine env <$> logSolver handle
-      explore engine func params
+      exploreFunc engine func params
 
 writeKTests :: FilePath -> FilePath -> [[KTestObj]] -> IO ()
 writeKTests directory fileArg objs = do
