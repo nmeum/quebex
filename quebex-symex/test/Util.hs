@@ -40,7 +40,7 @@ explore' :: String -> String -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.Ex
 explore' input funcName params = do
   (prog, entry) <- parseAndFind (QBE.GlobalIdent funcName) input
 
-  engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
-  explore engine defEnv entry $
+  engine <- newEngine defEnv <$> defSolver
+  explore engine entry $
     map (second QBE.Base) params
