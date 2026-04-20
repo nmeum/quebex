@@ -13,7 +13,7 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
+import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -32,7 +32,7 @@ explore' prog entry params = do
   defEnv <- mkEnv prog 0 128 Nothing
   engine <- newEngine defEnv <$> defSolver
 
-  explore engine entry $ map (second QBE.Base) params
+  exploreFunc engine entry $ map (second QBE.Base) params
 
 ------------------------------------------------------------------------
 

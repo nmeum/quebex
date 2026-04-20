@@ -5,7 +5,7 @@ module Language.QBE.Simulator.Explorer
   ( newEngine,
     hasNext,
     explorePath,
-    explore,
+    exploreFunc,
     defSolver,
     logSolver,
   )
@@ -98,18 +98,18 @@ hasNext = gets expNext
 
 ------------------------------------------------------------------------
 
-explore ::
+exploreFunc ::
   Engine ->
   QBE.FuncDef ->
   [(String, QBE.ExtType)] ->
   IO [(ST.Assign, T.ExecTrace)]
-explore engine entry params = do
+exploreFunc engine entry params = do
   let funcState = mapM (uncurry makeConcolic) params >>= execFunc entry
-  evalStateT (explore' funcState) engine
+  evalStateT (exploreFunc' funcState) engine
   where
-    explore' st = do
+    exploreFunc' st = do
       res <- explorePath st
       morePaths <- hasNext
       if morePaths
-        then (res :) <$> explore' st
+        then (res :) <$> exploreFunc' st
         else pure [res]

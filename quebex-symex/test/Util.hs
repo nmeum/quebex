@@ -14,7 +14,7 @@ import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Concolic.State (mkEnv, run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
+import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
@@ -42,5 +42,5 @@ explore' input funcName params = do
 
   defEnv <- mkEnv prog 0 128 Nothing
   engine <- newEngine defEnv <$> defSolver
-  explore engine entry $
+  exploreFunc engine entry $
     map (second QBE.Base) params
