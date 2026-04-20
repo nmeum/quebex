@@ -6,6 +6,7 @@ module Language.QBE.Simulator.Concolic.State
   ( Env (..),
     mkEnv,
     run,
+    runPath,
     makeConcolic,
   )
 where
@@ -143,11 +144,12 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
+runPath :: StateT Env IO a -> StateT Env IO (T.ExecTrace, ST.Store)
+runPath state = do
+  _ <- state
+  t <- gets envTracer
+  s <- gets envStore
+  pure (t, s)
+
 run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
-run env state = fst <$> runStateT go env
-  where
-    go = do
-      _ <- state
-      t <- gets envTracer
-      s <- gets envStore
-      pure (t, s)
+run env state = fst <$> runStateT (runPath state) env

@@ -65,15 +65,15 @@ exploreFile opts@Opts {optBase = base} = do
   case optLog opts of
     Just fn -> withFile fn WriteMode (exploreWithHandle env func)
     Nothing -> do
-      engine <- newEngine <$> defSolver
-      explore engine env func params
+      engine <- newEngine env <$> defSolver
+      explore engine func params
   where
     params :: [(String, QBE.ExtType)]
     params = []
 
     exploreWithHandle env func handle = do
-      engine <- newEngine <$> logSolver handle
-      explore engine env func params
+      engine <- newEngine env <$> logSolver handle
+      explore engine func params
 
 writeKTests :: FilePath -> FilePath -> [[KTestObj]] -> IO ()
 writeKTests directory fileArg objs = do
