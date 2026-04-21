@@ -11,15 +11,22 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
+import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
+import Data.Foldable (for_)
 import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, runPath)
+import Language.QBE.Simulator.Concolic.State
+  ( Env (envStore),
+    PathResult (..),
+    makeConcolic,
+    runPath,
+  )
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -75,7 +82,8 @@ findNext symVars eTrace = do
 explorePath :: StateT Env IO a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
-  (eTrace, nStore) <- lift $ evalStateT (runPath simState) env
+  PathResult {pathExp = exc, pathTrace = eTrace, pathStore = nStore} <-
+    lift $ evalStateT (runPath simState) env
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for
@@ -83,6 +91,10 @@ explorePath simState = do
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
   put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
+
+  -- If our 'PathResult' captures an exception, re-throw it here. The caller
+  -- can then inspect the trace and variable assignment that lead to it.
+  for_ exc throwM
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.

@@ -7,11 +7,12 @@ module Language.QBE.Simulator.Concolic.State
     mkEnv,
     run,
     runPath,
+    PathResult (..),
     makeConcolic,
   )
 where
 
-import Control.Monad.Catch (throwM)
+import Control.Monad.Catch (throwM, try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
 import Data.Map qualified as Map
@@ -144,12 +145,24 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
-runPath :: StateT Env IO a -> StateT Env IO (T.ExecTrace, ST.Store)
+data PathResult
+  = PathResult
+  { pathExp :: Maybe EvalError,
+    pathTrace :: T.ExecTrace,
+    pathStore :: ST.Store
+  }
+
+runPath :: StateT Env IO a -> StateT Env IO PathResult
 runPath state = do
-  _ <- state
+  tryResult <- try state
+  maybeExp <-
+    case tryResult of
+      Left err -> pure (Just err)
+      Right _ -> pure Nothing
+
   t <- gets envTracer
   s <- gets envStore
-  pure (t, s)
+  pure $ PathResult maybeExp t s
 
-run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
+run :: Env -> StateT Env IO a -> IO PathResult
 run env state = fst <$> runStateT (runPath state) env
