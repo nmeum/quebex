@@ -4,15 +4,17 @@
 
 module Main (main) where
 
-import Control.Monad.State (StateT, evalStateT, gets, liftIO)
+import Control.Monad.State (StateT, evalStateT, liftIO)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Simulator.Explorer
-  ( Engine (expExc, expPathVars),
+  ( Engine,
+    Path (pathError, pathVars),
     defSolver,
     explorePath,
+    lastPath,
     logSolver,
     newEngine,
   )
@@ -68,23 +70,23 @@ exploreEntry :: LogConf -> Engine -> QBE.FuncDef -> IO Int
 exploreEntry ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
-    logTest l n =
-      gets expPathVars >>= liftIO . logAssign ktest l n
+    logTest l n path =
+      liftIO $ logAssign ktest l n (pathVars path)
 
     go n st = do
       morePaths <- explorePath st
+      foundPath <- lastPath
 
-      exc <- gets expExc
-      case exc of
+      case pathError foundPath of
         Nothing -> do
-          logTest LogAll n
+          logTest LogAll n foundPath
           if morePaths
             then go (n + 1) st
             else pure n
-        Just err -> handleExp n err
+        Just err -> handleExp foundPath n err
 
-    handleExp :: Int -> EvalError -> StateT Engine IO Int
-    handleExp n e = do
+    handleExp :: Path -> Int -> EvalError -> StateT Engine IO Int
+    handleExp p n e = do
       liftIO $
         hPutStrLn stderr $
           "Encoundered error on path #"
@@ -95,7 +97,7 @@ exploreEntry ktest engine entry =
             ++ "↳ Check the generated .ktest file in "
             ++ show (confPath ktest)
 
-      logTest LogErr n >> liftIO (logError ktest n e)
+      logTest LogErr n p >> liftIO (logError ktest n e)
       pure n
 
 exploreFile :: Opts -> IO Int

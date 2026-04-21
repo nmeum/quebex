@@ -4,7 +4,9 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expPathVars, expPathTrace, expExc),
+    Engine,
+    Path (..),
+    lastPath,
     newEngine,
     explorePath,
     exploreFunc,
@@ -12,7 +14,7 @@ module Language.QBE.Simulator.Explorer
 where
 
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
+import Control.Monad.State (StateT, evalStateT, get, gets, lift, modify, put)
 import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
@@ -53,18 +55,27 @@ logSolver handle = do
 
 ------------------------------------------------------------------------
 
+data Path
+  = Path
+  { pathVars :: ST.Assign,
+    pathTrace :: T.ExecTrace,
+    pathError :: Maybe EvalError
+  }
+  deriving (Show, Eq)
+
+emptyPath :: Path
+emptyPath = Path Map.empty [] Nothing
+
 data Engine
   = Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
-    expPathVars :: ST.Assign,
-    expPathTrace :: T.ExecTrace,
-    expExc :: Maybe EvalError
+    expPath :: Path
   }
 
 newEngine :: Env -> SMT.Solver -> Engine
-newEngine env solver = Engine solver newPathSel env Map.empty [] Nothing
+newEngine env solver = Engine solver newPathSel env emptyPath
 
 findNext :: [SMT.SExpr] -> T.ExecTrace -> StateT Engine IO (Maybe Model)
 findNext symVars eTrace = do
@@ -90,7 +101,7 @@ explorePath simState = do
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expPathVars = varAssign, expPathTrace = eTrace, expExc = exc}
+  put $ engine {expPath = Path varAssign eTrace exc}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
@@ -103,8 +114,12 @@ explorePath simState = do
        in modify (\e -> e {expEnv = nEnv})
       pure True
 
+lastPath :: StateT Engine IO Path
+lastPath = gets expPath
+
 ------------------------------------------------------------------------
 
+-- TODO: Return a list of 'Path' here.
 exploreFunc ::
   Engine ->
   QBE.FuncDef ->
@@ -116,8 +131,8 @@ exploreFunc engine entry params = do
   where
     exploreFunc' st = do
       morePaths <- explorePath st
-      curEngine <- get
-      let ret = (expPathVars curEngine, expPathTrace curEngine)
+      foundPath <- lastPath
+      let ret = (pathVars foundPath, pathTrace foundPath)
        in if morePaths
             then (ret :) <$> exploreFunc' st
             else pure [ret]
