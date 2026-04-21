@@ -68,6 +68,7 @@ benchmark quebex-symex
       simple-smt,
       process,
       filepath,
+      exceptions,
       quebex,
       quebex-syntax,
       quebex-symex
