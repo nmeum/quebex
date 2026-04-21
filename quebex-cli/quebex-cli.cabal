@@ -30,6 +30,8 @@ library
       binary,
       bytestring,
       containers,
+      directory,
+      filepath,
       quebex,
       quebex-symex,
       quebex-syntax,
@@ -37,6 +39,7 @@ library
 
     exposed-modules:
       Data.KTest,
+      System.Log.KTest,
       Language.QBE.CmdLine
 
 executable quebex
@@ -64,9 +67,6 @@ executable quebex-symex
       quebex-syntax,
       mtl,
       exceptions,
-      filepath,
-      binary,
-      directory,
       optparse-applicative
 
 test-suite quebex-cli-test
