@@ -4,9 +4,9 @@
 
 module System.Log.KTest
   ( LogLevel (..),
-    KTestConf (..),
-    mkKTestConf,
-    writeAssign,
+    LogConf (..),
+    mkLogger,
+    logAssign,
   )
 where
 
@@ -21,26 +21,26 @@ import Text.Printf (printf)
 data LogLevel = LogAll | LogErr
   deriving (Show, Eq, Ord)
 
-data KTestConf
-  = KTestConf
+data LogConf
+  = LogConf
   { confLevel :: LogLevel,
     confPath :: FilePath,
     confName :: String
   }
   deriving (Show)
 
-mkKTestConf :: LogLevel -> FilePath -> String -> IO KTestConf
-mkKTestConf level directory name = do
+mkLogger :: LogLevel -> FilePath -> String -> IO LogConf
+mkLogger level directory name = do
   createDirectoryIfMissing True directory
-  pure $ KTestConf level directory name
+  pure $ LogConf level directory name
 
-writeAssign :: KTestConf -> LogLevel -> Int -> Assign -> IO ()
-writeAssign conf level pathID assign
+logAssign :: LogConf -> LogLevel -> Int -> Assign -> IO ()
+logAssign conf level pathID assign
   | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
   | otherwise = pure ()
 
-writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
-writeKTest KTestConf {confPath = directory, confName = name} pathID =
+writeKTest :: LogConf -> Int -> [KTestObj] -> IO ()
+writeKTest LogConf {confPath = directory, confName = name} pathID =
   writeKTest' pathID . KTest [fromString name]
   where
     writeKTest' :: Int -> KTest -> IO ()
