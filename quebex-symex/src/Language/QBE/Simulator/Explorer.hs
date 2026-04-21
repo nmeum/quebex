@@ -4,17 +4,15 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expPathVars, expPathTrace),
+    Engine (expPathVars, expPathTrace, expExc),
     newEngine,
     explorePath,
     exploreFunc,
   )
 where
 
-import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
-import Data.Foldable (for_)
 import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
@@ -27,6 +25,7 @@ import Language.QBE.Simulator.Concolic.State
     makeConcolic,
     runPath,
   )
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -60,11 +59,12 @@ data Engine
     expPathSel :: PathSel,
     expEnv :: Env,
     expPathVars :: ST.Assign,
-    expPathTrace :: T.ExecTrace
+    expPathTrace :: T.ExecTrace,
+    expExc :: Maybe EvalError
   }
 
 newEngine :: Env -> SMT.Solver -> Engine
-newEngine env solver = Engine solver newPathSel env Map.empty []
+newEngine env solver = Engine solver newPathSel env Map.empty [] Nothing
 
 findNext :: [SMT.SExpr] -> T.ExecTrace -> StateT Engine IO (Maybe Model)
 findNext symVars eTrace = do
@@ -90,11 +90,7 @@ explorePath simState = do
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
-
-  -- If our 'PathResult' captures an exception, re-throw it here. The caller
-  -- can then inspect the trace and variable assignment that lead to it.
-  for_ exc throwM
+  put $ engine {expPathVars = varAssign, expPathTrace = eTrace, expExc = exc}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.

@@ -4,14 +4,13 @@
 
 module Main (main) where
 
-import Control.Monad.Catch (catch)
 import Control.Monad.State (StateT, evalStateT, gets, liftIO)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Simulator.Explorer
-  ( Engine (expPathVars),
+  ( Engine (expExc, expPathVars),
     defSolver,
     explorePath,
     logSolver,
@@ -73,14 +72,18 @@ exploreEntry ktest engine entry =
       gets expPathVars >>= liftIO . logAssign ktest l n
 
     go n st = do
-      morePaths <- catch (explorePath st) (handleExp n)
-      logTest LogAll n
+      morePaths <- explorePath st
 
-      if morePaths
-        then go (n + 1) st
-        else pure n
+      exc <- gets expExc
+      case exc of
+        Nothing -> do
+          logTest LogAll n
+          if morePaths
+            then go (n + 1) st
+            else pure n
+        Just err -> handleExp n err
 
-    handleExp :: Int -> EvalError -> StateT Engine IO Bool
+    handleExp :: Int -> EvalError -> StateT Engine IO Int
     handleExp n e = do
       liftIO $
         hPutStrLn stderr $
@@ -93,7 +96,7 @@ exploreEntry ktest engine entry =
             ++ show (confPath ktest)
 
       logTest LogErr n >> liftIO (logError ktest n e)
-      pure False
+      pure n
 
 exploreFile :: Opts -> IO Int
 exploreFile opts@Opts {optBase = base} = do
