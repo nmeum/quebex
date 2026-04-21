@@ -4,13 +4,16 @@
 
 module Main (main) where
 
-import Control.Monad.State (evalStateT, gets, liftIO)
+import Control.Monad.Catch (catch)
+import Control.Monad.State (StateT, evalStateT, gets, liftIO)
 import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
 import Data.String (fromString)
+import Language.QBE.Backend.Store (Assign)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Simulator.Explorer
   ( Engine (expPathVars),
     defSolver,
@@ -22,13 +25,14 @@ import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (addExtension, (</>))
-import System.IO (IOMode (WriteMode), withFile)
+import System.IO (IOMode (WriteMode), hPutStrLn, stderr, withFile)
 import Text.Printf (printf)
 
 data Opts = Opts
   { optLog :: Maybe FilePath,
     optSeed :: Maybe Int,
-    optTests :: Maybe FilePath,
+    optTestDir :: FilePath,
+    optWriteAll :: Bool,
     optBase :: CMD.BasicArgs
   }
 
@@ -51,28 +55,45 @@ optsParser =
               <> OPT.help "Initial seed to for the random number generator"
           )
       )
-    <*> OPT.optional
-      ( OPT.strOption
-          ( OPT.long "write-tests"
-              <> OPT.short 't'
-              <> OPT.metavar "DIR"
-              <> OPT.help "Write .ktest files to the given directory"
-          )
+    <*> OPT.strOption
+      ( OPT.long "results"
+          <> OPT.short 'r'
+          <> OPT.metavar "DIR"
+          <> OPT.value "quebex-results/"
+          <> OPT.help "Directory to write generate test files to"
+      )
+    <*> OPT.switch
+      ( OPT.long "write-all"
+          <> OPT.short 'a'
+          <> OPT.help "Write tests for all paths, not just those with errors"
       )
     <*> CMD.basicArgs
 
 ------------------------------------------------------------------------
 
-data KTestConf = KTestConf FilePath String
+data LogLevel = LogAll | LogErr
+  deriving (Show, Eq, Ord)
+
+data KTestConf
+  = KTestConf
+  { confLevel :: LogLevel,
+    confPath :: FilePath,
+    confName :: String
+  }
   deriving (Show)
 
-mkKTestConf :: FilePath -> String -> IO KTestConf
-mkKTestConf directory name = do
+mkKTestConf :: LogLevel -> FilePath -> String -> IO KTestConf
+mkKTestConf level directory name = do
   createDirectoryIfMissing True directory
-  pure $ KTestConf directory name
+  pure $ KTestConf level directory name
+
+writeAssign :: KTestConf -> LogLevel -> Int -> Assign -> IO ()
+writeAssign conf level pathID assign
+  | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
+  | otherwise = pure ()
 
 writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
-writeKTest (KTestConf directory name) pathID =
+writeKTest KTestConf {confPath = directory, confName = name} pathID =
   writeKTest' pathID . KTest [fromString name]
   where
     writeKTest' :: Int -> KTest -> IO ()
@@ -84,31 +105,42 @@ writeKTest (KTestConf directory name) pathID =
 
 ------------------------------------------------------------------------
 
-exploreEntry :: Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry :: KTestConf -> Engine -> QBE.FuncDef -> IO Int
 exploreEntry ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
     go n st = do
-      morePaths <- explorePath st
-      case ktest of
-        Just conf -> do
-          assign <- gets (fromAssign . expPathVars)
-          liftIO $ writeKTest conf n assign
-        Nothing -> pure ()
+      morePaths <- catch (explorePath st) (handleExp n)
+      gets expPathVars
+        >>= liftIO . writeAssign ktest LogAll n
 
       if morePaths
         then go (n + 1) st
         else pure n
 
+    handleExp :: Int -> EvalError -> StateT Engine IO Bool
+    handleExp n e = do
+      liftIO $
+        hPutStrLn stderr $
+          "Encoundered error on path #"
+            ++ show n
+            ++ ": "
+            ++ show e
+            ++ "\n"
+            ++ "↳ Check the generated .ktest file in "
+            ++ show (confPath ktest)
+
+      gets expPathVars
+        >>= liftIO . writeAssign ktest LogErr n
+      pure False
+
 exploreFile :: Opts -> IO Int
 exploreFile opts@Opts {optBase = base} = do
   (prog, func) <- CMD.parseEntryFile $ CMD.optQBEFile base
 
-  ktest <-
-    case optTests opts of
-      Just dir -> do
-        Just <$> mkKTestConf dir (CMD.optQBEFile $ optBase opts)
-      Nothing -> pure Nothing
+  let binName = CMD.optQBEFile $ optBase opts
+      logLevel = if optWriteAll opts then LogAll else LogErr
+  ktest <- mkKTestConf logLevel (optTestDir opts) binName
 
   env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
