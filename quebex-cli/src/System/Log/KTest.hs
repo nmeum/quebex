@@ -34,18 +34,20 @@ mkLogger level directory name = do
   createDirectoryIfMissing True directory
   pure $ LogConf level directory name
 
+getPath :: LogConf -> Int -> String -> FilePath
+getPath conf pathID =
+  addExtension (confPath conf </> ("test" ++ printf "%06d" pathID))
+
 logAssign :: LogConf -> LogLevel -> Int -> Assign -> IO ()
 logAssign conf level pathID assign
   | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
   | otherwise = pure ()
 
 writeKTest :: LogConf -> Int -> [KTestObj] -> IO ()
-writeKTest LogConf {confPath = directory, confName = name} pathID =
-  writeKTest' pathID . KTest [fromString name]
+writeKTest conf@(LogConf {confName = name}) pathID =
+  writeKTest' . KTest [fromString name]
   where
-    writeKTest' :: Int -> KTest -> IO ()
-    writeKTest' n ktest = do
+    writeKTest' :: KTest -> IO ()
+    writeKTest' ktest = do
       flip encodeFile ktest $
-        addExtension
-          (directory </> ("test" ++ printf "%06d" n))
-          ".ktest"
+        getPath conf pathID ".ktest"
