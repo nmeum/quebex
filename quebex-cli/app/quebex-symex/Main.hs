@@ -6,10 +6,6 @@ module Main (main) where
 
 import Control.Monad.Catch (catch)
 import Control.Monad.State (StateT, evalStateT, gets, liftIO)
-import Data.Binary (encodeFile)
-import Data.KTest (KTest (KTest), KTestObj, fromAssign)
-import Data.String (fromString)
-import Language.QBE.Backend.Store (Assign)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
@@ -23,10 +19,8 @@ import Language.QBE.Simulator.Explorer
   )
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
-import System.Directory (createDirectoryIfMissing)
-import System.FilePath (addExtension, (</>))
 import System.IO (IOMode (WriteMode), hPutStrLn, stderr, withFile)
-import Text.Printf (printf)
+import System.Log.KTest (KTestConf (..), LogLevel (..), mkKTestConf, writeAssign)
 
 data Opts = Opts
   { optLog :: Maybe FilePath,
@@ -68,40 +62,6 @@ optsParser =
           <> OPT.help "Write tests for all paths, not just those with errors"
       )
     <*> CMD.basicArgs
-
-------------------------------------------------------------------------
-
-data LogLevel = LogAll | LogErr
-  deriving (Show, Eq, Ord)
-
-data KTestConf
-  = KTestConf
-  { confLevel :: LogLevel,
-    confPath :: FilePath,
-    confName :: String
-  }
-  deriving (Show)
-
-mkKTestConf :: LogLevel -> FilePath -> String -> IO KTestConf
-mkKTestConf level directory name = do
-  createDirectoryIfMissing True directory
-  pure $ KTestConf level directory name
-
-writeAssign :: KTestConf -> LogLevel -> Int -> Assign -> IO ()
-writeAssign conf level pathID assign
-  | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
-  | otherwise = pure ()
-
-writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
-writeKTest KTestConf {confPath = directory, confName = name} pathID =
-  writeKTest' pathID . KTest [fromString name]
-  where
-    writeKTest' :: Int -> KTest -> IO ()
-    writeKTest' n ktest = do
-      flip encodeFile ktest $
-        addExtension
-          (directory </> ("test" ++ printf "%06d" n))
-          ".ktest"
 
 ------------------------------------------------------------------------
 
