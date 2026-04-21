@@ -20,7 +20,7 @@ import Language.QBE.Simulator.Explorer
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.IO (IOMode (WriteMode), hPutStrLn, stderr, withFile)
-import System.Log.KTest (KTestConf (..), LogLevel (..), mkKTestConf, writeAssign)
+import System.Log.KTest (LogConf (..), LogLevel (..), logAssign, mkLogger)
 
 data Opts = Opts
   { optLog :: Maybe FilePath,
@@ -65,14 +65,14 @@ optsParser =
 
 ------------------------------------------------------------------------
 
-exploreEntry :: KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry :: LogConf -> Engine -> QBE.FuncDef -> IO Int
 exploreEntry ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
     go n st = do
       morePaths <- catch (explorePath st) (handleExp n)
       gets expPathVars
-        >>= liftIO . writeAssign ktest LogAll n
+        >>= liftIO . logAssign ktest LogAll n
 
       if morePaths
         then go (n + 1) st
@@ -91,7 +91,7 @@ exploreEntry ktest engine entry =
             ++ show (confPath ktest)
 
       gets expPathVars
-        >>= liftIO . writeAssign ktest LogErr n
+        >>= liftIO . logAssign ktest LogErr n
       pure False
 
 exploreFile :: Opts -> IO Int
@@ -100,7 +100,7 @@ exploreFile opts@Opts {optBase = base} = do
 
   let binName = CMD.optQBEFile $ optBase opts
       logLevel = if optWriteAll opts then LogAll else LogErr
-  ktest <- mkKTestConf logLevel (optTestDir opts) binName
+  ktest <- mkLogger logLevel (optTestDir opts) binName
 
   env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
