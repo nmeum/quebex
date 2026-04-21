@@ -12,7 +12,7 @@ import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer
-  ( Engine(expPathVars),
+  ( Engine (expPathVars),
     defSolver,
     explorePath,
     logSolver,
@@ -63,14 +63,18 @@ optsParser =
 
 ------------------------------------------------------------------------
 
-writeKTest :: FilePath -> FilePath -> Int -> [KTestObj] -> IO ()
-writeKTest directory fileArg pathID objs = do
-  createDirectoryIfMissing True directory
-  writeKTest' pathID $ mkTestCase objs
-  where
-    mkTestCase :: [KTestObj] -> KTest
-    mkTestCase = KTest [fromString fileArg]
+data KTestConf = KTestConf FilePath String
+  deriving (Show)
 
+mkKTestConf :: FilePath -> String -> IO KTestConf
+mkKTestConf directory name = do
+  createDirectoryIfMissing True directory
+  pure $ KTestConf directory name
+
+writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
+writeKTest (KTestConf directory name) pathID =
+  writeKTest' pathID . KTest [fromString name]
+  where
     writeKTest' :: Int -> KTest -> IO ()
     writeKTest' n ktest = do
       flip encodeFile ktest $
@@ -78,16 +82,18 @@ writeKTest directory fileArg pathID objs = do
           (directory </> ("test" ++ printf "%06d" n))
           ".ktest"
 
-exploreEntry :: Opts -> Engine -> QBE.FuncDef -> IO Int
-exploreEntry opts engine entry = evalStateT (go 1 $ execFunc entry []) engine
+------------------------------------------------------------------------
+
+exploreEntry :: Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry ktest engine entry =
+  evalStateT (go 1 $ execFunc entry []) engine
   where
     go n st = do
       morePaths <- explorePath st
-      case optTests opts of
-        Just dir -> do
+      case ktest of
+        Just conf -> do
           assign <- gets (fromAssign . expPathVars)
-          liftIO $
-            writeKTest dir (CMD.optQBEFile $ optBase opts) n assign
+          liftIO $ writeKTest conf n assign
         Nothing -> pure ()
 
       if morePaths
@@ -98,16 +104,22 @@ exploreFile :: Opts -> IO Int
 exploreFile opts@Opts {optBase = base} = do
   (prog, func) <- CMD.parseEntryFile $ CMD.optQBEFile base
 
+  ktest <-
+    case optTests opts of
+      Just dir -> do
+        Just <$> mkKTestConf dir (CMD.optQBEFile $ optBase opts)
+      Nothing -> pure Nothing
+
   env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
-    Just fn -> withFile fn WriteMode (exploreWithHandle env func)
+    Just fn -> withFile fn WriteMode (exploreWithHandle ktest env func)
     Nothing -> do
       engine <- newEngine env <$> defSolver
-      exploreEntry opts engine func
+      exploreEntry ktest engine func
   where
-    exploreWithHandle env func handle = do
+    exploreWithHandle ktest env func handle = do
       engine <- newEngine env <$> logSolver handle
-      exploreEntry opts engine func
+      exploreEntry ktest engine func
 
 ------------------------------------------------------------------------
 
