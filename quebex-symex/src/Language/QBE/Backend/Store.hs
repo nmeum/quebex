@@ -51,7 +51,7 @@ finalize solver store@(Store {sValues = m, defined = defs}) = do
 
   pure
     store
-      { defined = Map.union m new,
+      { defined = Map.union defs new,
         sValues = Map.empty
       }
   where

@@ -92,6 +92,7 @@ test-suite quebex-symex-test
         base,
         filepath,
         containers,
+        random,
         quebex,
         quebex-syntax,
         quebex-symex,

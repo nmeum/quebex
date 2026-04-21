@@ -7,15 +7,40 @@ module Backend (backendTests) where
 import Data.Maybe (fromJust)
 import Language.QBE.Backend.DFS (findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model qualified as Model
-import Language.QBE.Backend.Tracer qualified as ST
+import Language.QBE.Backend.Store qualified as ST
+import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (defSolver)
 import Language.QBE.Simulator.Symbolic.Expression qualified as SE
 import Language.QBE.Types qualified as QBE
+import System.Random (initStdGen)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Util
+
+storeTests :: TestTree
+storeTests =
+  testGroup
+    "Tests for the Variable Store"
+    [ testCase "finalize never forgets defined variables" $
+        do
+          s0 <- ST.empty <$> initStdGen
+          solver <- defSolver
+
+          let s1 = fst $ ST.getConcolic s0 "a" (QBE.Base QBE.Word)
+          s2 <- ST.finalize solver s1
+
+          let s3 = fst $ ST.getConcolic s2 "b" (QBE.Base QBE.Word)
+          s4 <- ST.finalize solver s3
+
+          -- The 'a' variable returns, but should still be known.
+          -- There used to be a bug where this caused an exception.
+          let s5 = fst $ ST.getConcolic s4 "a" (QBE.Base QBE.Word)
+          _ <- ST.finalize solver s5
+
+          assertBool "finalize does not throw an exception" True
+    ]
 
 traceTests :: TestTree
 traceTests =
@@ -59,7 +84,7 @@ traceTests =
               \ret\n\
               \}"
 
-          t @?= [(False, ST.newBranch (fromJust $ CE.symbolic c))]
+          t @?= [(False, T.newBranch (fromJust $ CE.symbolic c))]
 
           let pathSel = trackTrace newPathSel t
           (mm, nextPathSel) <- findUnexplored s inputs pathSel
@@ -105,4 +130,4 @@ backendTests :: TestTree
 backendTests =
   testGroup
     "Tests for the Symbolic Data Structures"
-    [traceTests]
+    [storeTests, traceTests]
