@@ -62,6 +62,7 @@ executable quebex-symex
       quebex-cli,
       quebex-symex,
       quebex-syntax,
+      mtl,
       filepath,
       binary,
       directory,
