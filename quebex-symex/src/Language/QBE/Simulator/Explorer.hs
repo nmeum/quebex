@@ -2,16 +2,17 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 module Language.QBE.Simulator.Explorer
-  ( newEngine,
-    hasNext,
+  ( defSolver,
+    logSolver,
+    Engine (expPathVars, expPathTrace),
+    newEngine,
     explorePath,
     exploreFunc,
-    defSolver,
-    logSolver,
   )
 where
 
 import Control.Monad.State
+import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
@@ -50,11 +51,12 @@ data Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
-    expNext :: Bool
+    expPathVars :: ST.Assign,
+    expPathTrace :: T.ExecTrace
   }
 
 newEngine :: Env -> SMT.Solver -> Engine
-newEngine env solver = Engine solver newPathSel env True
+newEngine env solver = Engine solver newPathSel env Map.empty []
 
 findNext :: [SMT.SExpr] -> T.ExecTrace -> StateT Engine IO (Maybe Model)
 findNext symVars eTrace = do
@@ -69,11 +71,9 @@ findNext symVars eTrace = do
 
 -- TODO: Consider modelling changes of the PathSel (via findNext) and
 -- changes of the Store (via ST.finalize and ST.setModel) as a StateT.
-explorePath :: StateT Env IO a -> StateT Engine IO (ST.Assign, T.ExecTrace)
+explorePath :: StateT Env IO a -> StateT Engine IO Bool
 explorePath simState = do
-  engine <- get
-
-  let env = expEnv engine
+  engine@(Engine {expEnv = env}) <- get
   (eTrace, nStore) <- lift $ evalStateT (runPath simState) env
 
   -- Before finalizing the store, we can extract the variables we encountered
@@ -81,20 +81,18 @@ explorePath simState = do
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  finalStore <- liftIO $ ST.finalize (expSolver engine) nStore
+  put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
 
+  -- Finalize the store (declare new symbolic vars in solver) and then,
+  -- based on the new solver state, solve constraints to find a new input.
+  store <- liftIO $ ST.finalize (expSolver engine) nStore
   model <- findNext inputVars eTrace
   case model of
-    Nothing -> do
-      modify (\e -> e {expNext = False})
-      pure (varAssign, eTrace)
+    Nothing -> pure False
     Just newModel -> do
-      let nEnv = env {envStore = ST.setModel finalStore newModel}
+      let nEnv = env {envStore = ST.setModel store newModel}
        in modify (\e -> e {expEnv = nEnv})
-      pure (varAssign, eTrace)
-
-hasNext :: StateT Engine IO Bool
-hasNext = gets expNext
+      pure True
 
 ------------------------------------------------------------------------
 
@@ -108,8 +106,9 @@ exploreFunc engine entry params = do
   evalStateT (exploreFunc' funcState) engine
   where
     exploreFunc' st = do
-      res <- explorePath st
-      morePaths <- hasNext
-      if morePaths
-        then (res :) <$> exploreFunc' st
-        else pure [res]
+      morePaths <- explorePath st
+      curEngine <- get
+      let ret = (expPathVars curEngine, expPathTrace curEngine)
+       in if morePaths
+            then (ret :) <$> exploreFunc' st
+            else pure [ret]
