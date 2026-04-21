@@ -11,7 +11,8 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
-import Control.Monad.State
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
 import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)
