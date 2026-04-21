@@ -5,6 +5,7 @@
 module Main (main) where
 
 import Control.Monad.State (StateT, evalStateT, gets, liftIO)
+import Data.Maybe (isNothing)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
@@ -26,6 +27,7 @@ data Opts = Opts
     optSeed :: Maybe Int,
     optTestDir :: FilePath,
     optWriteAll :: Bool,
+    optErrCont :: Bool,
     optBase :: CMD.BasicArgs
   }
 
@@ -60,12 +62,17 @@ optsParser =
           <> OPT.short 'a'
           <> OPT.help "Write tests for all paths, not just those with errors"
       )
+    <*> OPT.switch
+      ( OPT.long "continue-on-error"
+          <> OPT.short 'c'
+          <> OPT.help "Continue execution upon encountering an error"
+      )
     <*> CMD.basicArgs
 
 ------------------------------------------------------------------------
 
-exploreEntry :: LogConf -> Engine -> QBE.FuncDef -> IO Int
-exploreEntry ktest engine entry =
+exploreEntry :: Opts -> LogConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry opts ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
     logTest l n =
@@ -76,14 +83,14 @@ exploreEntry ktest engine entry =
 
       exc <- gets expExc
       case exc of
-        Nothing -> do
-          logTest LogAll n
-          if morePaths
-            then go (n + 1) st
-            else pure n
+        Nothing -> logTest LogAll n
         Just err -> handleExp n err
 
-    handleExp :: Int -> EvalError -> StateT Engine IO Int
+      if morePaths && (isNothing exc || optErrCont opts)
+        then go (n + 1) st
+        else pure n
+
+    handleExp :: Int -> EvalError -> StateT Engine IO ()
     handleExp n e = do
       liftIO $
         hPutStrLn stderr $
@@ -96,7 +103,6 @@ exploreEntry ktest engine entry =
             ++ show (confPath ktest)
 
       logTest LogErr n >> liftIO (logError ktest n e)
-      pure n
 
 exploreFile :: Opts -> IO Int
 exploreFile opts@Opts {optBase = base} = do
@@ -111,11 +117,11 @@ exploreFile opts@Opts {optBase = base} = do
     Just fn -> withFile fn WriteMode (exploreWithHandle ktest env func)
     Nothing -> do
       engine <- newEngine env <$> defSolver
-      exploreEntry ktest engine func
+      exploreEntry opts ktest engine func
   where
     exploreWithHandle ktest env func handle = do
       engine <- newEngine env <$> logSolver handle
-      exploreEntry ktest engine func
+      exploreEntry opts ktest engine func
 
 ------------------------------------------------------------------------
 
