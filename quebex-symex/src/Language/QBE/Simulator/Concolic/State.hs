@@ -7,7 +7,7 @@ module Language.QBE.Simulator.Concolic.State
     mkEnv,
     run,
     runPath,
-    PathResult (..),
+    RunResult (..),
     makeConcolic,
   )
 where
@@ -145,14 +145,14 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
-data PathResult
-  = PathResult
-  { pathExp :: Maybe EvalError,
-    pathTrace :: T.ExecTrace,
-    pathStore :: ST.Store
+data RunResult
+  = RunResult
+  { runExp :: Maybe EvalError,
+    runTrace :: T.ExecTrace,
+    runStore :: ST.Store
   }
 
-runPath :: StateT Env IO a -> StateT Env IO PathResult
+runPath :: StateT Env IO a -> StateT Env IO RunResult
 runPath state = do
   tryResult <- try state
   maybeExp <-
@@ -162,7 +162,7 @@ runPath state = do
 
   t <- gets envTracer
   s <- gets envStore
-  pure $ PathResult maybeExp t s
+  pure $ RunResult maybeExp t s
 
-run :: Env -> StateT Env IO a -> IO PathResult
+run :: Env -> StateT Env IO a -> IO RunResult
 run env state = fst <$> runStateT (runPath state) env

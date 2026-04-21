@@ -12,7 +12,7 @@ import Language.QBE.Backend.Tracer qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.Expression qualified as CE
-import Language.QBE.Simulator.Concolic.State (PathResult (pathTrace), mkEnv, run)
+import Language.QBE.Simulator.Concolic.State (RunResult (runTrace), mkEnv, run)
 import Language.QBE.Simulator.Default.Expression qualified as DE
 import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
 import Language.QBE.Simulator.Expression qualified as E
@@ -25,7 +25,7 @@ parseAndExec funcName params input = do
   (prog, entry) <- parseAndFind funcName input
 
   env <- mkEnv prog 0 128 Nothing
-  pathTrace <$> run env (execFunc entry params)
+  runTrace <$> run env (execFunc entry params)
 
 unconstrained :: SMT.Solver -> Word64 -> String -> QBE.BaseType -> IO (CE.Concolic DE.RegVal)
 unconstrained solver initCon name ty = do

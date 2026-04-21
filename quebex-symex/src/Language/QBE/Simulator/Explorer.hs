@@ -21,7 +21,7 @@ import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State
   ( Env (envStore),
-    PathResult (..),
+    RunResult (..),
     makeConcolic,
     runPath,
   )
@@ -82,7 +82,7 @@ findNext symVars eTrace = do
 explorePath :: StateT Env IO a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
-  PathResult {pathExp = exc, pathTrace = eTrace, pathStore = nStore} <-
+  RunResult {runExp = exc, runTrace = eTrace, runStore = nStore} <-
     lift $ evalStateT (runPath simState) env
 
   -- Before finalizing the store, we can extract the variables we encountered
