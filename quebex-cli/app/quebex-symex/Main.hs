@@ -20,7 +20,7 @@ import Language.QBE.Simulator.Explorer
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.IO (IOMode (WriteMode), hPutStrLn, stderr, withFile)
-import System.Log.KTest (LogConf (..), LogLevel (..), logAssign, mkLogger)
+import System.Log.KTest (LogConf (..), LogLevel (..), logAssign, logError, mkLogger)
 
 data Opts = Opts
   { optLog :: Maybe FilePath,
@@ -92,7 +92,7 @@ exploreEntry ktest engine entry =
             ++ "↳ Check the generated .ktest file in "
             ++ show (confPath ktest)
 
-      logTest LogErr n
+      logTest LogErr n >> liftIO (logError ktest n e)
       pure False
 
 exploreFile :: Opts -> IO Int

@@ -6,6 +6,7 @@ module System.Log.KTest
   ( LogLevel (..),
     LogConf (..),
     mkLogger,
+    logError,
     logAssign,
   )
 where
@@ -14,6 +15,7 @@ import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
 import Data.String (fromString)
 import Language.QBE.Backend.Store (Assign)
+import Language.QBE.Simulator.Error (EvalError)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (addExtension, (</>))
 import Text.Printf (printf)
@@ -37,6 +39,15 @@ mkLogger level directory name = do
 getPath :: LogConf -> Int -> String -> FilePath
 getPath conf pathID =
   addExtension (confPath conf </> ("test" ++ printf "%06d" pathID))
+
+logError :: LogConf -> Int -> EvalError -> IO ()
+logError conf pathID exc
+  | LogErr >= confLevel conf =
+      -- TODO: Include more information about the error message here.
+      -- For example, the source file and the line in which it occurred.
+      let path = getPath conf pathID ".err"
+       in writeFile path (show exc ++ "\n")
+  | otherwise = pure ()
 
 logAssign :: LogConf -> LogLevel -> Int -> Assign -> IO ()
 logAssign conf level pathID assign
