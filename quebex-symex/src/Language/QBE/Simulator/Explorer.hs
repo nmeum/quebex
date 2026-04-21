@@ -90,6 +90,11 @@ findNext symVars eTrace = do
 
 -- TODO: Consider modelling changes of the PathSel (via findNext) and
 -- changes of the Store (via ST.finalize and ST.setModel) as a StateT.
+--
+-- TODO: Treat HLTs as a termination point and prune the ExecTree
+-- accordingly. That is, somehow indicate that we never reached the node
+-- that we targeted with the branch negation. Doing so should enable
+-- continued exploration after an error occurred, which doesn't work rn.
 explorePath :: StateT Env IO a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
