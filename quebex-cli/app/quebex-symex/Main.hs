@@ -69,10 +69,12 @@ exploreEntry :: LogConf -> Engine -> QBE.FuncDef -> IO Int
 exploreEntry ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
+    logTest l n =
+      gets expPathVars >>= liftIO . logAssign ktest l n
+
     go n st = do
       morePaths <- catch (explorePath st) (handleExp n)
-      gets expPathVars
-        >>= liftIO . logAssign ktest LogAll n
+      logTest LogAll n
 
       if morePaths
         then go (n + 1) st
@@ -90,8 +92,7 @@ exploreEntry ktest engine entry =
             ++ "↳ Check the generated .ktest file in "
             ++ show (confPath ktest)
 
-      gets expPathVars
-        >>= liftIO . logAssign ktest LogErr n
+      logTest LogErr n
       pure False
 
 exploreFile :: Opts -> IO Int
