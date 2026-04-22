@@ -7,7 +7,7 @@ module Golden (goldenTests) where
 import Data.Bifunctor (second)
 import Language.QBE (parseAndFind)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
-import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
+import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
 import Language.QBE.Types qualified as QBE
 import System.FilePath
 import Test.Tasty
@@ -22,11 +22,11 @@ exploreQBE :: FilePath -> [(String, QBE.BaseType)] -> IO Result
 exploreQBE filePath params = do
   (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
-  engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
+  engine <- newEngine defEnv <$> defSolver
 
   traces <-
-    explore engine defEnv func $
+    exploreFunc engine func $
       map (second QBE.Base) params
   pure $ length traces
 

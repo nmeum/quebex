@@ -13,7 +13,7 @@ import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (defSolver, explore, newEngine)
+import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -29,11 +29,10 @@ findAssign ((a, eTrace) : xs) toFind
 
 explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
 explore' prog entry params = do
-  engine <- newEngine <$> defSolver
   defEnv <- mkEnv prog 0 128 Nothing
+  engine <- newEngine defEnv <$> defSolver
 
-  explore engine defEnv entry $
-    map (second QBE.Base) params
+  exploreFunc engine entry $ map (second QBE.Base) params
 
 ------------------------------------------------------------------------
 

@@ -4,14 +4,20 @@
 
 module Main (main) where
 
+import Control.Monad.State (evalStateT, gets, liftIO)
 import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
 import Data.String (fromString)
-import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.CmdLine qualified as CMD
+import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
-import Language.QBE.Simulator.Explorer (defSolver, explore, logSolver, newEngine)
+import Language.QBE.Simulator.Explorer
+  ( Engine (expPathVars),
+    defSolver,
+    explorePath,
+    logSolver,
+    newEngine,
+  )
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.Directory (createDirectoryIfMissing)
@@ -57,55 +63,75 @@ optsParser =
 
 ------------------------------------------------------------------------
 
-exploreFile :: Opts -> IO [(ST.Assign, T.ExecTrace)]
-exploreFile opts@Opts {optBase = base} = do
-  (prog, func) <- CMD.parseEntryFile $ CMD.optQBEFile base
+data KTestConf = KTestConf FilePath String
+  deriving (Show)
 
-  env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
-  case optLog opts of
-    Just fn -> withFile fn WriteMode (exploreWithHandle env func)
-    Nothing -> do
-      engine <- newEngine <$> defSolver
-      explore engine env func params
-  where
-    params :: [(String, QBE.ExtType)]
-    params = []
-
-    exploreWithHandle env func handle = do
-      engine <- newEngine <$> logSolver handle
-      explore engine env func params
-
-writeKTests :: FilePath -> FilePath -> [[KTestObj]] -> IO ()
-writeKTests directory fileArg objs = do
+mkKTestConf :: FilePath -> String -> IO KTestConf
+mkKTestConf directory name = do
   createDirectoryIfMissing True directory
-  mapM_ (uncurry writeKTest) $ zip [1 ..] (map mkTestCase objs)
-  where
-    mkTestCase :: [KTestObj] -> KTest
-    mkTestCase = KTest [fromString fileArg]
+  pure $ KTestConf directory name
 
-    writeKTest :: Int -> KTest -> IO ()
-    writeKTest n ktest = do
+writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
+writeKTest (KTestConf directory name) pathID =
+  writeKTest' pathID . KTest [fromString name]
+  where
+    writeKTest' :: Int -> KTest -> IO ()
+    writeKTest' n ktest = do
       flip encodeFile ktest $
         addExtension
           (directory </> ("test" ++ printf "%06d" n))
           ".ktest"
 
+------------------------------------------------------------------------
+
+exploreEntry :: Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry ktest engine entry =
+  evalStateT (go 1 $ execFunc entry []) engine
+  where
+    go n st = do
+      morePaths <- explorePath st
+      case ktest of
+        Just conf -> do
+          assign <- gets (fromAssign . expPathVars)
+          liftIO $ writeKTest conf n assign
+        Nothing -> pure ()
+
+      if morePaths
+        then go (n + 1) st
+        else pure n
+
+exploreFile :: Opts -> IO Int
+exploreFile opts@Opts {optBase = base} = do
+  (prog, func) <- CMD.parseEntryFile $ CMD.optQBEFile base
+
+  ktest <-
+    case optTests opts of
+      Just dir -> do
+        Just <$> mkKTestConf dir (CMD.optQBEFile $ optBase opts)
+      Nothing -> pure Nothing
+
+  env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
+  case optLog opts of
+    Just fn -> withFile fn WriteMode (exploreWithHandle ktest env func)
+    Nothing -> do
+      engine <- newEngine env <$> defSolver
+      exploreEntry ktest engine func
+  where
+    exploreWithHandle ktest env func handle = do
+      engine <- newEngine env <$> logSolver handle
+      exploreEntry ktest engine func
+
+------------------------------------------------------------------------
+
+cmd :: OPT.ParserInfo Opts
+cmd =
+  OPT.info
+    (optsParser OPT.<**> OPT.helper)
+    ( OPT.fullDesc
+        <> OPT.progDesc "Symbolic execution of programs in the QBE intermediate language"
+    )
+
 main :: IO ()
 main = do
-  args <- OPT.execParser cmd
-  paths <- exploreFile args
-
-  putStrLn $ "\n---\nAmount of paths: " ++ show (length paths)
-  case optTests args of
-    Just dir ->
-      writeKTests dir (CMD.optQBEFile $ optBase args) $
-        map (fromAssign . fst) paths
-    Nothing -> pure ()
-  where
-    cmd :: OPT.ParserInfo Opts
-    cmd =
-      OPT.info
-        (optsParser OPT.<**> OPT.helper)
-        ( OPT.fullDesc
-            <> OPT.progDesc "Symbolic execution of programs in the QBE intermediate language"
-        )
+  numPaths <- OPT.execParser cmd >>= exploreFile
+  putStrLn $ "\n---\nAmount of paths: " ++ show numPaths
