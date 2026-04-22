@@ -57,7 +57,14 @@ data Engine
   }
 
 newEngine :: Env -> SMT.Solver -> Engine
-newEngine env solver = Engine solver newPathSel env Map.empty []
+newEngine env solver =
+  Engine
+    { expSolver = solver,
+      expPathSel = newPathSel,
+      expEnv = env,
+      expPathVars = Map.empty,
+      expPathTrace = []
+    }
 
 findNext :: [SMT.SExpr] -> T.ExecTrace -> StateT Engine IO (Maybe Model)
 findNext symVars eTrace = do
