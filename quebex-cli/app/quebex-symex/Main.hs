@@ -4,6 +4,7 @@
 
 module Main (main) where
 
+import Control.Monad (when)
 import Control.Monad.State (evalStateT, gets, liftIO)
 import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
@@ -29,6 +30,7 @@ data Opts = Opts
   { optLog :: Maybe FilePath,
     optSeed :: Maybe Int,
     optTests :: Maybe FilePath,
+    optVerbose :: Bool,
     optBase :: CMD.BasicArgs
   }
 
@@ -59,6 +61,11 @@ optsParser =
               <> OPT.help "Write .ktest files to the given directory"
           )
       )
+    <*> OPT.switch
+      ( OPT.long "verbose"
+          <> OPT.short 'v'
+          <> OPT.help "Enable more verbose output"
+      )
     <*> CMD.basicArgs
 
 ------------------------------------------------------------------------
@@ -84,11 +91,14 @@ writeKTest (KTestConf directory name) pathID =
 
 ------------------------------------------------------------------------
 
-exploreEntry :: Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
-exploreEntry ktest engine entry =
+exploreEntry :: Opts -> Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry opts ktest engine entry =
   evalStateT (go 1 $ execFunc entry []) engine
   where
     go n st = do
+      when (optVerbose opts) $
+        liftIO (putStrLn $ "Exploring path " ++ show n ++ "...")
+
       morePaths <- explorePath st
       case ktest of
         Just conf -> do
@@ -115,11 +125,11 @@ exploreFile opts@Opts {optBase = base} = do
     Just fn -> withFile fn WriteMode (exploreWithHandle ktest env func)
     Nothing -> do
       engine <- newEngine env <$> defSolver
-      exploreEntry ktest engine func
+      exploreEntry opts ktest engine func
   where
     exploreWithHandle ktest env func handle = do
       engine <- newEngine env <$> logSolver handle
-      exploreEntry ktest engine func
+      exploreEntry opts ktest engine func
 
 ------------------------------------------------------------------------
 
