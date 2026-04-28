@@ -49,11 +49,15 @@ module SimpleBV
     bvSDiv,
     bvSLeq,
     bvSLt,
+    bvSGeq,
+    bvSGt,
     bvSRem,
     bvShl,
     bvSub,
     bvUDiv,
     bvULeq,
+    bvUGeq,
+    bvUGt,
     bvULt,
     bvURem,
     bvXOr,
@@ -85,11 +89,15 @@ data Expr a
   | BvSDiv a a
   | BvSLeq a a
   | BvSLt a a
+  | BvSGeq a a
+  | BvSGt a a
   | BvSRem a a
   | BvShl a a
   | BvSub a a
   | BvUDiv a a
   | BvULeq a a
+  | BvUGeq a a
+  | BvUGt a a
   | BvULt a a
   | BvURem a a
   | BvXOr a a
@@ -131,11 +139,15 @@ toSMT expr =
     (BvSDiv lhs rhs) -> SMT.bvSDiv (toSMT lhs) (toSMT rhs)
     (BvSLeq lhs rhs) -> SMT.bvSLeq (toSMT lhs) (toSMT rhs)
     (BvSLt lhs rhs) -> SMT.bvSLt (toSMT lhs) (toSMT rhs)
+    (BvSGeq lhs rhs) -> SMT.fun "bvsge" [toSMT lhs, toSMT rhs]
+    (BvSGt lhs rhs) -> SMT.fun "bvsgt" [toSMT lhs, toSMT rhs]
     (BvSRem lhs rhs) -> SMT.bvSRem (toSMT lhs) (toSMT rhs)
     (BvShl lhs rhs) -> SMT.bvShl (toSMT lhs) (toSMT rhs)
     (BvSub lhs rhs) -> SMT.bvSub (toSMT lhs) (toSMT rhs)
     (BvUDiv lhs rhs) -> SMT.bvUDiv (toSMT lhs) (toSMT rhs)
     (BvULeq lhs rhs) -> SMT.bvULeq (toSMT lhs) (toSMT rhs)
+    (BvUGeq lhs rhs) -> SMT.fun "bvuge" [toSMT lhs, toSMT rhs]
+    (BvUGt lhs rhs) -> SMT.fun "bvugt" [toSMT lhs, toSMT rhs]
     (BvULt lhs rhs) -> SMT.bvULt (toSMT lhs) (toSMT rhs)
     (BvURem lhs rhs) -> SMT.bvURem (toSMT lhs) (toSMT rhs)
     (BvXOr lhs rhs) -> SMT.bvXOr (toSMT lhs) (toSMT rhs)
@@ -365,6 +377,12 @@ bvSLeq = binOp BvSLeq
 bvSLt :: SExpr -> SExpr -> SExpr
 bvSLt = binOp BvSLt
 
+bvSGeq :: SExpr -> SExpr -> SExpr
+bvSGeq = binOp BvSGeq
+
+bvSGt :: SExpr -> SExpr -> SExpr
+bvSGt = binOp BvSGt
+
 bvSRem :: SExpr -> SExpr -> SExpr
 bvSRem = binOp BvSRem
 
@@ -379,6 +397,12 @@ bvUDiv = binOp BvUDiv
 
 bvULeq :: SExpr -> SExpr -> SExpr
 bvULeq = binOp BvULeq
+
+bvUGeq :: SExpr -> SExpr -> SExpr
+bvUGeq = binOp BvUGeq
+
+bvUGt :: SExpr -> SExpr -> SExpr
+bvUGt = binOp BvUGt
 
 bvULt :: SExpr -> SExpr -> SExpr
 bvULt = binOp BvULt
