@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE Strict #-}
 -- SPDX-FileCopyrightText: 2009 Matt Morrow <klebinger.andreas@gmx.at>
 --
@@ -44,6 +45,13 @@ import Data.IntSet qualified as IS
 import Data.Maybe
 import Data.Tree
 import Data.Tuple (swap)
+
+-- Since GHC 9.10.1, Prelude exports foldl' before that we need 'Data.Foldable'.
+--
+-- See: https://gitlab.haskell.org/ghc/ghc/-/commit/f1ec362817baa5d440a9f2b3a8b17e5513538119
+#if !MIN_VERSION_base(4,20,0)
+import Data.Foldable (foldl')
+#endif
 
 -----------------------------------------------------------------------------
 
