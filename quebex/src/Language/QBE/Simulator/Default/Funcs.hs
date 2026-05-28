@@ -4,7 +4,7 @@
 
 module Language.QBE.Simulator.Default.Funcs (lookupSimFunc) where
 
-import Control.Monad.Catch (throwM)
+import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Language.QBE.Simulator.Error (EvalError (FuncArgsMismatch))
 import Language.QBE.Simulator.Expression qualified as E
@@ -16,7 +16,7 @@ puts _ [strPtr] = do
   bytes <- toAddress strPtr >>= readNullArray
   liftIO $ putStrLn (E.toString bytes)
   pure (Just $ E.fromLit (QBE.Base QBE.Word) 0)
-puts ident _ = throwM $ FuncArgsMismatch ident
+puts ident _ = throwError $ FuncArgsMismatch ident
 
 ------------------------------------------------------------------------
 

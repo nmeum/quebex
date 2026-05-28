@@ -5,7 +5,7 @@
 
 module Language.QBE.Simulator.State where
 
-import Control.Monad.Catch (Exception, MonadThrow, throwM)
+import Control.Monad.Error.Class (MonadError, throwError)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes)
@@ -43,7 +43,7 @@ data SomeFunc m v
 -- a polymorphic Simulator state implement over a State monad.
 --
 -- The idea is inspired by Bourgeat et al. https://doi.org/10.1145/3607833
-class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
+class (E.ValueRepr v, MonadError EvalError m) => Simulator m v | m -> v where
   isTrue :: v -> m Bool
   toAddress :: v -> m MEM.Address
 
@@ -61,8 +61,8 @@ class (E.ValueRepr v, MonadThrow m) => Simulator m v | m -> v where
   writeMemory :: MEM.Address -> QBE.ExtType -> v -> m () -- TODO: LoadType?
   readMemory :: QBE.LoadType -> MEM.Address -> m v
 
-liftMaybe :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
-liftMaybe e Nothing = throwM e
+liftMaybe :: (MonadError EvalError m) => EvalError -> Maybe a -> m a
+liftMaybe e Nothing = throwError e
 liftMaybe _ (Just r) = pure r
 {-# INLINE liftMaybe #-}
 
@@ -110,7 +110,7 @@ stackAlloc size align = do
   let newStkPtr = stkPtr `E.sub` size >>= (`stackAlign` E.fromLit (QBE.Base QBE.Long) align)
   case newStkPtr of
     Just ptr -> setSP ptr >> pure ptr
-    Nothing -> throwM InvalidAddressType
+    Nothing -> throwError InvalidAddressType
 {-# INLINEABLE stackAlloc #-}
 
 stackSpill :: (Simulator m v) => v -> m MEM.Address
@@ -165,13 +165,13 @@ lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
   maybeFunc <- findFunc name
   case maybeFunc of
     Just def -> pure def
-    Nothing -> throwM (UnknownFunction name)
+    Nothing -> throwError (UnknownFunction name)
 lookupFunc value = do
   addr <- lookupValue QBE.Long value >>= toAddress
   maybeFunc <- findFuncByAddr addr
   case maybeFunc of
     Just def -> pure def
-    Nothing -> throwM (UnknownFunctionAddr addr)
+    Nothing -> throwError (UnknownFunctionAddr addr)
 {-# INLINEABLE lookupFunc #-}
 
 lookupArg :: (Simulator m v) => QBE.FuncArg -> m (Maybe v)

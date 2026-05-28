@@ -5,11 +5,12 @@
 
 module Language.QBE.Simulator.Default.State where
 
-import Control.Exception (assert)
+import Control.Monad.IO.Class (MonadIO)
+import Control.Exception (assert, throwIO, catch)
 import Control.Monad (foldM)
-import Control.Monad.Catch (throwM)
+import Control.Monad.Error.Class (throwError, catchError, MonadError)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, gets, modify, runStateT)
+import Control.Monad.State (StateT(StateT), gets, modify, runStateT, evalStateT, MonadState)
 import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -137,7 +138,7 @@ loadItem addr QBE.Byte (QBE.DString str) = do
 loadItem addr ty (QBE.DSymOff ident off) = do
   globals <- gets envSyms
   case Map.lookup ident globals of
-    Nothing -> throwM (Err.UnknownVariable $ show ident)
+    Nothing -> error "TODO"
     Just symAddr ->
       storeValue addr $ E.fromLit @v ty (symAddr + off)
 loadItem addr ty (QBE.DConst (QBE.Global ident)) =
@@ -224,8 +225,20 @@ allocData startAddr dataDefs =
 
 ------------------------------------------------------------------------
 
--- | Simulator state, parameterized over a value and byte representation.
-type SimState v b = StateT (Env v b) IO
+ -- | Simulator state, parameterized over a value and byte representation.
+newtype SimState v b a = SimState { unSimState :: StateT (Env v b) IO a }
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+deriving instance MonadState (Env v b) (SimState v b)
+
+instance MonadError Err.EvalError (SimState v b) where
+  throwError = liftIO . throwIO
+  catchError (SimState st) handler =
+    SimState $ StateT $ \s -> do
+      let state = runStateT st s
+      state `catch` (\e -> runStateT (unSimState $ handler e) s)
+
+------------------------------------------------------------------------
 
 instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
@@ -248,14 +261,14 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
     stk <- gets envStk
     case stk of
       (x : _) -> pure x
-      [] -> throwM Err.EmptyStack
+      [] -> throwError Err.EmptyStack
   pushStackFrame frame =
     modify (\s -> s {envStk = frame : envStk s})
   popStackFrame = do
     stk <- gets envStk
     case stk of
       (x : xs) -> modify (\s -> s {envStk = xs}) >> pure x
-      [] -> throwM Err.EmptyStack
+      [] -> throwError Err.EmptyStack
 
   getSP = gets envStkPtr
   setSP sp = modify (\s -> s {envStkPtr = sp})
@@ -279,10 +292,10 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
 
     case MEM.fromBytes ty bytes of
       Just x -> pure x
-      Nothing -> throwM InvalidMemoryLoad
+      Nothing -> throwError InvalidMemoryLoad
 
 ------------------------------------------------------------------------
 
 run :: (E.ValueRepr v, MEM.Storable v b) => Env v b -> SimState v b a -> IO a
-run env state = fst <$> runStateT state env
+run env state = evalStateT (unSimState state) env
 {-# SPECIALIZE run :: Env D.RegVal Word8 -> SimState D.RegVal Word8 a -> IO a #-}
