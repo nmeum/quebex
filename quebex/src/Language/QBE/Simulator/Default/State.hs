@@ -7,9 +7,9 @@ module Language.QBE.Simulator.Default.State where
 
 import Control.Exception (assert)
 import Control.Monad (foldM)
-import Control.Monad.Catch (throwM)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, gets, modify, runStateT)
+import Control.Monad.Catch (Exception, throwM, MonadThrow)
+import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.State (StateT, get, lift, gets, modify, runStateT, evalStateT, MonadState)
 import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -224,8 +224,25 @@ allocData startAddr dataDefs =
 
 ------------------------------------------------------------------------
 
+data StateException v b = StateException (Env v b) Err.EvalError
+
+instance Show (StateException v b) where
+  show (StateException _ e) = show e
+
+instance Exception (StateException v b)
+
 -- | Simulator state, parameterized over a value and byte representation.
-type SimState v b = StateT (Env v b) IO
+newtype SimState v b a = SimState { unSimState :: StateT (Env v b) IO a }
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+deriving instance MonadState (Env v b) (SimState v b)
+
+instance MonadThrow (SimState v b) where
+  throwM err = do
+    s <- get
+    throwM $ StateException s err
+
+------------------------------------------------------------------------
 
 instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
@@ -284,5 +301,5 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
 ------------------------------------------------------------------------
 
 run :: (E.ValueRepr v, MEM.Storable v b) => Env v b -> SimState v b a -> IO a
-run env state = fst <$> runStateT state env
+run env state = evalStateT (unSimState state) env
 {-# SPECIALIZE run :: Env D.RegVal Word8 -> SimState D.RegVal Word8 a -> IO a #-}
