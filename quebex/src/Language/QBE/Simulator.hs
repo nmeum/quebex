@@ -14,7 +14,7 @@ module Language.QBE.Simulator
 where
 
 import Control.Monad (unless, void, when)
-import Control.Monad.Catch (throwM)
+import Control.Monad.Error.Class (throwError)
 import Data.Functor ((<&>))
 import Data.List (elemIndex, find, uncons)
 import Data.Map qualified as Map
@@ -53,7 +53,7 @@ execVolatile (QBE.Blit src dst toCopy) = do
   srcAddr <- toAddress srcAddrVal
   dstAddr <- toAddress dstAddrVal
   when (srcAddr /= dstAddr && addrOverlap srcAddr dstAddr toCopy) $
-    throwM $
+    throwError $
       OverlappingBlit srcAddr dstAddr
 
   -- Somehow allow specialization of memory copies, e.g. for quebex-symex.
@@ -142,7 +142,7 @@ execInstr retTy (QBE.Load ty addrVal) = do
 execInstr QBE.Long (QBE.Alloc align sizeValue) = do
   size <- lookupValue QBE.Long sizeValue
   stackAlloc size (fromIntegral $ QBE.getSize align)
-execInstr _ QBE.Alloc {} = throwM InvalidAddressType
+execInstr _ QBE.Alloc {} = throwError InvalidAddressType
 execInstr retTy (QBE.CompareInt intArg cmpOp lhs rhs) = do
   let cmpTy = QBE.i2BaseType intArg
   v1 <- lookupValue cmpTy lhs
@@ -171,7 +171,7 @@ execInstr QBE.Single (QBE.TruncDouble value) = do
   v <- lookupValue QBE.Double value
   liftMaybe TypingError $ E.truncFloat v
 -- truncd is only valid with a single return type.
-execInstr _ (QBE.TruncDouble _) = throwM TypingError
+execInstr _ (QBE.TruncDouble _) = throwError TypingError
 execInstr retTy (QBE.Copy value) = lookupValue retTy value
 execInstr retTy (QBE.FloatToInt floatArg isSigned value) = do
   v <- lookupValue (QBE.f2BaseType floatArg) value
@@ -236,10 +236,10 @@ execStmt (QBE.Call ret toCall params) = do
       -- XXX: Could also check funcDef for the return value.
       if isNothing ret
         then pure ()
-        else throwM FunctionReturnIgnored
+        else throwError FunctionReturnIgnored
     Just retVal ->
       case ret of
-        Nothing -> throwM AssignedVoidReturnValue
+        Nothing -> throwError AssignedVoidReturnValue
         Just (ident, abity) -> do
           let baseTy = QBE.abityToBase abity
           subTyped <- subType baseTy retVal
@@ -247,12 +247,12 @@ execStmt (QBE.Call ret toCall params) = do
 {-# INLINEABLE execStmt #-}
 
 execJump :: (Simulator m v) => QBE.JumpInstr -> m (BlockResult v)
-execJump QBE.Halt = throwM EncounteredHalt
+execJump QBE.Halt = throwError EncounteredHalt
 execJump (QBE.Jump ident) = do
   blocks <- QBE.fBlock <$> (activeFrame <&> stkFunc)
   case find (\x -> QBE.label x == ident) blocks of
     Just bl -> pure $ Right bl
-    Nothing -> throwM (UnknownBlock ident)
+    Nothing -> throwError (UnknownBlock ident)
 execJump (QBE.Jnz cond ifT ifF) = do
   condValue <- lookupValue QBE.Word cond
   condResult <- isTrue condValue
@@ -263,20 +263,20 @@ execJump (QBE.Return v) = do
     Just abity -> do
       retVal <-
         case v of
-          Nothing -> throwM InvalidReturnValue
+          Nothing -> throwError InvalidReturnValue
           Just x -> pure x
       lookupValue (QBE.abityToBase abity) retVal <&> (Left . Just)
     Nothing ->
       if isNothing v
         then pure (Left Nothing)
-        else throwM InvalidReturnValue
+        else throwError InvalidReturnValue
 {-# INLINEABLE execJump #-}
 
 execPhi :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Phi -> m ()
-execPhi Nothing _ = throwM InvalidPhiPosition
+execPhi Nothing _ = throwError InvalidPhiPosition
 execPhi (Just prevIdent) (QBE.Phi name ty labels) =
   case Map.lookup prevIdent labels of
-    Nothing -> throwM (UnknownBlock prevIdent)
+    Nothing -> throwError (UnknownBlock prevIdent)
     Just v -> do
       retVal <- lookupValue ty v
       modifyFrame (storeLocal name retVal)
@@ -308,7 +308,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
           then length args + 1 >= length params -- +1 for filtered '...'
           else length params == length args
   unless argsSane $
-    throwM (FuncArgsMismatch $ QBE.fName func)
+    throwError (FuncArgsMismatch $ QBE.fName func)
 
   -- Separate name and unnamed variadic arguments using 'numNamed'
   -- and create a 'StackFrame' for 'func' that captures both.
@@ -319,7 +319,7 @@ execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args 
 
   blockResult <- execTilRet Nothing block <* returnFromFunc
   case blockResult of
-    Right _block -> throwM MissingFunctionReturn
+    Right _block -> throwError MissingFunctionReturn
     Left maybeValue -> pure maybeValue
   where
     paramName :: QBE.FuncParam -> QBE.LocalIdent
