@@ -19,7 +19,7 @@ import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, runPath)
+import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, runPath, SimState(..))
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -79,10 +79,10 @@ findNext symVars eTrace = do
 
 -- TODO: Consider modelling changes of the PathSel (via findNext) and
 -- changes of the Store (via ST.finalize and ST.setModel) as a StateT.
-explorePath :: StateT Env IO a -> StateT Engine IO Bool
+explorePath :: SimState a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
-  (eTrace, nStore) <- lift $ evalStateT (runPath simState) env
+  (eTrace, nStore) <- lift $ evalStateT (unSimState $ runPath simState) env
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for
