@@ -9,7 +9,7 @@ import Control.Exception (assert)
 import Control.Monad (foldM)
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, gets, modify, runStateT)
+import Control.Monad.State (StateT, evalStateT, execStateT, gets, modify)
 import Data.Array.IO (IOArray)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -77,7 +77,7 @@ mkEnv prog a s = do
             envStkPtr = E.fromLit (QBE.Base QBE.Long) $ a + s - 1,
             envDataPtr = a
           }
-  snd <$> runStateT (initData dataMem) env
+  execStateT (initData dataMem) env
   where
     makeFuncs :: [QBE.FuncDef] -> Map.Map QBE.GlobalIdent QBE.FuncDef
     makeFuncs = Map.fromList . map (\f -> (QBE.fName f, f))
@@ -284,5 +284,5 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
 ------------------------------------------------------------------------
 
 run :: (E.ValueRepr v, MEM.Storable v b) => Env v b -> SimState v b a -> IO a
-run env state = fst <$> runStateT state env
+run env state = evalStateT state env
 {-# SPECIALIZE run :: Env D.RegVal Word8 -> SimState D.RegVal Word8 a -> IO a #-}

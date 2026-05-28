@@ -4,7 +4,7 @@
 
 module State (stateTests) where
 
-import Control.Monad.State (runStateT)
+import Control.Monad.State (evalStateT)
 import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, loadObj, mkEnv)
@@ -21,7 +21,7 @@ stateTests =
           let obj = QBE.OItem QBE.Byte [QBE.DString "foobar"]
 
           env <- mkEnv [] 0x1000 128 :: IO (Env D.RegVal Word8)
-          res <- fst <$> runStateT (loadObj 0x1000 obj) env
+          res <- evalStateT (loadObj 0x1000 obj) env
 
           res @?= 0x1006,
       -- TODO: Turn this into a QuickCheck 'testProperty'.
@@ -31,7 +31,7 @@ stateTests =
           let o2 = QBE.OItem (QBE.Base QBE.Word) [QBE.DConst $ QBE.Number 23]
 
           env <- mkEnv [] 0x0 128 :: IO (Env D.RegVal Word8)
-          res <- fst <$> runStateT (loadObj 0x0 o1 >>= flip loadObj o2) env
+          res <- evalStateT (loadObj 0x0 o1 >>= flip loadObj o2) env
 
           -- No padding inserted.
           res @?= 10

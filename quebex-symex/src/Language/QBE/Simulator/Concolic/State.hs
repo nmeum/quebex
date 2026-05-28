@@ -13,7 +13,7 @@ where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (MonadState, StateT, gets, modify, runStateT)
+import Control.Monad.State (MonadState, StateT, evalStateT, gets, modify, runStateT)
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program)
@@ -152,4 +152,4 @@ runPath state = do
   pure (t, s)
 
 run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
-run env state = fst <$> runStateT (runPath state) env
+run env state = evalStateT (runPath state) env
