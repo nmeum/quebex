@@ -11,6 +11,7 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
+import Control.Monad.Catch (try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
 import Data.Map qualified as Map
@@ -19,7 +20,7 @@ import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, runPath, SimState(..))
+import Language.QBE.Simulator.Concolic.State
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -82,7 +83,14 @@ findNext symVars eTrace = do
 explorePath :: SimState a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
-  (eTrace, nStore) <- lift $ evalStateT (unSimState $ runPath simState) env
+  maybeRunPath <- try $ lift (evalStateT (unSimState $ runPath simState) env)
+
+  let (eTrace, nStore) =
+        case maybeRunPath of
+          Left (err :: ErrorPath) ->
+            let st = epState err
+             in (errTracer st, errStore st)
+          Right rt -> rt
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for

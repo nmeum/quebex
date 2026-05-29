@@ -10,7 +10,7 @@ module Language.QBE.Simulator.Concolic.State
     makeConcolic,
     SimState (..),
     ErrorState (..),
-    ErrorPath,
+    ErrorPath (..),
   )
 where
 
@@ -112,7 +112,11 @@ data ErrorState
     errStore  :: ST.Store
   }
 
-data ErrorPath = ErrorPath ErrorState EvalError
+data ErrorPath
+  = ErrorPath
+  { epState :: ErrorState,
+    epError :: EvalError
+  }
 
 instance Exception ErrorPath
 
