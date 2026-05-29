@@ -11,6 +11,7 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
+import Debug.Trace (trace)
 import Control.Monad.Catch (try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
@@ -87,9 +88,9 @@ explorePath simState = do
 
   let (eTrace, nStore) =
         case maybeRunPath of
-          Left (err :: ErrorPath) ->
+          Left (err :: ErrorPath) -> do
             let st = epState err
-             in (errTracer st, errStore st)
+             in trace ("ERROR CASE: " ++ show (ST.cValues $ errStore st)) (errTracer st, errStore st)
           Right rt -> rt
 
   -- Before finalizing the store, we can extract the variables we encountered
