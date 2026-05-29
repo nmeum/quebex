@@ -9,15 +9,17 @@ module Language.QBE.Simulator.Concolic.State
     runPath,
     makeConcolic,
     SimState (..),
+    ErrorState (..),
+    ErrorPath,
   )
 where
 
-import Control.Exception (assert, throwIO, catch)
+import Control.Exception (throwIO, catch)
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Error.Class (throwError, catchError, MonadError)
-import Control.Monad.Catch (throwM)
+import Control.Monad.Catch (Exception)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (MonadState, StateT(StateT), gets, modify, runStateT)
+import Control.Monad.State (MonadState, StateT(StateT), get, gets, modify, runStateT)
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program)
@@ -104,13 +106,28 @@ findSimFunc ident = lookupSimFunc ident
 
 ------------------------------------------------------------------------
 
+data ErrorState
+  = ErrorState
+  { errTracer :: T.ExecTrace,
+    errStore  :: ST.Store
+  }
+
+data ErrorPath = ErrorPath ErrorState EvalError
+
+instance Exception ErrorPath
+
+instance Show ErrorPath where
+  show (ErrorPath _ err) = show err
+
 newtype SimState a = SimState { unSimState :: StateT Env IO a }
   deriving (Functor, Applicative, Monad, MonadIO)
 
 deriving instance MonadState Env SimState
 
 instance MonadError EvalError SimState where
-  throwError = liftIO . throwIO
+  throwError err = do
+    Env { envTracer = t, envStore = s } <- get
+    liftIO $ throwIO (ErrorPath (ErrorState t s) err)
   catchError (SimState st) handler =
     SimState $ StateT $ \s -> do
       let state = runStateT st s
