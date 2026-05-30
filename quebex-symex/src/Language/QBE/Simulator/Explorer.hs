@@ -4,7 +4,7 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expErr, expPathVars, expPathTrace),
+    Engine (expPathErr, expPathVars, expPathTrace),
     newEngine,
     explorePath,
     exploreFunc,
@@ -61,7 +61,7 @@ data Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
-    expErr :: Maybe EvalError,
+    expPathErr :: Maybe EvalError,
     expPathVars :: ST.Assign,
     expPathTrace :: T.ExecTrace
   }
@@ -72,7 +72,7 @@ newEngine env solver =
     { expSolver = solver,
       expPathSel = newPathSel,
       expEnv = env,
-      expErr = Nothing,
+      expPathErr = Nothing,
       expPathVars = Map.empty,
       expPathTrace = []
     }
@@ -106,7 +106,7 @@ explorePath simState = do
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expErr = mayErr, expPathVars = varAssign, expPathTrace = eTrace}
+  put $ engine {expPathErr = mayErr, expPathVars = varAssign, expPathTrace = eTrace}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
