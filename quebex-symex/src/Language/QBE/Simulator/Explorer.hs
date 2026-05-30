@@ -4,7 +4,7 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expPathVars, expPathTrace),
+    Engine (expErr, expPathVars, expPathTrace),
     newEngine,
     explorePath,
     exploreFunc,
@@ -28,6 +28,7 @@ import Language.QBE.Simulator.Concolic.State
     makeConcolic,
     runPath,
   )
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -60,6 +61,7 @@ data Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
+    expErr :: Maybe EvalError,
     expPathVars :: ST.Assign,
     expPathTrace :: T.ExecTrace
   }
@@ -91,19 +93,19 @@ explorePath :: SimState a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
   maybePath <- try $ run env
-  let (eTrace, nStore) =
+  let (mayErr, eTrace, nStore) =
         case maybePath of
           Left (err :: ErrorPath) ->
             let st = pathInput err
-             in (errTracer st, errStore st)
-          Right p -> p
+             in (Just err, errTracer st, errStore st)
+          Right (t, s) -> (Nothing, t, s)
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
+  put $ engine {expErr = mayErr, expPathVars = varAssign, expPathTrace = eTrace}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
