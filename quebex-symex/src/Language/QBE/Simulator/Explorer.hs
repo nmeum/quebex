@@ -113,8 +113,7 @@ explorePath simState = do
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-      pathResult = PathResult mayErr eTrace varAssign
-  put $ engine {expLastPath = pathResult}
+  put $ engine {expLastPath = PathResult mayErr eTrace varAssign}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
