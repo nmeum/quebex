@@ -22,7 +22,7 @@ import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State
   ( Env (envStore),
-    ErrorPath (pathInput),
+    ErrorPath (pathError, pathInput),
     ErrorState (errStore, errTracer),
     SimState (..),
     makeConcolic,
@@ -72,6 +72,7 @@ newEngine env solver =
     { expSolver = solver,
       expPathSel = newPathSel,
       expEnv = env,
+      expErr = Nothing,
       expPathVars = Map.empty,
       expPathTrace = []
     }
@@ -97,7 +98,7 @@ explorePath simState = do
         case maybePath of
           Left (err :: ErrorPath) ->
             let st = pathInput err
-             in (Just err, errTracer st, errStore st)
+             in (Just $ pathError err, errTracer st, errStore st)
           Right (t, s) -> (Nothing, t, s)
 
   -- Before finalizing the store, we can extract the variables we encountered
