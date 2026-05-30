@@ -124,7 +124,7 @@ data ErrorState
 data ErrorPath
   = ErrorPath
   { pathInput :: ErrorState,
-    patherror :: EvalError
+    pathError :: EvalError
   }
 
 instance Exception ErrorPath
