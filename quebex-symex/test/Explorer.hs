@@ -221,5 +221,27 @@ exploreTests =
           (prog, funcDef) <- parseAndFind (QBE.GlobalIdent "main") qbe
           eTraces <- explore' prog funcDef []
 
-          length eTraces @?= 3
+          length eTraces @?= 3,
+      testCase "explore a path with an error case" $
+        do
+          let qbe =
+                "data $.Lstring.1 = align 1 { b \"a\", b 0 }\n\
+                \export\n\
+                \function w $main() {\n\
+                \@body\n\
+                \%.1 =l alloc4 4\n\
+                \call $quebex_make_symbolic(l %.1, l 1, l 4, l $.Lstring.1)\n\
+                \%.2 =w loadw %.1\n\
+                \%.3 =w ceqw %.2, 42\n\
+                \jnz %.3, @if_true.2, @if_false.3\n\
+                \@error\n\
+                \hlt\n\
+                \@okay\n\
+                \ret 0\n\
+                \}"
+
+          (prog, funcDef) <- parseAndFind (QBE.GlobalIdent "main") qbe
+          eTraces <- explore' prog funcDef []
+
+          length eTraces @?= 2
     ]
