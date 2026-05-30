@@ -4,7 +4,7 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expPathVars, expPathTrace),
+    Engine (expPathErr, expPathVars, expPathTrace),
     newEngine,
     explorePath,
     exploreFunc,
@@ -22,12 +22,13 @@ import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State
   ( Env (envStore),
-    ErrorPath (pathInput),
+    ErrorPath (pathError, pathInput),
     ErrorState (errStore, errTracer),
     SimState (..),
     makeConcolic,
     runPath,
   )
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -60,6 +61,7 @@ data Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
+    expPathErr :: Maybe EvalError,
     expPathVars :: ST.Assign,
     expPathTrace :: T.ExecTrace
   }
@@ -70,6 +72,7 @@ newEngine env solver =
     { expSolver = solver,
       expPathSel = newPathSel,
       expEnv = env,
+      expPathErr = Nothing,
       expPathVars = Map.empty,
       expPathTrace = []
     }
@@ -91,19 +94,19 @@ explorePath :: SimState a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
   maybePath <- try $ run env
-  let (eTrace, nStore) =
+  let (mayErr, eTrace, nStore) =
         case maybePath of
           Left (err :: ErrorPath) ->
             let st = pathInput err
-             in (errTracer st, errStore st)
-          Right p -> p
+             in (Just $ pathError err, errTracer st, errStore st)
+          Right (t, s) -> (Nothing, t, s)
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
+  put $ engine {expPathErr = mayErr, expPathVars = varAssign, expPathTrace = eTrace}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
