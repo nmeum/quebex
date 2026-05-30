@@ -13,7 +13,8 @@ import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer
-  ( Engine (expPathVars),
+  ( Engine (expLastPath),
+    PathResult (pathVars),
     defSolver,
     explorePath,
     logSolver,
@@ -102,7 +103,7 @@ exploreEntry opts ktest engine entry =
       morePaths <- explorePath st
       case ktest of
         Just conf -> do
-          assign <- gets (fromAssign . expPathVars)
+          assign <- gets (fromAssign . pathVars . expLastPath)
           liftIO $ writeKTest conf n assign
         Nothing -> pure ()
 
