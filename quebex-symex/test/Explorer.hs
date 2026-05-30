@@ -10,24 +10,28 @@ import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Language.QBE (Program, parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
+import Language.QBE.Simulator.Explorer
+  ( PathResult (..),
+    defSolver,
+    exploreFunc,
+    newEngine,
+  )
 import Language.QBE.Types qualified as QBE
 import Test.Tasty
 import Test.Tasty.HUnit
 
-branchPoints :: [(ST.Assign, T.ExecTrace)] -> [[Bool]]
-branchPoints lst = sort $ map (\(_, t) -> map fst t) lst
+branchPoints :: [PathResult] -> [[Bool]]
+branchPoints lst = sort $ map (\(PathResult _ t _) -> map fst t) lst
 
-findAssign :: [(ST.Assign, T.ExecTrace)] -> [Bool] -> Maybe ST.Assign
+findAssign :: [PathResult] -> [Bool] -> Maybe ST.Assign
 findAssign [] _ = Nothing
-findAssign ((a, eTrace) : xs) toFind
+findAssign ((PathResult _ eTrace a) : xs) toFind
   | map fst eTrace == toFind = Just a
   | otherwise = findAssign xs toFind
 
-explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
+explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [PathResult]
 explore' prog entry params = do
   defEnv <- mkEnv prog 0 128 Nothing
   engine <- newEngine defEnv <$> defSolver
