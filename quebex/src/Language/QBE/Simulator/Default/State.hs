@@ -5,7 +5,7 @@
 
 module Language.QBE.Simulator.Default.State where
 
-import Control.Exception (assert, catch, throwIO)
+import Control.Exception (Exception, assert, catch, throwIO)
 import Control.Monad (foldM)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -232,6 +232,18 @@ allocData startAddr dataDefs =
 
 ------------------------------------------------------------------------
 
+-- | Unlift 'IOException' handling into a generic 'StateT' monad.
+--
+-- See also: <https://hackage.haskell.org/package/unliftio>.
+unliftCatch ::
+  (Exception t) =>
+  StateT s IO a -> (t -> StateT s IO a) -> StateT s IO a
+unliftCatch st handler = do
+  StateT $ \s -> do
+    let state = runStateT st s
+    state `catch` (\e -> runStateT (handler e) s)
+{-# INLINEABLE unliftCatch #-}
+
 -- | Simulator state, parameterized over a value and byte representation.
 newtype SimState v b a = SimState {unSimState :: StateT (Env v b) IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -244,9 +256,7 @@ deriving instance MonadState (Env v b) (SimState v b)
 instance MonadError Err.EvalError (SimState v b) where
   throwError = liftIO . throwIO
   catchError (SimState st) handler =
-    SimState $ StateT $ \s -> do
-      let state = runStateT st s
-      state `catch` (\e -> runStateT (unSimState $ handler e) s)
+    SimState $ unliftCatch st (unSimState . handler)
 
 ------------------------------------------------------------------------
 

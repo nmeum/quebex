@@ -14,7 +14,7 @@ module Language.QBE.Simulator.Concolic.State
   )
 where
 
-import Control.Exception (Exception, catch, throwIO)
+import Control.Exception (Exception, throwIO)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.State
@@ -150,9 +150,7 @@ instance MonadError EvalError SimState where
     liftIO $ throwIO (ErrorPath (ErrorState t s) err)
 
   catchError (SimState st) handler =
-    SimState $ StateT $ \s -> do
-      let state = runStateT st s
-      state `catch` (\e -> runStateT (unSimState $ handler e) s)
+    SimState $ DS.unliftCatch st (unSimState . handler)
 
 ------------------------------------------------------------------------
 
