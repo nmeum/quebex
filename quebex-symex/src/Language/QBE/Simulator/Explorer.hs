@@ -135,7 +135,7 @@ exploreFunc ::
   Engine ->
   QBE.FuncDef ->
   [(String, QBE.ExtType)] ->
-  IO [(ST.Assign, T.ExecTrace)]
+  IO [PathResult]
 exploreFunc engine entry params = do
   let funcState = mapM (uncurry makeConcolic) params >>= execFunc entry
   evalStateT (exploreFunc' funcState) engine
@@ -144,8 +144,7 @@ exploreFunc engine entry params = do
       morePaths <- explorePath st
       curEngine <- get
 
-      let res = expLastPath curEngine
-          ret = (pathVars res, pathTrace res)
+      let ret = expLastPath curEngine
        in if morePaths
             then (ret :) <$> exploreFunc' st
             else pure [ret]
