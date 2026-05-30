@@ -8,14 +8,24 @@ module Language.QBE.Simulator.Concolic.State
     run,
     runPath,
     makeConcolic,
+    ErrorState (..),
+    ErrorPath (..),
     SimState (..),
   )
 where
 
-import Control.Exception (catch, throwIO)
+import Control.Exception (Exception, catch, throwIO)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.State (MonadState, StateT (StateT), evalStateT, gets, modify, runStateT)
+import Control.Monad.State
+  ( MonadState,
+    StateT (StateT),
+    evalStateT,
+    get,
+    gets,
+    modify,
+    runStateT,
+  )
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program)
@@ -102,13 +112,43 @@ findSimFunc ident = lookupSimFunc ident
 
 ------------------------------------------------------------------------
 
+-- | State of the concolic executor with which an error was triggered
+-- in the application code, which can be reproduced using this state.
+data ErrorState
+  = ErrorState
+  { errTracer :: T.ExecTrace,
+    errStore :: ST.Store
+  }
+
+-- | Exception thrown upon encountered an 'ErrorState'.
+data ErrorPath
+  = ErrorPath
+  { pathInput :: ErrorState,
+    patherror :: EvalError
+  }
+
+instance Exception ErrorPath
+
+instance Show ErrorPath where
+  show (ErrorPath _ err) = show err
+
+------------------------------------------------------------------------
+
 newtype SimState a = SimState {unSimState :: StateT Env IO a}
   deriving (Functor, Applicative, Monad, MonadIO)
 
 deriving instance MonadState Env SimState
 
+-- Implements 'MonadError' in 'SimState' via 'IOException's. On throw,
+-- it also returns the relevant executor state by encapsulting it in
+-- an 'ErrorPath'.
+--
+-- See also: The instance for 'DS.SimState'.
 instance MonadError EvalError SimState where
-  throwError = liftIO . throwIO
+  throwError err = do
+    Env {envTracer = t, envStore = s} <- get
+    liftIO $ throwIO (ErrorPath (ErrorState t s) err)
+
   catchError (SimState st) handler =
     SimState $ StateT $ \s -> do
       let state = runStateT st s
