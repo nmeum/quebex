@@ -19,6 +19,7 @@ import Language.QBE.Simulator.Explorer
     newEngine,
   )
 import Language.QBE.Types qualified as QBE
+import System.FilePath ((</>))
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -37,6 +38,11 @@ explore' prog entry params = do
   engine <- newEngine defEnv <$> defSolver
 
   exploreFunc engine entry $ map (second QBE.Base) params
+
+getFuncAndProg :: FilePath -> QBE.GlobalIdent -> IO (Program, QBE.FuncDef)
+getFuncAndProg fileName funcName =
+  let filePath = "test" </> "testdata" </> fileName
+   in readFile filePath >>= parseAndFind funcName
 
 ------------------------------------------------------------------------
 
@@ -254,5 +260,22 @@ exploreTests =
 
           let errorVars = pathVars $ fst $ fromJust $ uncons wErr
               errorVal = Map.lookup "a1" errorVars
-          errorVal @?= Just (DE.VWord 42)
+          errorVal @?= Just (DE.VWord 42),
+      testCase "explore program with multiple paths to error" $
+        do
+          (prog, funcDef) <-
+            getFuncAndProg
+              "insertion-sort-error-on-42.qbe"
+              (QBE.GlobalIdent "main")
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 8
+          length woErr @?= 6
+
+          -- every path on the error case must contain 42 in its input.
+          let vals = map (Map.elems . pathVars) wErr
+          let has42 = elem (DE.VWord 42)
+          length (filter has42 vals) @?= 8
     ]

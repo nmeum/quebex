@@ -1,0 +1,104 @@
+export
+function $__assert_fail() {
+@start.1
+@body.2
+	hlt
+}
+export
+function $insertionSort(l %.1, w %.3) {
+@start.3
+	%.2 =l alloc8 8
+	storel %.1, %.2
+	%.4 =l alloc4 4
+	storew %.3, %.4
+	%.5 =l alloc4 4
+	%.9 =l alloc4 4
+	%.12 =l alloc4 4
+@body.4
+	storew 1, %.5
+@for_cond.5
+	%.6 =w loadw %.5
+	%.7 =w loadw %.4
+	%.8 =w csltw %.6, %.7
+	jnz %.8, @for_body.6, @for_join.8
+@for_body.6
+	%.10 =w loadw %.5
+	%.11 =w sub %.10, 1
+	storew %.11, %.9
+	%.13 =l loadl %.2
+	%.14 =w loadw %.5
+	%.15 =l extsw %.14
+	%.16 =l mul %.15, 4
+	%.17 =l add %.13, %.16
+	%.18 =w loadw %.17
+	storew %.18, %.12
+@while_cond.9
+	%.19 =w loadw %.9
+	%.20 =w csgew %.19, 0
+	jnz %.20, @logic_right.12, @logic_join.13
+@logic_right.12
+	%.21 =w loadw %.12
+	%.22 =l loadl %.2
+	%.23 =w loadw %.9
+	%.24 =l extsw %.23
+	%.25 =l mul %.24, 4
+	%.26 =l add %.22, %.25
+	%.27 =w loadw %.26
+	%.28 =w csltw %.21, %.27
+	%.29 =w cnew %.28, 0
+@logic_join.13
+	%.30 =w phi @while_cond.9 0, @logic_right.12 %.29
+	jnz %.30, @while_body.10, @while_join.11
+@while_body.10
+	%.31 =l loadl %.2
+	%.32 =w loadw %.9
+	%.33 =l extsw %.32
+	%.34 =l mul %.33, 4
+	%.35 =l add %.31, %.34
+	%.36 =w loadw %.35
+	%.37 =l loadl %.2
+	%.38 =w loadw %.9
+	%.39 =w add %.38, 1
+	%.40 =l extsw %.39
+	%.41 =l mul %.40, 4
+	%.42 =l add %.37, %.41
+	storew %.36, %.42
+	%.43 =w loadw %.9
+	%.44 =w sub %.43, 1
+	storew %.44, %.9
+	jmp @while_cond.9
+@while_join.11
+	%.45 =w loadw %.12
+	%.46 =l loadl %.2
+	%.47 =w loadw %.9
+	%.48 =w add %.47, 1
+	%.49 =l extsw %.48
+	%.50 =l mul %.49, 4
+	%.51 =l add %.46, %.50
+	storew %.45, %.51
+	%.52 =w loadw %.12
+	%.53 =w ceqw %.52, 42
+	jnz %.53, @if_true.14, @if_false.15
+@if_true.14
+	call $__assert_fail()
+	hlt
+@if_false.15
+@for_cont.7
+	%.54 =w loadw %.5
+	%.55 =w add %.54, 1
+	storew %.55, %.5
+	jmp @for_cond.5
+@for_join.8
+	ret
+}
+data $.Lstring.4 = align 1 { b "array\000", }
+export
+function w $main() {
+@start.16
+	%.1 =l alloc4 12
+@body.17
+	%.2 =l extsw 3
+	call $quebex_make_symbolic(l %.1, l %.2, l 4, l $.Lstring.4)
+	call $insertionSort(l %.1, w 3)
+	ret 0
+}
