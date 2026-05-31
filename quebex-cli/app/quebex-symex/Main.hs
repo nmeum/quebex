@@ -15,7 +15,7 @@ import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Explorer
   ( Engine (expLastPath),
-    PathResult (pathExp, pathVars),
+    PathResult (pathErr, pathVars),
     defSolver,
     explorePath,
     logSolver,
@@ -131,7 +131,7 @@ exploreEntry opts ktest engine entry =
       morePaths <- explorePath st
 
       lastPath <- gets expLastPath
-      logLevel <- case pathExp lastPath of
+      logLevel <- case pathErr lastPath of
         Just err -> do
           liftIO $ printErr n err
           pure LogErr

@@ -59,7 +59,7 @@ logSolver handle = do
 
 data PathResult
   = PathResult
-  { pathExp :: Maybe EvalError,
+  { pathErr :: Maybe EvalError,
     pathTrace :: T.ExecTrace,
     pathVars :: ST.Assign
   }
