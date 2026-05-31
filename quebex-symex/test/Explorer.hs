@@ -276,6 +276,6 @@ exploreTests =
 
           -- every path on the error case must contain 42 in its input.
           let vals = map (Map.elems . pathVars) wErr
-          let has42 = any (\x -> x == DE.VWord 42)
+          let has42 = elem (DE.VWord 42)
           length (filter has42 vals) @?= 8
     ]
