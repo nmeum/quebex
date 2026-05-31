@@ -5,9 +5,9 @@
 module Explorer (exploreTests) where
 
 import Data.Bifunctor (second)
-import Data.List (sort)
+import Data.List (partition, sort, uncons)
 import Data.Map qualified as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import Language.QBE (Program, parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Simulator.Concolic.State (mkEnv)
@@ -237,7 +237,7 @@ exploreTests =
                 \call $quebex_make_symbolic(l %.1, l 1, l 4, l $.Lstring.1)\n\
                 \%.2 =w loadw %.1\n\
                 \%.3 =w ceqw %.2, 42\n\
-                \jnz %.3, @if_true.2, @if_false.3\n\
+                \jnz %.3, @error, @okay\n\
                 \@error\n\
                 \hlt\n\
                 \@okay\n\
@@ -245,7 +245,14 @@ exploreTests =
                 \}"
 
           (prog, funcDef) <- parseAndFind (QBE.GlobalIdent "main") qbe
-          eTraces <- explore' prog funcDef []
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
 
-          length eTraces @?= 2
+          length wErr @?= 1
+          length woErr @?= 1
+
+          let errorVars = pathVars $ fst $ fromJust $ uncons wErr
+              errorVal = Map.lookup "a1" errorVars
+          errorVal @?= Just (DE.VWord 42)
     ]
