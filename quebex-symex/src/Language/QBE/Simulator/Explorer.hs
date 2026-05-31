@@ -63,6 +63,7 @@ data PathResult
     pathTrace :: T.ExecTrace,
     pathVars :: ST.Assign
   }
+  deriving (Show, Eq)
 
 initPath :: PathResult
 initPath = PathResult Nothing [] Map.empty
