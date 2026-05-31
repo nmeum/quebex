@@ -38,8 +38,3 @@ SPDX-License-Identifier = "Unlicense"
 path = "quebex-cli/test/testdata/*.ktest"
 SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
 SPDX-License-Identifier = "Unlicense"
-
-[[annotations]]
-path = "TODO.txt"
-SPDX-FileCopyrightText = "2025 Sören Tempel <soeren+git@soeren-tempel.net>"
-SPDX-License-Identifier = "Unlicense"
