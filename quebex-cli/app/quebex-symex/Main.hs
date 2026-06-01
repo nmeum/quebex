@@ -13,6 +13,7 @@ import Language.QBE.Backend.Store (Assign)
 import Language.QBE.CmdLine qualified as CMD
 import Language.QBE.Simulator (execFunc)
 import Language.QBE.Simulator.Concolic.State (mkEnv)
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Simulator.Explorer
   ( Engine (expLastPath),
     PathResult (pathErr, pathVars),
@@ -32,7 +33,7 @@ import Text.Printf (printf)
 data Opts = Opts
   { optLog :: Maybe FilePath,
     optSeed :: Maybe Int,
-    optTestDir :: FilePath,
+    optTestDir :: Maybe FilePath,
     optErrExit :: Bool,
     optWriteAll :: Bool,
     optVerbose :: Bool,
@@ -58,12 +59,13 @@ optsParser =
               <> OPT.help "Initial seed to for the random number generator"
           )
       )
-    <*> OPT.strOption
-      ( OPT.long "test-cases"
-          <> OPT.short 't'
-          <> OPT.metavar "FILE"
-          <> OPT.value "quebex-results"
-          <> OPT.help "Directory to write generate test inputs to"
+    <*> OPT.optional
+      ( OPT.strOption
+          ( OPT.long "test-cases"
+              <> OPT.short 't'
+              <> OPT.metavar "FILE"
+              <> OPT.help "Directory to write generate test inputs to"
+          )
       )
     <*> OPT.switch
       ( OPT.long "exit-on-error"
@@ -100,8 +102,9 @@ mkKTestConf level directory name = do
   createDirectoryIfMissing True directory
   pure $ KTestConf level directory name
 
-writeAssign :: KTestConf -> LogLevel -> Int -> Assign -> IO ()
-writeAssign conf level pathID assign
+writeAssign :: Maybe KTestConf -> LogLevel -> Int -> Assign -> IO ()
+writeAssign Nothing _ _ _ = pure ()
+writeAssign (Just conf) level pathID assign
   | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
   | otherwise = pure ()
 
@@ -118,20 +121,31 @@ writeKTest KTestConf {confPath = directory, confName = name} pathID =
 
 ------------------------------------------------------------------------
 
-exploreEntry :: Opts -> KTestConf -> Engine -> QBE.FuncDef -> IO Int
-exploreEntry opts ktest engine entry =
-  evalStateT (go 1 $ execFunc entry []) engine
+handleError :: Opts -> Maybe KTestConf -> Int -> EvalError -> IO ()
+handleError opts ktest n err = do
+  printErr
+  when (optErrExit opts) $
+    die "Exiting due to encountered error"
   where
-    printErr n err = do
+    printErr = do
       hPutStrLn stderr $
         "Encoundered error on path #"
           ++ show n
           ++ ": "
           ++ show err
           ++ "\n"
-          ++ "↳ Check the generated .ktest file in "
-          ++ show (confPath ktest)
+          ++ "↳ "
+          ++ printPath ktest
 
+    printPath :: Maybe KTestConf -> String
+    printPath Nothing = "Pass --test-cases to dump test input in KTest format"
+    printPath (Just kt) =
+      "Check the generated .ktest file in " ++ show (confPath kt)
+
+exploreEntry :: Opts -> Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
+exploreEntry opts ktest engine entry =
+  evalStateT (go 1 $ execFunc entry []) engine
+  where
     go n st = do
       when (optVerbose opts) $
         liftIO (putStrLn $ "Exploring path " ++ show n ++ "...")
@@ -140,9 +154,7 @@ exploreEntry opts ktest engine entry =
       lastPath <- gets expLastPath
       logLevel <- case pathErr lastPath of
         Just err -> liftIO $ do
-          printErr n err
-          when (optErrExit opts) $
-            die "Exiting due to encountered error"
+          handleError opts ktest n err
           pure LogErr
         Nothing -> pure LogAll
 
@@ -157,7 +169,11 @@ exploreFile opts@Opts {optBase = base} = do
 
   let binName = CMD.optQBEFile $ optBase opts
       logLevel = if optWriteAll opts then LogAll else LogErr
-  ktest <- mkKTestConf logLevel (optTestDir opts) binName
+  ktest <-
+    case optTestDir opts of
+      Just dir -> do
+        Just <$> mkKTestConf logLevel dir binName
+      Nothing -> pure Nothing
 
   env <- mkEnv prog (CMD.optMemStart base) (CMD.optMemSize base) (optSeed opts)
   case optLog opts of
