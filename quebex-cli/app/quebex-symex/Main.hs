@@ -108,16 +108,20 @@ writeAssign (Just conf) level pathID assign
   | level >= confLevel conf = writeKTest conf pathID (fromAssign assign)
   | otherwise = pure ()
 
+testCasePath :: KTestConf -> Int -> FilePath
+testCasePath (KTestConf {confPath = directory}) n =
+  addExtension
+    (directory </> ("test" ++ printf "%06d" n))
+    ".ktest"
+
 writeKTest :: KTestConf -> Int -> [KTestObj] -> IO ()
-writeKTest KTestConf {confPath = directory, confName = name} pathID =
+writeKTest conf@(KTestConf {confName = name}) pathID =
   writeKTest' pathID . KTest [fromString name]
   where
     writeKTest' :: Int -> KTest -> IO ()
     writeKTest' n ktest = do
       flip encodeFile ktest $
-        addExtension
-          (directory </> ("test" ++ printf "%06d" n))
-          ".ktest"
+        testCasePath conf n
 
 ------------------------------------------------------------------------
 
@@ -138,9 +142,9 @@ handleError opts ktest n err = do
           ++ printPath ktest
 
     printPath :: Maybe KTestConf -> String
-    printPath Nothing = "Pass --test-cases to dump test input in KTest format"
+    printPath Nothing = "Pass --test-cases to generate test case"
     printPath (Just kt) =
-      "Check the generated .ktest file in " ++ show (confPath kt)
+      "Refer to the KTest file in " ++ show (testCasePath kt n)
 
 exploreEntry :: Opts -> Maybe KTestConf -> Engine -> QBE.FuncDef -> IO Int
 exploreEntry opts ktest engine entry =
