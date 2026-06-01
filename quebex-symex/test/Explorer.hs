@@ -277,5 +277,21 @@ exploreTests =
           -- every path on the error case must contain 42 in its input.
           let vals = map (Map.elems . pathVars) wErr
           let has42 = elem (DE.VWord 42)
-          length (filter has42 vals) @?= 8
+          length (filter has42 vals) @?= length wErr,
+      testCase "continue exploration after single path to error" $
+        do
+          (prog, funcDef) <-
+            getFuncAndProg
+              "single-error-case.qbe"
+              (QBE.GlobalIdent "main")
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 1
+          length woErr @?= 20
+
+          let errorVars = pathVars $ fst $ fromJust $ uncons wErr
+              errorVal = Map.lookup "prime1" errorVars
+          errorVal @?= Just (DE.VWord 43)
     ]
