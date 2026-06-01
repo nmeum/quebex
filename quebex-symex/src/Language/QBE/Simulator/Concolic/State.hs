@@ -1,4 +1,4 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
@@ -8,12 +8,24 @@ module Language.QBE.Simulator.Concolic.State
     run,
     runPath,
     makeConcolic,
+    ErrorState (..),
+    ErrorPath (..),
+    SimState (..),
   )
 where
 
-import Control.Monad.Catch (throwM)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (MonadState, StateT, evalStateT, gets, modify, runStateT)
+import Control.Exception (Exception, throwIO)
+import Control.Monad.Error.Class (MonadError, catchError, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.State
+  ( MonadState,
+    StateT (StateT),
+    evalStateT,
+    get,
+    gets,
+    modify,
+    runStateT,
+  )
 import Data.Map qualified as Map
 import Data.Word (Word8)
 import Language.QBE (Program)
@@ -54,14 +66,14 @@ mkEnv prog memStart memSize maySeed = do
 
 liftState ::
   (DS.SimState (CE.Concolic DE.RegVal) (CE.Concolic Word8)) a ->
-  (StateT Env IO) a
-liftState toLift = do
+  SimState a
+liftState (DS.SimState toLift) = do
   defEnv <- gets envBase
   (a, s) <- liftIO $ runStateT toLift defEnv
   modify (\ps -> ps {envBase = s})
   pure a
 
-makeConcolic :: String -> QBE.ExtType -> StateT Env IO (CE.Concolic DE.RegVal)
+makeConcolic :: String -> QBE.ExtType -> SimState (CE.Concolic DE.RegVal)
 makeConcolic name ty = do
   st <- gets envStore
   let (ns, cv) = ST.getConcolic st name ty
@@ -75,7 +87,7 @@ modifyTracer f =
 makeSymbolicArray ::
   QBE.GlobalIdent ->
   [CE.Concolic DE.RegVal] ->
-  StateT Env IO (Maybe (CE.Concolic DE.RegVal))
+  SimState (Maybe (CE.Concolic DE.RegVal))
 makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
   name <- E.toString <$> (toAddress namePtr >>= readNullArray)
   vlty <- case E.toWord64 elemSize of
@@ -83,7 +95,7 @@ makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
     2 -> pure QBE.HalfWord
     4 -> pure (QBE.Base QBE.Word)
     8 -> pure (QBE.Base QBE.Long)
-    _ -> throwM TypingError
+    _ -> throwError TypingError
 
   values <-
     mapM
@@ -91,14 +103,58 @@ makeSymbolicArray _ [arrayPtr, numElem, elemSize, namePtr] = do
       [1 .. E.toWord64 numElem]
 
   arrayAddr <- toAddress arrayPtr
-  liftState (DS.storeValues arrayAddr values) >> pure Nothing
-makeSymbolicArray ident _ = throwM $ FuncArgsMismatch ident
+  liftState (DS.SimState $ DS.storeValues arrayAddr values) >> pure Nothing
+makeSymbolicArray ident _ = throwError $ FuncArgsMismatch ident
 
-findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> (StateT Env IO) (Maybe (CE.Concolic DE.RegVal)))
+findSimFunc :: QBE.GlobalIdent -> Maybe ([CE.Concolic DE.RegVal] -> SimState (Maybe (CE.Concolic DE.RegVal)))
 findSimFunc i@(QBE.GlobalIdent "quebex_make_symbolic") = Just (makeSymbolicArray i)
 findSimFunc ident = lookupSimFunc ident
 
-instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
+------------------------------------------------------------------------
+
+-- | State of the concolic executor with which an error was triggered
+-- in the application code, which can be reproduced using this state.
+data ErrorState
+  = ErrorState
+  { errTracer :: T.ExecTrace,
+    errStore :: ST.Store
+  }
+
+-- | Exception thrown upon encountered an 'ErrorState'.
+data ErrorPath
+  = ErrorPath
+  { pathInput :: ErrorState,
+    pathError :: EvalError
+  }
+
+instance Exception ErrorPath
+
+instance Show ErrorPath where
+  show (ErrorPath _ err) = show err
+
+------------------------------------------------------------------------
+
+newtype SimState a = SimState {unSimState :: StateT Env IO a}
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+deriving instance MonadState Env SimState
+
+-- Implements 'MonadError' in 'SimState' via 'IOException's. On throw,
+-- it also returns the relevant executor state by encapsulting it in
+-- an 'ErrorPath'.
+--
+-- See also: The instance for 'DS.SimState'.
+instance MonadError EvalError SimState where
+  throwError err = do
+    Env {envTracer = t, envStore = s} <- get
+    liftIO $ throwIO (ErrorPath (ErrorState t s) err)
+
+  catchError (SimState st) handler =
+    SimState $ DS.unliftCatch st (unSimState . handler)
+
+------------------------------------------------------------------------
+
+instance Simulator SimState (CE.Concolic DE.RegVal) where
   isTrue value = do
     let condResult = E.toWord64 (CE.concrete value) /= 0
     case CE.symbolic value of
@@ -118,7 +174,7 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
           Just c -> do
             modifyTracer (`T.appendCons` c)
             pure $ E.toWord64 cv
-          Nothing -> throwM TypingError
+          Nothing -> throwError TypingError
       Nothing -> pure $ E.toWord64 cv
 
   findFunc ident = do
@@ -144,12 +200,12 @@ instance Simulator (StateT Env IO) (CE.Concolic DE.RegVal) where
 
 ------------------------------------------------------------------------
 
-runPath :: StateT Env IO a -> StateT Env IO (T.ExecTrace, ST.Store)
+runPath :: SimState a -> SimState (T.ExecTrace, ST.Store)
 runPath state = do
   _ <- state
   t <- gets envTracer
   s <- gets envStore
   pure (t, s)
 
-run :: Env -> StateT Env IO a -> IO (T.ExecTrace, ST.Store)
-run env state = evalStateT (runPath state) env
+run :: Env -> SimState a -> IO (T.ExecTrace, ST.Store)
+run env state = evalStateT (unSimState $ runPath state) env

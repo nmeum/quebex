@@ -1,38 +1,48 @@
--- SPDX-FileCopyrightText: 2025 Sören Tempel <soeren+git@soeren-tempel.net>
+-- SPDX-FileCopyrightText: 2025-2026 Sören Tempel <soeren+git@soeren-tempel.net>
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
 module Explorer (exploreTests) where
 
 import Data.Bifunctor (second)
-import Data.List (sort)
+import Data.List (partition, sort, uncons)
 import Data.Map qualified as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import Language.QBE (Program, parseAndFind)
 import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
 import Language.QBE.Simulator.Default.Expression qualified as DE
-import Language.QBE.Simulator.Explorer (defSolver, exploreFunc, newEngine)
+import Language.QBE.Simulator.Explorer
+  ( PathResult (..),
+    defSolver,
+    exploreFunc,
+    newEngine,
+  )
 import Language.QBE.Types qualified as QBE
+import System.FilePath ((</>))
 import Test.Tasty
 import Test.Tasty.HUnit
 
-branchPoints :: [(ST.Assign, T.ExecTrace)] -> [[Bool]]
-branchPoints lst = sort $ map (\(_, t) -> map fst t) lst
+branchPoints :: [PathResult] -> [[Bool]]
+branchPoints lst = sort $ map (\(PathResult _ t _) -> map fst t) lst
 
-findAssign :: [(ST.Assign, T.ExecTrace)] -> [Bool] -> Maybe ST.Assign
+findAssign :: [PathResult] -> [Bool] -> Maybe ST.Assign
 findAssign [] _ = Nothing
-findAssign ((a, eTrace) : xs) toFind
+findAssign ((PathResult _ eTrace a) : xs) toFind
   | map fst eTrace == toFind = Just a
   | otherwise = findAssign xs toFind
 
-explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [(ST.Assign, T.ExecTrace)]
+explore' :: Program -> QBE.FuncDef -> [(String, QBE.BaseType)] -> IO [PathResult]
 explore' prog entry params = do
   defEnv <- mkEnv prog 0 128 Nothing
   engine <- newEngine defEnv <$> defSolver
 
   exploreFunc engine entry $ map (second QBE.Base) params
+
+getFuncAndProg :: FilePath -> QBE.GlobalIdent -> IO (Program, QBE.FuncDef)
+getFuncAndProg fileName funcName =
+  let filePath = "test" </> "testdata" </> fileName
+   in readFile filePath >>= parseAndFind funcName
 
 ------------------------------------------------------------------------
 
@@ -221,5 +231,67 @@ exploreTests =
           (prog, funcDef) <- parseAndFind (QBE.GlobalIdent "main") qbe
           eTraces <- explore' prog funcDef []
 
-          length eTraces @?= 3
+          length eTraces @?= 3,
+      testCase "explore a path with an error case" $
+        do
+          let qbe =
+                "data $.Lstring.1 = align 1 { b \"a\", b 0 }\n\
+                \export\n\
+                \function w $main() {\n\
+                \@body\n\
+                \%.1 =l alloc4 4\n\
+                \call $quebex_make_symbolic(l %.1, l 1, l 4, l $.Lstring.1)\n\
+                \%.2 =w loadw %.1\n\
+                \%.3 =w ceqw %.2, 42\n\
+                \jnz %.3, @error, @okay\n\
+                \@error\n\
+                \hlt\n\
+                \@okay\n\
+                \ret 0\n\
+                \}"
+
+          (prog, funcDef) <- parseAndFind (QBE.GlobalIdent "main") qbe
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 1
+          length woErr @?= 1
+
+          let errorVars = pathVars $ fst $ fromJust $ uncons wErr
+              errorVal = Map.lookup "a1" errorVars
+          errorVal @?= Just (DE.VWord 42),
+      testCase "explore program with multiple paths to error" $
+        do
+          (prog, funcDef) <-
+            getFuncAndProg
+              "insertion-sort-error-on-42.qbe"
+              (QBE.GlobalIdent "main")
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 8
+          length woErr @?= 6
+
+          -- every path on the error case must contain 42 in its input.
+          let vals = map (Map.elems . pathVars) wErr
+          let has42 = elem (DE.VWord 42)
+          length (filter has42 vals) @?= length wErr,
+      testCase "continue exploration after single path to error" $
+        do
+          (prog, funcDef) <-
+            getFuncAndProg
+              "single-error-case.qbe"
+              (QBE.GlobalIdent "main")
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 1
+          length woErr @?= 20
+
+          let errorVars = pathVars $ fst $ fromJust $ uncons wErr
+              errorVal = Map.lookup "prime1" errorVars
+          errorVal @?= Just (DE.VWord 43)
     ]

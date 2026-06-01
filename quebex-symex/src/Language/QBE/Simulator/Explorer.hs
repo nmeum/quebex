@@ -4,13 +4,15 @@
 module Language.QBE.Simulator.Explorer
   ( defSolver,
     logSolver,
-    Engine (expPathVars, expPathTrace),
+    PathResult (..),
+    Engine (expLastPath),
     newEngine,
     explorePath,
     exploreFunc,
   )
 where
 
+import Control.Monad.Catch (try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
 import Data.Map qualified as Map
@@ -19,7 +21,15 @@ import Language.QBE.Backend.Model (Model)
 import Language.QBE.Backend.Store qualified as ST
 import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator (execFunc)
-import Language.QBE.Simulator.Concolic.State (Env (envStore), makeConcolic, runPath)
+import Language.QBE.Simulator.Concolic.State
+  ( Env (envStore),
+    ErrorPath (pathError, pathInput),
+    ErrorState (errStore, errTracer),
+    SimState (..),
+    makeConcolic,
+    runPath,
+  )
+import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
 import System.IO (Handle)
@@ -47,13 +57,23 @@ logSolver handle = do
 
 ------------------------------------------------------------------------
 
+data PathResult
+  = PathResult
+  { pathErr :: Maybe EvalError,
+    pathTrace :: T.ExecTrace,
+    pathVars :: ST.Assign
+  }
+  deriving (Show, Eq)
+
+initPath :: PathResult
+initPath = PathResult Nothing [] Map.empty
+
 data Engine
   = Engine
   { expSolver :: SMT.Solver,
     expPathSel :: PathSel,
     expEnv :: Env,
-    expPathVars :: ST.Assign,
-    expPathTrace :: T.ExecTrace
+    expLastPath :: PathResult
   }
 
 newEngine :: Env -> SMT.Solver -> Engine
@@ -62,8 +82,7 @@ newEngine env solver =
     { expSolver = solver,
       expPathSel = newPathSel,
       expEnv = env,
-      expPathVars = Map.empty,
-      expPathTrace = []
+      expLastPath = initPath
     }
 
 findNext :: [SMT.SExpr] -> T.ExecTrace -> StateT Engine IO (Maybe Model)
@@ -79,17 +98,23 @@ findNext symVars eTrace = do
 
 -- TODO: Consider modelling changes of the PathSel (via findNext) and
 -- changes of the Store (via ST.finalize and ST.setModel) as a StateT.
-explorePath :: StateT Env IO a -> StateT Engine IO Bool
+explorePath :: SimState a -> StateT Engine IO Bool
 explorePath simState = do
   engine@(Engine {expEnv = env}) <- get
-  (eTrace, nStore) <- lift $ evalStateT (runPath simState) env
+  maybePath <- try $ run env
+  let (mayErr, eTrace, nStore) =
+        case maybePath of
+          Left (err :: ErrorPath) ->
+            let st = pathInput err
+             in (Just $ pathError err, errTracer st, errStore st)
+          Right (t, s) -> (Nothing, t, s)
 
   -- Before finalizing the store, we can extract the variables we encountered
   -- during this concrete execution, as well as the concrete values used for
   -- these variables during the execution.
   let inputVars = ST.sexprs nStore
       varAssign = ST.cValues nStore
-  put $ engine {expPathVars = varAssign, expPathTrace = eTrace}
+  put $ engine {expLastPath = PathResult mayErr eTrace varAssign}
 
   -- Finalize the store (declare new symbolic vars in solver) and then,
   -- based on the new solver state, solve constraints to find a new input.
@@ -101,6 +126,8 @@ explorePath simState = do
       let nEnv = env {envStore = ST.setModel store newModel}
        in modify (\e -> e {expEnv = nEnv})
       pure True
+  where
+    run env = lift $ evalStateT (unSimState $ runPath simState) env
 
 ------------------------------------------------------------------------
 
@@ -108,7 +135,7 @@ exploreFunc ::
   Engine ->
   QBE.FuncDef ->
   [(String, QBE.ExtType)] ->
-  IO [(ST.Assign, T.ExecTrace)]
+  IO [PathResult]
 exploreFunc engine entry params = do
   let funcState = mapM (uncurry makeConcolic) params >>= execFunc entry
   evalStateT (exploreFunc' funcState) engine
@@ -116,7 +143,8 @@ exploreFunc engine entry params = do
     exploreFunc' st = do
       morePaths <- explorePath st
       curEngine <- get
-      let ret = (expPathVars curEngine, expPathTrace curEngine)
+
+      let ret = expLastPath curEngine
        in if morePaths
             then (ret :) <$> exploreFunc' st
             else pure [ret]

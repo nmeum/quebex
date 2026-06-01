@@ -7,10 +7,8 @@ module SMT (smtBench) where
 import Control.Monad (when)
 import Criterion.Main
 import Language.QBE (parseAndFind)
-import Language.QBE.Backend.Store qualified as ST
-import Language.QBE.Backend.Tracer qualified as T
 import Language.QBE.Simulator.Concolic.State (mkEnv)
-import Language.QBE.Simulator.Explorer (exploreFunc, logSolver, newEngine)
+import Language.QBE.Simulator.Explorer (PathResult, exploreFunc, logSolver, newEngine)
 import Language.QBE.Types qualified as QBE
 import SMTUnwind (unwind)
 import System.Exit (ExitCode (ExitSuccess))
@@ -33,7 +31,7 @@ entryFunc = QBE.GlobalIdent "main"
 
 ------------------------------------------------------------------------
 
-exploreQBE :: FilePath -> IO [(ST.Assign, T.ExecTrace)]
+exploreQBE :: FilePath -> IO [PathResult]
 exploreQBE filePath = do
   (prog, func) <- readFile filePath >>= parseAndFind entryFunc
 
