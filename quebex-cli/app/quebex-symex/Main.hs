@@ -4,7 +4,7 @@
 
 module Main (main) where
 
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Control.Monad.State (evalStateT, gets, liftIO)
 import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
@@ -24,6 +24,7 @@ import Language.QBE.Simulator.Explorer
 import Language.QBE.Types qualified as QBE
 import Options.Applicative qualified as OPT
 import System.Directory (createDirectoryIfMissing)
+import System.Exit (exitFailure)
 import System.FilePath (addExtension, (</>))
 import System.IO (IOMode (WriteMode), hPutStrLn, stderr, withFile)
 import Text.Printf (printf)
@@ -32,6 +33,7 @@ data Opts = Opts
   { optLog :: Maybe FilePath,
     optSeed :: Maybe Int,
     optTestDir :: FilePath,
+    optContinue :: Bool,
     optWriteAll :: Bool,
     optVerbose :: Bool,
     optBase :: CMD.BasicArgs
@@ -62,6 +64,11 @@ optsParser =
           <> OPT.metavar "FILE"
           <> OPT.value "quebex-results"
           <> OPT.help "Directory to write generate test inputs to"
+      )
+    <*> OPT.switch
+      ( OPT.long "continue-on-error"
+          <> OPT.short 'c'
+          <> OPT.help "Continue exploration after encoutering an error path"
       )
     <*> OPT.switch
       ( OPT.long "write-all"
@@ -132,8 +139,9 @@ exploreEntry opts ktest engine entry =
 
       lastPath <- gets expLastPath
       logLevel <- case pathErr lastPath of
-        Just err -> do
-          liftIO $ printErr n err
+        Just err -> liftIO $ do
+          printErr n err
+          unless (optContinue opts) exitFailure
           pure LogErr
         Nothing -> pure LogAll
 
