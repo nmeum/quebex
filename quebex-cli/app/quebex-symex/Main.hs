@@ -40,6 +40,9 @@ data Opts = Opts
     optBase :: CMD.BasicArgs
   }
 
+optTestCases :: String
+optTestCases = "test-cases"
+
 optsParser :: OPT.Parser Opts
 optsParser =
   Opts
@@ -61,7 +64,7 @@ optsParser =
       )
     <*> OPT.optional
       ( OPT.strOption
-          ( OPT.long "test-cases"
+          ( OPT.long optTestCases
               <> OPT.short 't'
               <> OPT.metavar "FILE"
               <> OPT.help "Directory to write generate test inputs to"
@@ -142,7 +145,7 @@ handleError opts ktest n err = do
           ++ printPath ktest
 
     printPath :: Maybe KTestConf -> String
-    printPath Nothing = "Pass --test-cases to generate test case"
+    printPath Nothing = "Pass --" ++ optTestCases ++ " to generate test case"
     printPath (Just kt) =
       "Refer to the KTest file in " ++ show (testCasePath kt n)
 
