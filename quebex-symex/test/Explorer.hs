@@ -293,5 +293,21 @@ exploreTests =
 
           let errorVars = pathVars $ fst $ fromJust $ uncons wErr
               errorVal = Map.lookup "prime1" errorVars
-          errorVal @?= Just (DE.VWord 43)
+          errorVal @?= Just (DE.VWord 43),
+      testCase "exploration with memory error" $
+        do
+          (prog, funcDef) <-
+            getFuncAndProg
+              "out-of-bounds-error.qbe"
+              (QBE.GlobalIdent "main")
+          (wErr, woErr) <-
+            partition (isJust . pathErr)
+              <$> explore' prog funcDef []
+
+          length wErr @?= 1
+          length woErr @?= 3
+
+          let errorVars = pathVars $ fst $ fromJust $ uncons wErr
+              errorVal = Map.lookup "a1" errorVars
+          errorVal @?= Just (DE.VWord 0x23523929)
     ]
