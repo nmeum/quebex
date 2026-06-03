@@ -5,8 +5,16 @@
 
 module Language.QBE.Simulator.Default.State where
 
-import Control.DeepSeq (NFData)
-import Control.Exception (Exception, assert, catch, throwIO)
+import Control.DeepSeq (NFData, force)
+import Control.Exception
+  ( ErrorCall (ErrorCall),
+    Exception,
+    assert,
+    catch,
+    evaluate,
+    throwIO,
+    try,
+  )
 import Control.Monad (foldM)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -309,11 +317,16 @@ instance (MEM.Storable v b, E.ValueRepr v, NFData b) => Simulator (SimState v b)
           QBE.Base _ -> bytes
   readMemory ty addr = do
     mem <- gets envMem
-    bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)
+    mayBytes <-
+      liftIO $
+        try (MEM.loadBytes mem addr (QBE.loadByteSize ty) >>= evaluate . force)
 
-    case MEM.fromBytes ty bytes of
-      Just x -> pure x
-      Nothing -> throwError InvalidMemoryLoad
+    case mayBytes of
+      Left (ErrorCall msg) -> throwError $ Err.MemoryError msg
+      Right bytes ->
+        case MEM.fromBytes ty bytes of
+          Just x -> pure x
+          Nothing -> throwError InvalidMemoryLoad
 
 ------------------------------------------------------------------------
 

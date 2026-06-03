@@ -27,6 +27,7 @@ data EvalError
   | OverlappingBlit Address Address
   | FuncArgsMismatch QBE.GlobalIdent
   | InvalidPhiPosition
+  | MemoryError String
   deriving (Eq)
 
 instance Show EvalError where
@@ -47,5 +48,6 @@ instance Show EvalError where
   show (OverlappingBlit a1 a2) = "Addresses for Blit instruction overlap: " ++ show a1 ++ " and " ++ show a2
   show (FuncArgsMismatch ident) = "FuncArgsMismatch: '" ++ show ident ++ "'"
   show InvalidPhiPosition = "InvalidPhiPosition"
+  show (MemoryError msg) = "MemoryError: " ++ show msg
 
 instance Exception EvalError
