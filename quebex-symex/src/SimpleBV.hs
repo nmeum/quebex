@@ -68,7 +68,9 @@ module SimpleBV
   )
 where
 
+import Control.DeepSeq (NFData, NFData1)
 import Data.Bits (shiftL, shiftR, (.&.))
+import GHC.Generics (Generic, Generic1)
 import SimpleSMT qualified as SMT
 import Prelude hiding (and, concat, const, not, or)
 
@@ -106,14 +108,20 @@ data Expr a
   | Extract Int Int a
   | SignExtend Integer a
   | ZeroExtend Integer a
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, Generic1)
+
+instance (NFData a) => NFData (Expr a)
+
+instance NFData1 Expr
 
 data SExpr
   = SExpr
   { width :: Int,
     sexpr :: Expr SExpr
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NFData SExpr
 
 toSMT :: SExpr -> SMT.SExpr
 toSMT expr =

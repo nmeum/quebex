@@ -13,9 +13,11 @@ module Language.QBE.Simulator.Symbolic.Expression
   )
 where
 
+import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Data.Bits (shiftL, (.&.))
 import Data.Word (Word64, Word8)
+import GHC.Generics (Generic)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -24,7 +26,9 @@ import SimpleBV qualified as SMT
 
 -- TODO: Floating point support.
 newtype BitVector = BitVector SMT.SExpr
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NFData BitVector
 
 fromByte :: Word8 -> BitVector
 fromByte byte = BitVector (SMT.bvLit 8 $ fromIntegral byte)

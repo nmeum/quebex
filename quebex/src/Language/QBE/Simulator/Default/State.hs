@@ -5,6 +5,7 @@
 
 module Language.QBE.Simulator.Default.State where
 
+import Control.DeepSeq (NFData)
 import Control.Exception (Exception, assert, catch, throwIO)
 import Control.Monad (foldM)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
@@ -260,7 +261,7 @@ instance MonadError Err.EvalError (SimState v b) where
 
 ------------------------------------------------------------------------
 
-instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
+instance (MEM.Storable v b, E.ValueRepr v, NFData b) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
   toAddress = pure . E.toWord64
 
