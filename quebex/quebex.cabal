@@ -29,6 +29,7 @@ library
     build-depends:
       base,
       array,
+      deepseq,
       template-haskell,
       quebex-syntax,
       containers,

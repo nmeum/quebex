@@ -5,7 +5,16 @@
 
 module Language.QBE.Simulator.Default.State where
 
-import Control.Exception (Exception, assert, catch, throwIO)
+import Control.DeepSeq (NFData, force)
+import Control.Exception
+  ( ErrorCall (ErrorCall),
+    Exception,
+    assert,
+    catch,
+    evaluate,
+    throwIO,
+    try,
+  )
 import Control.Monad (foldM)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -260,7 +269,27 @@ instance MonadError Err.EvalError (SimState v b) where
 
 ------------------------------------------------------------------------
 
-instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
+-- | Like 'MEM.loadBytes' but receives a 'QBE.LoadType' as an argument, deducing
+-- the size from it. Further, also catches any errors potentionally raised by
+-- the memory and rethrows them as a 'EvalError'.
+safeLoadBytes ::
+  (NFData a) =>
+  MEM.Memory IOArray a ->
+  MEM.Address ->
+  QBE.LoadType ->
+  SimState v b [a]
+safeLoadBytes mem addr ty = do
+  let size = QBE.loadByteSize ty
+  mayBytes <-
+    liftIO $
+      try (MEM.loadBytes mem addr size >>= evaluate . force)
+
+  case mayBytes of
+    Left (ErrorCall msg) -> throwError $ Err.MemoryError msg
+    Right bytes -> pure bytes
+{-# INLINE safeLoadBytes #-}
+
+instance (MEM.Storable v b, E.ValueRepr v, NFData b) => Simulator (SimState v b) v where
   isTrue value = pure (E.toWord64 value /= 0)
   toAddress = pure . E.toWord64
 
@@ -308,7 +337,7 @@ instance (MEM.Storable v b, E.ValueRepr v) => Simulator (SimState v b) v where
           QBE.Base _ -> bytes
   readMemory ty addr = do
     mem <- gets envMem
-    bytes <- liftIO $ MEM.loadBytes mem addr (QBE.loadByteSize ty)
+    bytes <- safeLoadBytes mem addr ty
 
     case MEM.fromBytes ty bytes of
       Just x -> pure x

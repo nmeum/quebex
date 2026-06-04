@@ -1,0 +1,35 @@
+data $.Lstring.2 = align 1 { b "a\000", }
+export
+function w $main() {
+@start.1
+	%.1 =l alloc4 4
+	%.2 =l alloc4 20
+@body.2
+	%.3 =l extsw 1
+	call $quebex_make_symbolic(l %.1, l %.3, l 4, l $.Lstring.2)
+	%.4 =w loadw %.1
+	%.5 =w ceqw %.4, 42
+	jnz %.5, @if_true.3, @if_false.4
+@if_true.3
+	ret 1
+@if_false.4
+	%.6 =w loadw %.1
+	%.7 =w ceqw %.6, 592591145
+	jnz %.7, @if_true.6, @if_false.7
+@if_true.6
+	%.8 =l extsw 1024
+	%.9 =l mul %.8, 4
+	%.10 =l add %.2, %.9
+	%.11 =w loadw %.10
+	ret %.11
+@if_false.7
+	%.12 =w loadw %.1
+	%.13 =w ceqw %.12, 1337
+	jnz %.13, @if_true.9, @if_false.10
+@if_true.9
+	ret 42
+@if_false.10
+@if_join.8
+@if_join.5
+	ret 0
+}

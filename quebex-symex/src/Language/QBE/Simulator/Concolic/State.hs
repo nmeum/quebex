@@ -14,7 +14,7 @@ module Language.QBE.Simulator.Concolic.State
   )
 where
 
-import Control.Exception (Exception, throwIO)
+import Control.Exception (Exception, throwIO, try)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.State
@@ -69,9 +69,17 @@ liftState ::
   SimState a
 liftState (DS.SimState toLift) = do
   defEnv <- gets envBase
-  (a, s) <- liftIO $ runStateT toLift defEnv
-  modify (\ps -> ps {envBase = s})
-  pure a
+
+  -- XXX: Since 'toLift' is run in the DS.SimState monad, it would
+  -- use its 'throwError' implementation here. We want to use the
+  -- implementation of our 'SimState' though, hence we need to handle
+  -- IO exceptions here.
+  result <- liftIO $ try (runStateT toLift defEnv)
+  case result of
+    Left (e :: EvalError) -> throwError e
+    Right (a, s) -> do
+      modify (\ps -> ps {envBase = s})
+      pure a
 
 makeConcolic :: String -> QBE.ExtType -> SimState (CE.Concolic DE.RegVal)
 makeConcolic name ty = do

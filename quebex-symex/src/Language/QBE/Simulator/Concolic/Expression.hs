@@ -8,10 +8,12 @@ module Language.QBE.Simulator.Concolic.Expression
   )
 where
 
+import Control.DeepSeq (NFData, NFData1)
 import Control.Exception (assert)
 import Data.Functor ((<&>))
 import Data.Maybe (fromMaybe)
 import Data.Word (Word8)
+import GHC.Generics (Generic, Generic1)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
@@ -22,7 +24,11 @@ data Concolic v
   { concrete :: v,
     symbolic :: Maybe SE.BitVector
   }
-  deriving (Show)
+  deriving (Show, Generic, Generic1)
+
+instance (NFData a) => NFData (Concolic a)
+
+instance NFData1 Concolic
 
 hasSymbolic :: Concolic v -> Bool
 hasSymbolic Concolic {symbolic = Just _} = True

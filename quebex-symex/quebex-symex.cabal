@@ -28,6 +28,7 @@ library
 
     build-depends:
       base,
+      deepseq,
       mtl,
       containers,
       exceptions,
