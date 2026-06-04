@@ -5,7 +5,7 @@
 module Main (main) where
 
 import Control.Monad (when)
-import Control.Monad.State (evalStateT, gets, liftIO)
+import Control.Monad.State.Strict (evalStateT, gets, liftIO)
 import Data.Binary (encodeFile)
 import Data.KTest (KTest (KTest), KTestObj, fromAssign)
 import Data.String (fromString)

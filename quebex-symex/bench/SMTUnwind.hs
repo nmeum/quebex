@@ -5,7 +5,7 @@
 module SMTUnwind (unwind) where
 
 import Control.Monad (forM_)
-import Control.Monad.State (State, gets, modify, runState)
+import Control.Monad.State.Strict (State, gets, modify, runState)
 import Data.Functor ((<&>))
 import SimpleSMT qualified as SMT
 

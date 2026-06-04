@@ -14,7 +14,7 @@ where
 
 import Control.Monad.Catch (try)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (StateT, evalStateT, get, lift, modify, put)
+import Control.Monad.State.Strict (StateT, evalStateT, get, lift, modify, put)
 import Data.Map qualified as Map
 import Language.QBE.Backend.DFS (PathSel, findUnexplored, newPathSel, trackTrace)
 import Language.QBE.Backend.Model (Model)

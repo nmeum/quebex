@@ -18,7 +18,7 @@ import Control.Exception
 import Control.Monad (foldM)
 import Control.Monad.Error.Class (MonadError, catchError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.State
+import Control.Monad.State.Strict
   ( MonadState,
     StateT (StateT),
     evalStateT,

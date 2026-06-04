@@ -4,7 +4,7 @@
 
 module State (stateTests) where
 
-import Control.Monad.State (evalStateT)
+import Control.Monad.State.Strict (evalStateT)
 import Data.Word (Word8)
 import Language.QBE.Simulator.Default.Expression qualified as D
 import Language.QBE.Simulator.Default.State (Env, loadObj, mkEnv)
