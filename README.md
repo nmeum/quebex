@@ -26,7 +26,7 @@ For example, [SCC], [cproc], or the [Hare compiler][Hare].
 
 I currently consider this a vertical prototype.
 A lot of the desired functionality is already there, but not fully developed and tested.
-However, all major features of the [QBE specification][QBE v1.2] are nowadays implemented to some degree.
+However, all major features of the [QBE specification][QBE v1.3] are nowadays implemented to some degree.
 Consequentially, it is possible to process QBE programs emitted by existing compiler frontends such as the [cproc] C11 compiler.
 In terms of analysis features, the implementation currently focuses on dynamic analysis techniques (primarily [symbolic execution]).
 Unfortunately, there is basically no documentation for the API and the provided command-line frontends (`quebex` and `quebex-symex`) are presently very rudimentary.
@@ -34,7 +34,7 @@ Unfortunately, there is basically no documentation for the API and the provided 
 ### Architecture
 
 The foundation of this project is a formal, yet executable, description of the QBE intermediate language.
-At the time of writing, it targets [v1.2 of the QBE specification][QBE v1.2].
+At the time of writing, it targets [v1.3 of the QBE specification][QBE v1.3].
 The syntax is specified using [literate Haskell][literate programming] and [parser combinators] in the `quebex-syntax` library.
 The language semantics are expressed in a modular way by distinguishing abstract and actual semantics.
 *Abstract semantics* of the QBE language are described in terms of a `Simulator` monad (i.e., an [abstract monad]).
@@ -209,7 +209,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 
 [QBE]: https://c9x.me/compile/
 [QBE vs LLVM]: https://c9x.me/compile/doc/llvm.html
-[QBE v1.2]: https://c9x.me/compile/doc/il-v1.2.html
+[QBE v1.3]: https://c9x.me/compile/doc/il-v1.3.html
 [LLVM]: https://llvm.org/
 [KLEE]: https://klee-se.org
 [KLEE LLVM]: https://klee-se.org/releases/docs/v3.1/build-llvm13/
