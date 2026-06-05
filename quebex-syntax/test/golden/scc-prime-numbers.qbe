@@ -1,0 +1,75 @@
+function w $first_divisor.L2(w %a.L3.val)
+{
+@.L24
+	%a.L3 =l	alloc4	4
+	%i.L5 =l	alloc4	4
+		storew	%a.L3.val,%a.L3
+		storew	2,%i.L5
+		jmp	@.L5
+@.L6
+	%.L11 =w	loaduw	%a.L3
+	%.L12 =w	loaduw	%i.L5
+	%.L13 =w	urem	%.L11,%.L12
+	%.L14 =w	ceqw	%.L13,0
+	%.L15 =w	ceqw	%.L14,0
+		jnz	%.L15,@.L7,@.L10
+@.L10
+	%.L16 =w	loaduw	%i.L5
+		ret	%.L16
+@.L7
+@.L8
+	%.L17 =w	loaduw	%i.L5
+	%.L18 =w	add	%.L17,1
+		storew	%.L18,%i.L5
+@.L5
+	%.L19 =w	loaduw	%i.L5
+	%.L20 =w	loaduw	%a.L3
+	%.L21 =w	cultw	%.L19,%.L20
+	%.L22 =w	cnew	%.L21,0
+		jnz	%.L22,@.L6,@.L9
+@.L9
+	%.L23 =w	loaduw	%a.L3
+		ret	%.L23
+}
+export function w $entry(w %a.L12.val)
+{
+@.L51
+	%a.L12 =l	alloc4	4
+	%b.L14 =l	alloc4	4
+	%c.L17 =l	alloc4	4
+		storew	%a.L12.val,%a.L12
+	%.L37 =w	loaduw	%a.L12
+	%.L38 =w	culew	%.L37,50
+	%.L39 =w	ceqw	%.L38,0
+		jnz	%.L39,@.L27,@.L34
+@.L34
+	%.L40 =w	loaduw	%a.L12
+		storew	%.L40,%b.L14
+	%.L41 =w	loaduw	%b.L14
+	%.L42 =w	culew	%.L41,1
+	%.L43 =w	ceqw	%.L42,0
+		jnz	%.L43,@.L29,@.L35
+@.L35
+		ret	0
+@.L52
+		jmp	@.L30
+@.L29
+	%.L44 =w	loaduw	%b.L14
+		storew	%.L44,%c.L17
+	%.L45 =w	loaduw	%c.L17
+	%.L46 =w	call	$first_divisor.L2(w %.L45)
+	%.L48 =w	loaduw	%c.L17
+	%.L49 =w	ceqw	%.L46,%.L48
+	%.L50 =w	ceqw	%.L49,0
+		jnz	%.L50,@.L32,@.L36
+@.L36
+		ret	1
+@.L53
+		jmp	@.L33
+@.L32
+		ret	0
+@.L33
+@.L30
+@.L27
+		ret	0
+}

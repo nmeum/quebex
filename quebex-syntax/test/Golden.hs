@@ -77,5 +77,6 @@ goldenTests =
       runTest "number-literal-plus-sign",
       runTest "float-literal-plus-sign",
       runTest "hare-hello-world",
-      runTest "dynconst"
+      runTest "dynconst",
+      runTest "scc-prime-numbers"
     ]
