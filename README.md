@@ -209,7 +209,7 @@ This project uses the [REUSE Specification] to indicated used software license.
 
 [QBE]: https://c9x.me/compile/
 [QBE vs LLVM]: https://c9x.me/compile/doc/llvm.html
-[QBE v1.3]: https://c9x.me/compile/doc/il-v1.3.html
+[QBE v1.3]: https://c9x.me/compile/doc/il.html
 [LLVM]: https://llvm.org/
 [KLEE]: https://klee-se.org
 [KLEE LLVM]: https://klee-se.org/releases/docs/v3.1/build-llvm13/
