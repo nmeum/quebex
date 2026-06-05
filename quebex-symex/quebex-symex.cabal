@@ -30,6 +30,7 @@ library
       base,
       deepseq,
       mtl,
+      directory,
       containers,
       exceptions,
       random,

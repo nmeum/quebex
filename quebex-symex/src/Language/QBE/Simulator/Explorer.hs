@@ -12,6 +12,7 @@ module Language.QBE.Simulator.Explorer
   )
 where
 
+import Control.Applicative (empty, (<|>))
 import Control.Monad.Catch (try)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Strict (StateT, evalStateT, get, lift, modify, put)
@@ -32,15 +33,29 @@ import Language.QBE.Simulator.Concolic.State
 import Language.QBE.Simulator.Error (EvalError)
 import Language.QBE.Types qualified as QBE
 import SimpleBV qualified as SMT
+import System.Directory (findExecutable)
 import System.IO (Handle)
 
 logic :: String
 logic = "QF_BV"
 
+findSolver :: IO (String, [String])
+findSolver =
+  solver "bitwuzla" []
+    <|> solver "z3" ["-smt2", "-in"]
+    <|> solver "cvc5" ["--incremental"]
+    <|> fail "no suitable sover found in PATH"
+  where
+    solver :: String -> [String] -> IO (String, [String])
+    solver exec args = do
+      r <- findExecutable exec
+      maybe empty (\_ -> pure (exec, args)) r
+
 defSolver :: IO SMT.Solver
 defSolver = do
   -- l <- SMT.newLogger 0
-  s <- SMT.newSolver "bitwuzla" [] Nothing
+  (solver, args) <- findSolver
+  s <- SMT.newSolver solver args Nothing
   SMT.setLogic s logic
   return s
 
