@@ -1259,7 +1259,22 @@ blockTests =
               []
               "builtin-vaarg-vm.qbe"
 
-          res @?= Just (D.VWord 127)
+          res @?= Just (D.VWord 127),
+      testCase "use extern for representing globals" $
+        do
+          res <-
+            parseAndExec
+              (QBE.GlobalIdent "main")
+              []
+              "function w $main() {\n\
+              \@body\n\
+              \%.1 =w loadw extern $x\n\
+              \%.2 =w add %.1, 23\n\
+              \ret %.2\n\
+              \}\n\
+              \export data $x = align 4 { z 4 }\n"
+
+          res @?= Just (D.VWord 23)
     ]
 
 simTests :: TestTree

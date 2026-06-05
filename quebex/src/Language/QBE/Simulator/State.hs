@@ -142,6 +142,12 @@ maybeLookup :: (Simulator m v) => String -> Maybe a -> m a
 maybeLookup name = liftMaybe (UnknownVariable name)
 {-# INLINE maybeLookup #-}
 
+lookupGlobal :: (Simulator m v) => QBE.BaseType -> QBE.GlobalIdent -> m v
+lookupGlobal ty name = do
+  v <- lookupSymbol name >>= maybeLookup (show name)
+  subType ty (E.fromLit (QBE.Base QBE.Long) v)
+{-# INLINEABLE lookupGlobal #-}
+
 lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit (QBE.Base ty) v
@@ -149,12 +155,10 @@ lookupValue ty (QBE.VConst (QBE.Const (QBE.SFP v))) =
   subType ty (E.fromFloat v)
 lookupValue ty (QBE.VConst (QBE.Const (QBE.DFP v))) =
   subType ty (E.fromDouble v)
-lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = do
-  v <- lookupSymbol k >>= maybeLookup (show k)
-  subType ty (E.fromLit (QBE.Base QBE.Long) v)
-lookupValue ty (QBE.VConst (QBE.Thread k)) = do
-  v <- lookupSymbol k >>= maybeLookup (show k)
-  subType ty (E.fromLit (QBE.Base QBE.Long) v)
+lookupValue ty (QBE.VConst (QBE.Const (QBE.Global k))) = lookupGlobal ty k
+lookupValue ty (QBE.VConst (QBE.Thread k)) = lookupGlobal ty k
+lookupValue ty (QBE.VConst (QBE.Extern k)) = lookupGlobal ty k
+lookupValue ty (QBE.VConst (QBE.ExternThread k)) = lookupGlobal ty k
 lookupValue ty (QBE.VLocal k) = do
   v <- activeFrame >>= maybeLookup (show k) . flip lookupLocal k
   subType ty v
