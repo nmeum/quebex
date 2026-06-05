@@ -1,0 +1,13 @@
+export
+function $f() {
+@start.1
+@body.2
+	%.1 =l extsw 1
+	%.2 =l mul %.1, 4
+	%.3 =l add extern $x, %.2
+	%.4 =l add extern thread $x, %.2
+	%.5 =l add thread $x, %.2
+	%.6 =l add extern     thread $x, %.2
+	ret
+}
+export data $x = align 4 { z 8 }

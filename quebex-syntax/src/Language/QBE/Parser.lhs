@@ -365,14 +365,26 @@ either by zero-extension, or by sign-extension.
 dynConst :: Parser Q.DynConst
 dynConst =
   (Q.Const <$> constant)
-    <|> (Q.Thread <$> global)
+    <|> (Q.Thread <$> (key "thread" >> global))
+    <|> (Q.Extern <$> try (key "extern" >> global))
+    <|> (Q.ExternThread <$> (key "extern" >> key "thread" >> global))
     <?> "dynconst"
+  where
+    key s = ws1 $ string s
 \end{code}
 
 Constants come in two kinds: compile-time constants and dynamic
 constants. Dynamic constants include compile-time constants and other
 symbol variants that are only known at program-load time or execution
 time. Consequently, dynamic constants can only occur in function bodies.
+
+When the \texttt{extern} keyword prefixes a symbol name, the symbol is
+accessed indirectly through a table edited by the dynamic linker (e.g.,
+GOT/PLT). This enables PIE/PIC code generation. When \texttt{extern} is
+combined with \texttt{thread}, the symbol is accessed using the
+initial-exec TLS model, suitable for thread-local variables defined in
+shared objects available at startup time (i.e., not loaded through
+dlopen).
 
 The representation of integers is two's complement.
 Floating-point numbers are represented using the single-precision and

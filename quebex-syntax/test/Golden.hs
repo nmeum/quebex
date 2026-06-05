@@ -76,5 +76,6 @@ goldenTests =
       runTest "comments",
       runTest "number-literal-plus-sign",
       runTest "float-literal-plus-sign",
-      runTest "hare-hello-world"
+      runTest "hare-hello-world",
+      runTest "dynconst"
     ]
