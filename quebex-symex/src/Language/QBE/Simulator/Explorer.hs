@@ -62,9 +62,10 @@ defSolver = do
 logSolver :: Handle -> IO SMT.Solver
 logSolver handle = do
   l <- SMT.newLoggerWithHandle handle 0
+  (solver, args) <- findSolver
   s <-
     SMT.newSolverWithConfig
-      (SMT.defaultConfig "bitwuzla" [])
+      (SMT.defaultConfig solver args)
         { SMT.solverLogger = SMT.smtSolverLogger l
         }
   SMT.setLogic s logic
