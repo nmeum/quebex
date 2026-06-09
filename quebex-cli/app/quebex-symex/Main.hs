@@ -136,7 +136,7 @@ handleError opts ktest n err = do
   where
     printErr = do
       hPutStrLn stderr $
-        "Encoundered error on path #"
+        "Encountered error on path #"
           ++ show n
           ++ ": "
           ++ show err
