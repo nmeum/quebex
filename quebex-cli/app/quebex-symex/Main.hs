@@ -155,7 +155,7 @@ exploreEntry opts ktest engine entry =
   where
     go n st = do
       when (optVerbose opts) $
-        liftIO (putStrLn $ "Exploring path " ++ show n ++ "...")
+        liftIO (hPutStrLn stderr $ "Exploring path " ++ show n ++ "...")
       morePaths <- explorePath st
 
       lastPath <- gets expLastPath
