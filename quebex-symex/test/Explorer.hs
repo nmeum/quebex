@@ -193,7 +193,7 @@ exploreTests =
                 \function w $main() {\n\
                 \@start\n\
                 \%ptr =l alloc4 4\n\
-                \call $quebex_make_symbolic(l %ptr, l 1, l 4, l $name)\n\
+                \call extern $quebex_make_symbolic(l %ptr, l 1, l 4, l $name)\n\
                 \%word =w loadw %ptr\n\
                 \jnz %word, @b1, @b2\n\
                 \@b1\n\

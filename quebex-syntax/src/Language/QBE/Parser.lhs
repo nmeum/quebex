@@ -33,14 +33,7 @@
 
 \ignore{
 \begin{code}
-module Language.QBE.Parser
-  ( skipInitComments,
-    dataDef,
-    typeDef,
-    funcDef,
-    fileDef
-  )
-where
+module Language.QBE.Parser where
 
 import Data.Char (chr)
 import Data.Word (Word64)

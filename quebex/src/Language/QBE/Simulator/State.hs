@@ -164,12 +164,17 @@ lookupValue ty (QBE.VLocal k) = do
   subType ty v
 {-# INLINEABLE lookupValue #-}
 
-lookupFunc :: (Simulator m v) => QBE.Value -> m (SomeFunc m v)
-lookupFunc (QBE.VConst (QBE.Const (QBE.Global name))) = do
+lookupFuncName :: (Simulator m v) => QBE.GlobalIdent -> m (SomeFunc m v)
+lookupFuncName name = do
   maybeFunc <- findFunc name
   case maybeFunc of
     Just def -> pure def
     Nothing -> throwError (UnknownFunction name)
+{-# INLINEABLE lookupFuncName #-}
+
+lookupFunc :: (Simulator m v) => QBE.Value -> m (SomeFunc m v)
+lookupFunc (QBE.VConst (QBE.Extern n)) = lookupFuncName n
+lookupFunc (QBE.VConst (QBE.Const (QBE.Global n))) = lookupFuncName n
 lookupFunc value = do
   addr <- lookupValue QBE.Long value >>= toAddress
   maybeFunc <- findFuncByAddr addr
