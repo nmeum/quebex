@@ -2,13 +2,20 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
+-- | This module describes the semantics of the [QBE](https://c9x.me/compile/)
+-- intermediate representation using an abstract 'Simulator' monad.
+-- Specifically, it abstractly describes the semantics of QBE's control-flow
+-- constructs (such as functions, statements, and blocks) and instructions
+-- using the primitives of this monad. The semantics can then be concretely
+-- instantiated (refer to the instance of the 'Simulator' monad). This idea
+-- is inspired by the paper [Flexible Instruction-Set Semantics via Abstract Monads]
+-- (https://dl.acm.org/doi/10.1145/3607833).
 module Language.QBE.Simulator
   ( BlockResult,
     execInstr,
     execVolatile,
     execStmt,
     execBlock,
-    execTilRet,
     execFunc,
   )
 where
@@ -28,8 +35,8 @@ import Language.QBE.Simulator.Memory (addrOverlap)
 import Language.QBE.Simulator.State
 import Language.QBE.Types qualified as QBE
 
--- Execution of a BasicBlock can either return (with an optional return
--- value) or it can jump to another BasicBlock which will then be executed.
+-- | Execution of a 'QBE.Block' can either return (with an optional return
+-- value) or it can jump to another 'QBE.Block' which will then be executed.
 type BlockResult v = (Either (Maybe v) QBE.Block)
 
 ------------------------------------------------------------------------
