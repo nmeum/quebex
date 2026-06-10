@@ -2,6 +2,8 @@
 --
 -- SPDX-License-Identifier: GPL-3.0-only
 
+-- | This module provides top-level definitions for representing programs
+-- written in the [QBE](https://c9x.me/compile/) intermediate representation.
 module Language.QBE
   ( Program,
     Definition (..),
@@ -28,11 +30,19 @@ import Text.ParserCombinators.Parsec
     try,
   )
 
+-- | A QBE program consists of a sequence of definitions. Four types of objects
+-- can be defined: aggregate types, data, functions, and debugging information.
+--
+-- See also: The corresponding section of the [QBE specification](https://c9x.me/compile/doc/il-v1.2.html#Definitions).
 data Definition
-  = DefData DataDef
-  | DefType TypeDef
-  | DefFunc FuncDef
-  | DefFile String
+  = -- | Definition of data (e.g. a string).
+    DefData DataDef
+  | -- | Definition of an aggregate data type.
+    DefType TypeDef
+  | -- | Definition of a function.
+    DefFunc FuncDef
+  | -- | Definition of a debug file.
+    DefFile String
   deriving (Eq, Show)
 
 parseDef :: Parser Definition
@@ -48,8 +58,16 @@ parseDef =
       DefFile <$> fileDef
     ]
 
+-- | A parsed QBE program, represented as a list of 'Definition' values.
 type Program = [Definition]
 
+-- | Wrapper to parse a QBE program using 'Text.ParserCombinators.Parsec.parse'.
+parse :: SourceName -> String -> Either ParseError Program
+parse =
+  Text.ParserCombinators.Parsec.parse
+    (skipInitComments *> many parseDef <* eof)
+
+-- | Utility function to obtain all functions defined in a QBE 'Program'.
 globalFuncs :: Program -> [FuncDef]
 globalFuncs = mapMaybe globalFuncs'
   where
@@ -57,23 +75,22 @@ globalFuncs = mapMaybe globalFuncs'
     globalFuncs' (DefFunc f) = Just f
     globalFuncs' _ = Nothing
 
-parse :: SourceName -> String -> Either ParseError Program
-parse =
-  Text.ParserCombinators.Parsec.parse
-    (skipInitComments *> many parseDef <* eof)
-
 ------------------------------------------------------------------------
 
+-- | Custom 'Exception' used for error handling in 'parseAndFind'.
 data ExecError
-  = ESyntaxError ParseError
-  | EUnknownEntry GlobalIdent
+  = -- | The input is not a valid QBE program.
+    ESyntaxError ParseError
+  | -- | The given entry function is not defined in the QBE program.
+    EUnknownEntry GlobalIdent
   deriving (Show)
 
 instance Exception ExecError
 
 -- | Utility function for the common task of parsing an input as a QBE
 -- 'Program' and, within that program, finding the entry function. If the
--- function doesn't exist or a the input is invalid an exception is thrown.
+-- function doesn't exist or a the input is invalid a 'ExecError' exception
+-- is thrown.
 parseAndFind ::
   (MonadThrow m) =>
   GlobalIdent ->
