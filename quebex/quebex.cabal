@@ -37,6 +37,9 @@ library
       parsec,
       mtl
 
+    other-modules:
+      Language.QBE.Simulator.Default.Generator
+
     exposed-modules:
       Language.QBE.Analysis.CFG,
       Language.QBE.Analysis.CDG,
@@ -48,8 +51,7 @@ library
       Language.QBE.Simulator.Expression,
       Language.QBE.Simulator.Default.State,
       Language.QBE.Simulator.Default.Funcs,
-      Language.QBE.Simulator.Default.Expression,
-      Language.QBE.Simulator.Default.Generator,
+      Language.QBE.Simulator.Default.Expression
 
 benchmark quebex
     import:           warnings, opts
