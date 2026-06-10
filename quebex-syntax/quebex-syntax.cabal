@@ -23,13 +23,13 @@ library
     default-language: GHC2021
 
     other-modules:
-      Language.QBE.Util
+      Language.QBE.Util,
+      Language.QBE.Numbers
 
     exposed-modules:
       Language.QBE,
       Language.QBE.Types,
-      Language.QBE.Parser,
-      Language.QBE.Numbers
+      Language.QBE.Parser
 
     build-depends:
       base,
