@@ -3,7 +3,17 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 {-# LANGUAGE TypeApplications #-}
 
-module Language.QBE.Simulator.Default.State where
+module Language.QBE.Simulator.Default.State
+  ( Env (..),
+    mkEnv,
+    initData,
+    loadObj, -- TODO: Don't export this.
+    storeValues,
+    unliftCatch, -- TODO: Move this elsewhere.
+    SimState (..),
+    run,
+  )
+where
 
 import Control.DeepSeq (NFData, force)
 import Control.Exception

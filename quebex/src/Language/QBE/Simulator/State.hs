@@ -3,7 +3,28 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Language.QBE.Simulator.State where
+module Language.QBE.Simulator.State
+  ( StackFrame (..),
+    newStackFrame,
+    storeLocal,
+    lookupLocal,
+    SomeFunc (..),
+    Simulator (..),
+    liftMaybe,
+    subType,
+    runBinary,
+    modifyFrame,
+    stackAlign,
+    stackAlloc,
+    stackSpill,
+    returnFromFunc,
+    lookupGlobal,
+    lookupValue,
+    lookupFunc,
+    lookupArgs,
+    readNullArray,
+  )
+where
 
 import Control.Monad.Error.Class (MonadError, throwError)
 import Data.Functor ((<&>))
@@ -22,6 +43,17 @@ data StackFrame v
     stkVarArgs :: [v],
     stkFp :: v
   }
+
+newStackFrame ::
+  (Simulator m v) =>
+  QBE.FuncDef ->
+  Map.Map QBE.LocalIdent v ->
+  [v] ->
+  m (StackFrame v)
+newStackFrame f args variadicArgs = do
+  frame <- getSP <&> StackFrame f args variadicArgs
+  pushStackFrame frame >> pure frame
+{-# INLINEABLE newStackFrame #-}
 
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
@@ -122,17 +154,6 @@ stackSpill val = do
   writeMemory ptr ty val
   pure ptr
 {-# INLINEABLE stackSpill #-}
-
-newStackFrame ::
-  (Simulator m v) =>
-  QBE.FuncDef ->
-  Map.Map QBE.LocalIdent v ->
-  [v] ->
-  m (StackFrame v)
-newStackFrame f args variadicArgs = do
-  frame <- getSP <&> StackFrame f args variadicArgs
-  pushStackFrame frame >> pure frame
-{-# INLINEABLE newStackFrame #-}
 
 returnFromFunc :: (Simulator m v) => m ()
 returnFromFunc = popStackFrame >>= setSP . stkFp
