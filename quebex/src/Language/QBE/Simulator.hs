@@ -13,7 +13,6 @@
 module Language.QBE.Simulator
   ( BlockResult,
     execInstr,
-    execVolatile,
     execStmt,
     execBlock,
     execFunc,
@@ -125,6 +124,8 @@ execShift retTy op lhs amount =
   execBinaryTy retTy op (retTy, lhs) (QBE.Word, amount)
 {-# INLINE execShift #-}
 
+-- | Execute a single 'QBE.Instr'. The 'QBE.BaseType' denotes the return value type.
+-- For example, as provided in the enclosing 'QBE.Assign'.
 execInstr :: (Simulator m v) => QBE.BaseType -> QBE.Instr -> m v
 execInstr retTy (QBE.Neg op) = do
   v <- lookupValue retTy op
@@ -224,6 +225,8 @@ execInstr retTy (QBE.VAArg argLst) = do
   pure val
 {-# INLINEABLE execInstr #-}
 
+-- | Execute a 'QBE.Statement', usually a sequence of 'QBE.Instruction'.
+-- Therefore, this function iteratively calls 'execInstr' in the common case.
 execStmt :: (Simulator m v) => QBE.Statement -> m ()
 execStmt (QBE.Assign name ty inst) = do
   newVal <- execInstr ty inst
@@ -289,6 +292,11 @@ execPhi (Just prevIdent) (QBE.Phi name ty labels) =
       modifyFrame (storeLocal name retVal)
 {-# INLINEABLE execPhi #-}
 
+-- | Execute a BasicBlock, as represented by 'QBE.Block', by iteratively
+-- invoking 'execStmt'. If this isn't the first executed BasicBlock within a a
+-- 'QBE.Function', then the 'QBE.BlockIdent' of the previously executed
+-- BasicBlock should be provided. This is required to properly execute [phi
+-- instructions](https://c9x.me/compile/doc/il-v1.2.html#Phi).
 execBlock :: (Simulator m v) => Maybe QBE.BlockIdent -> QBE.Block -> m (BlockResult v)
 execBlock prevIdent block = do
   mapM_ (execPhi prevIdent) (QBE.phi block)
@@ -304,6 +312,11 @@ execTilRet prevIdent block = go prevIdent (Right block)
       execBlock prevIdent' nextBlock >>= go (Just $ QBE.label nextBlock)
 {-# INLINEABLE execTilRet #-}
 
+-- | Execute a 'QBE.FuncDef' until function return. If the function requires arguments to
+-- be passed to it, these must be provided as a list. Limited sanity checking is performed
+-- to ensure that the provided arguments match the declared function parameters. The return
+-- value of 'execFunc' is the return value of the executed 'QBE.FuncDef'. If the function
+-- has no return value, 'Nothing' is returned here.
 execFunc :: (Simulator m v) => QBE.FuncDef -> [v] -> m (Maybe v)
 execFunc (QBE.FuncDef {QBE.fBlock = []}) _ = pure Nothing
 execFunc func@(QBE.FuncDef {QBE.fBlock = block : _, QBE.fParams = params}) args = do
