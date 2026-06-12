@@ -7,25 +7,32 @@
 -- used by "Language.QBE.Simulator" to describe the semantics of the QBE intermediate
 -- representation.
 module Language.QBE.Simulator.State
-  ( StackFrame (..),
-    newStackFrame,
-    storeLocal,
-    lookupLocal,
-    SomeFunc (..),
+  ( -- * Abstract Monad
     Simulator (..),
+
+    -- * Name Resolution
+    SomeFunc (..),
+    lookupFunc,
+    lookupArgs,
+    lookupGlobal,
+    lookupLocal,
+    lookupValue,
+
+    -- * Helper
     liftMaybe,
     subType,
     runBinary,
+    returnFromFunc,
+    readNullArray,
+
+    -- * Stack
+    StackFrame (..),
+    newStackFrame,
+    storeLocal,
     modifyFrame,
     stackAlign,
     stackAlloc,
     stackSpill,
-    returnFromFunc,
-    lookupGlobal,
-    lookupValue,
-    lookupFunc,
-    lookupArgs,
-    readNullArray,
   )
 where
 
@@ -39,6 +46,7 @@ import Language.QBE.Simulator.Expression qualified as E
 import Language.QBE.Simulator.Memory qualified as MEM
 import Language.QBE.Types qualified as QBE
 
+-- | Representation of a stack frame on the function call stack.
 data StackFrame v
   = StackFrame
   { stkFunc :: QBE.FuncDef,
@@ -47,10 +55,14 @@ data StackFrame v
     stkFp :: v
   }
 
+-- | Create a new 'StackFrame' and push it onto the call stack.
 newStackFrame ::
   (Simulator m v) =>
+  -- | Definition of the functions to which this frame belongs.
   QBE.FuncDef ->
+  -- | Named arguments passed to this function.
   Map.Map QBE.LocalIdent v ->
+  -- | Optional, unnamed variadic arguments.
   [v] ->
   m (StackFrame v)
 newStackFrame f args variadicArgs = do
@@ -58,19 +70,24 @@ newStackFrame f args variadicArgs = do
   pushStackFrame frame >> pure frame
 {-# INLINEABLE newStackFrame #-}
 
+-- | Store a local variable with a given name and value in the given 'StackFrame'.
 storeLocal :: QBE.LocalIdent -> v -> StackFrame v -> StackFrame v
 storeLocal ident value frame@(StackFrame {stkVars = v}) =
   frame {stkVars = Map.insert ident value v}
 
+-- | Lookup a local variable in the current 'StackFrame'.
 lookupLocal :: StackFrame v -> QBE.LocalIdent -> Maybe v
 lookupLocal (StackFrame {stkVars = v}) = flip Map.lookup v
 {-# INLINEABLE lookupLocal #-}
 
 ------------------------------------------------------------------------
 
+-- | Representation of a function.
 data SomeFunc m v
-  = SSimFunc ([v] -> m (Maybe v))
-  | SFuncDef QBE.FuncDef
+  = -- | A simulated function whose execution is intercepted by the Simulator.
+    SSimFunc ([v] -> m (Maybe v))
+  | -- | A QBE function defined in the input program.
+    SFuncDef QBE.FuncDef
 
 -- | This is an “abstract monad” representing the Simulator and allowing
 -- interaction with an encapsulated Simulator state 'm'. Conceptually,
@@ -124,12 +141,16 @@ class (E.ValueRepr v, MonadError EvalError m) => Simulator m v | m -> v where
   -- | Read a value from memory.
   readMemory :: QBE.LoadType -> MEM.Address -> m v
 
+-- | Extracts the element out of a 'Just' or throw the given 'EvalError' if
+-- if its argument is 'Nothing'.
 liftMaybe :: (MonadError EvalError m) => EvalError -> Maybe a -> m a
 liftMaybe e Nothing = throwError e
 liftMaybe _ (Just r) = pure r
 {-# INLINE liftMaybe #-}
 
--- See https://c9x.me/compile/doc/il-v1.2.html#Subtyping
+-- | Implements the subtyping rules of the QBE intermediate representation.
+--
+-- See <https://c9x.me/compile/doc/il-v1.2.html#Subtyping>.
 subType :: (Simulator m v) => QBE.BaseType -> v -> m v
 subType baseTy v = liftMaybe TypingError $ subType' baseTy (E.getType v)
   where
@@ -142,6 +163,9 @@ subType baseTy v = liftMaybe TypingError $ subType' baseTy (E.getType v)
     subType' _ _ = Nothing
 {-# INLINEABLE subType #-}
 
+-- | Invoke a binary operation and perform subtyping (see 'subType') on its
+-- results for the provided 'QBE.BaseType'. If the operation returns a 'Nothing'
+-- value a 'TypingError' is raised.
 runBinary ::
   (Simulator m v) =>
   QBE.BaseType ->
@@ -180,6 +204,8 @@ stackAlloc size align = do
     Nothing -> throwError InvalidAddressType
 {-# INLINEABLE stackAlloc #-}
 
+-- | Allocate space for the given value on the stack and store it there.
+-- Returns a reference (i.e., a memory address) fore the allocated memory.
 stackSpill :: (Simulator m v) => v -> m MEM.Address
 stackSpill val = do
   let ty = E.getType val
@@ -190,6 +216,8 @@ stackSpill val = do
   pure ptr
 {-# INLINEABLE stackSpill #-}
 
+-- | Trigger a function return, popping its 'StackFrame' from the call stack
+-- and updating both the stack and frame pointer.
 returnFromFunc :: (Simulator m v) => m ()
 returnFromFunc = popStackFrame >>= setSP . stkFp
 {-# INLINE returnFromFunc #-}
@@ -198,12 +226,15 @@ maybeLookup :: (Simulator m v) => String -> Maybe a -> m a
 maybeLookup name = liftMaybe (UnknownVariable name)
 {-# INLINE maybeLookup #-}
 
+-- | Lookup a global variable, might throw an 'UnknownVariable' error.
 lookupGlobal :: (Simulator m v) => QBE.BaseType -> QBE.GlobalIdent -> m v
 lookupGlobal ty name = do
   v <- lookupSymbol name >>= maybeLookup (show name)
   subType ty (E.fromLit (QBE.Base QBE.Long) v)
 {-# INLINEABLE lookupGlobal #-}
 
+-- | Lookup a 'QBE.Value', invoking the correct lookup function. For example,
+-- 'lookupGlobal' for globals or 'lookupLocal' for local variables.
 lookupValue :: (Simulator m v) => QBE.BaseType -> QBE.Value -> m v
 lookupValue ty (QBE.VConst (QBE.Const (QBE.Number v))) =
   pure $ E.fromLit (QBE.Base ty) v
@@ -228,6 +259,10 @@ lookupFuncName name = do
     Nothing -> throwError (UnknownFunction name)
 {-# INLINEABLE lookupFuncName #-}
 
+-- | Interpret the given 'QBE.Value' as a function reference, either
+-- looking it up by name or by address. If the function could not be
+-- found by address an 'UnknownFunctionAddr' is thrown, otherwise an
+-- 'UnknownFunction' error is thrown.
 lookupFunc :: (Simulator m v) => QBE.Value -> m (SomeFunc m v)
 lookupFunc (QBE.VConst (QBE.Extern n)) = lookupFuncName n
 lookupFunc (QBE.VConst (QBE.Const (QBE.Global n))) = lookupFuncName n
@@ -246,10 +281,13 @@ lookupArg (QBE.ArgEnv _) = error "env function parameters not supported"
 lookupArg QBE.ArgVar = pure Nothing
 {-# INLINEABLE lookupArg #-}
 
+-- | Lookup the arguments to a function.
 lookupArgs :: (Simulator m v) => [QBE.FuncArg] -> m [v]
 lookupArgs args = catMaybes <$> mapM lookupArg args
 {-# INLINE lookupArgs #-}
 
+-- | Read a null-terminated C string from memory at the given 'MEM.Address'.
+-- The return value is a list of 8-bit values.
 readNullArray :: (Simulator m v) => MEM.Address -> m [v]
 readNullArray addr = go addr []
   where

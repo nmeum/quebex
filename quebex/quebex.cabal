@@ -1,8 +1,28 @@
 cabal-version:      3.4
 name:               quebex
 version:            0.1.0.0
--- synopsis:
--- description:
+synopsis:           A software analysis framework built around the QBE intermediate language.
+description:
+  This library provides a formal semantics for the [QBE intermediate language](https://c9x.me/compile/)
+  by providing [modular monadic semantics](https://doi.org/10.1007/3-540-61055-3_39) implemented using
+  an [abstract monad](https://doi.org/10.1145/3607833). The package refers to this abstract monad as
+  the 'Language.QBE.Simulator.State.Simulator' monad. It provides several primitives that are used by
+  the "Language.QBE.Simulator" to /abstractly/ describe the semantics of QBE instructions. The
+  'Language.QBE.Simulator.State.Simulator' can then be instantiated with /concrete/ semantics. For
+  example, the "Language.QBE.Simulator.Default.State" module provides an instantiation using a
+  'Control.Monad.State' monad. This instantiation, and the 'Language.QBE.Simulator.State.Simulator'
+  itself, are parameterized over the representation of QBE instruction operand values.
+
+  To abstractly describe operations on values passed to QBE instructions, this library additionally
+  provides an expression language abstraction in the "Language.QBE.Simulator.Expression" module.
+  Further, an implementation of this expression language based on fixed-with integer values is
+  available in the "Language.QBE.Simulator.Default.Expression" module.
+
+  A separate "quebex-symex" library provides an implementation of the expression abstraction and the
+  'Language.QBE.Simulator.State.Simulator' monad for formal reasoning about a software under test
+  using [symbolic execution](https://en.wikipedia.org/wiki/Symbolic_execution). Similar dynamic
+  software testing techniques can be implemented using this library. Additionally, there is some
+  preliminary support for static analysis as well through the "Language.QBE.Analysis.CFG" module.
 license:            GPL-3.0-only AND MIT AND BSD-3-Clause
 -- license-file:
 author:             Sören Tempel

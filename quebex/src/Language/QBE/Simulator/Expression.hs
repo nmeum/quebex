@@ -7,7 +7,20 @@
 -- 'Language.QBE.Simulator' description of QBE semantics. Therefore, in
 -- addition to the 'Language.QBE.Simulator.State.Simulator' monad, it is the
 -- central component for the abstract description of QBE's semantics.
-module Language.QBE.Simulator.Expression where
+module Language.QBE.Simulator.Expression
+  ( -- * Expression Abstraction
+    ValueRepr (..),
+
+    -- * Conversion Functions,
+    fromString,
+    toString,
+    boolToValue,
+
+    -- * Comparision
+    compareIntExpr,
+    compareFloatExpr,
+  )
+where
 
 import Data.Char qualified as C
 import Data.Word (Word64)
